@@ -1,0 +1,109 @@
+{% extends "base/layout.html" %}
+
+{% block title %}Pagina non trovata - Organigramma Manager{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <div class="error-content">
+        <div class="error-icon">🔍</div>
+        <h1>404 - Pagina non trovata</h1>
+        <p>La pagina che stai cercando non esiste o è stata spostata.</p>
+        
+        <div class="error-actions">
+            <a href="/" class="btn btn-primary">🏠 Torna alla Dashboard</a>
+            <a href="/employees" class="btn btn-secondary">👥 Vedi Dipendenti</a>
+            <a href="javascript:history.back()" class="btn btn-secondary">← Indietro</a>
+        </div>
+        
+        <div class="error-help">
+            <h3>Suggerimenti:</h3>
+            <ul>
+                <li>Verifica l'URL nella barra degli indirizzi</li>
+                <li>Usa la ricerca per trovare dipendenti o funzioni</li>
+                <li>Controlla i link nella navigazione</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+.error-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+    text-align: center;
+}
+
+.error-content {
+    max-width: 600px;
+    padding: 3rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+}
+
+.error-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.error-content h1 {
+    color: #1f2937;
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.error-content p {
+    color: #6b7280;
+    font-size: 1.125rem;
+    margin-bottom: 2rem;
+}
+
+.error-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.error-help {
+    background: #f8fafc;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-top: 2rem;
+}
+
+.error-help h3 {
+    color: #374151;
+    margin-bottom: 1rem;
+}
+
+.error-help ul {
+    color: #6b7280;
+    text-align: left;
+    list-style-position: inside;
+}
+
+.error-help li {
+    margin-bottom: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .error-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .error-content {
+        margin: 1rem;
+        padding: 2rem;
+    }
+    
+    .error-content h1 {
+        font-size: 2rem;
+    }
+}
+</style>
+{% endblock %}

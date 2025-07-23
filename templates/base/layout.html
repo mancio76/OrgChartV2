@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="it" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ page_title or 'Organigramma' }}{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', path='/css/base.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', path='/css/components.css') }}" rel="stylesheet">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    {% include "base/navigation.html" %}
+    
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container-fluid">
+            <!-- Breadcrumb -->
+            {% if breadcrumb %}
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/">Home</a></li>
+                    {% for crumb in breadcrumb %}
+                    {% if loop.last %}
+                    <li class="breadcrumb-item active" aria-current="page">{{ crumb.name }}</li>
+                    {% else %}
+                    <li class="breadcrumb-item"><a href="{{ crumb.url }}">{{ crumb.name }}</a></li>
+                    {% endif %}
+                    {% endfor %}
+                </ol>
+            </nav>
+            {% endif %}
+            
+            <!-- Page Header -->
+            {% if page_title %}
+            <div class="page-header mb-4">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h1 class="page-title">
+                            {% if page_icon %}<i class="bi bi-{{ page_icon }} me-2"></i>{% endif %}
+                            {{ page_title }}
+                        </h1>
+                        {% if page_subtitle %}
+                        <p class="page-subtitle text-muted">{{ page_subtitle }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        {% block page_actions %}{% endblock %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Alert Messages -->
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.type }} alert-dismissible fade show" role="alert">
+                <i class="bi bi-{{ 'check-circle' if message.type == 'success' else 'exclamation-triangle' }} me-2"></i>
+                {{ message.text }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+            
+            <!-- Validation Errors -->
+            {% if errors %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Si sono verificati degli errori:</strong>
+                <ul class="mb-0 mt-2">
+                    {% for error in errors %}
+                    <li>{{ error.field }}: {{ error.message }}</li>
+                    {% endfor %}
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endif %}
+            
+            <!-- Page Content -->
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    
+    <!-- Footer -->
+    <!-- {   % include "base/footer.html" %   } -->
+    
+    <!-- Modals -->
+    <div id="modal-container"></div>
+    
+    <!-- JavaScript -->
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', path='/js/base.js') }}"></script>
+    <script src="{{ url_for('static', path='/js/components.js') }}"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

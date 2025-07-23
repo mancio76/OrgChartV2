@@ -1,0 +1,241 @@
+{% extends "base/layout.html" %}
+
+{% block extra_css %}
+<link href="{{ url_for('static', path='/css/home.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Unità Organizzative</h6>
+                        <h2 class="mb-0">{{ stats.total_units or 0 }}</h2>
+                    </div>
+                    <div class="icon">
+                        <i class="bi bi-building fs-1"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="/units" class="text-white text-decoration-none">
+                    <i class="bi bi-arrow-right me-1"></i>Visualizza tutte
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Incarichi Correnti</h6>
+                        <h2 class="mb-0">{{ stats.current_assignments or 0 }}</h2>
+                    </div>
+                    <div class="icon">
+                        <i class="bi bi-person-badge fs-1"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="/assignments" class="text-white text-decoration-none">
+                    <i class="bi bi-arrow-right me-1"></i>Visualizza tutti
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Persone Assegnate</h6>
+                        <h2 class="mb-0">{{ stats.people_with_assignments or 0 }}</h2>
+                    </div>
+                    <div class="icon">
+                        <i class="bi bi-people fs-1"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="/persons" class="text-white text-decoration-none">
+                    <i class="bi bi-arrow-right me-1"></i>Visualizza tutte
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Incarichi Interim</h6>
+                        <h2 class="mb-0">{{ stats.interim_assignments or 0 }}</h2>
+                    </div>
+                    <div class="icon">
+                        <i class="bi bi-clock-history fs-1"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="/assignments?filter=interim" class="text-white text-decoration-none">
+                    <i class="bi bi-arrow-right me-1"></i>Visualizza tutti
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Row -->
+<div class="row">
+    <!-- Recent Assignments -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-clock me-2"></i>Incarichi Recenti
+                </h5>
+                <a href="/assignments" class="btn btn-sm btn-outline-primary">
+                    Visualizza tutti
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_assignments %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Persona</th>
+                                <th>Ruolo</th>
+                                <th>Unità</th>
+                                <th>Status</th>
+                                <th>Data Inizio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assignment in recent_assignments %}
+                            <tr>
+                                <td>
+                                    <strong>{{ assignment.person_name }}</strong>
+                                </td>
+                                <td>
+                                    {{ assignment.job_title_name }}
+                                    {% if assignment.ad_interim %}
+                                    <span class="badge bg-warning text-dark ms-1">Interim</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ assignment.unit_name }}</td>
+                                <td>
+                                    <span class="badge bg-{{ assignment.status_color }}">
+                                        {{ assignment.status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if assignment.valid_from %}
+                                    {{ assignment.valid_from.strftime('%d/%m/%Y') }}
+                                    {% else %}
+                                    <span class="text-muted">Non specificata</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-inbox display-4 text-muted"></i>
+                    <p class="text-muted mt-2">Nessun incarico trovato</p>
+                    <a href="/assignments/new" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-1"></i>Crea primo incarico
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions & Hierarchy Overview -->
+    <div class="col-lg-4 mb-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Azioni Rapide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/units/new" class="btn btn-outline-primary">
+                        <i class="bi bi-building me-2"></i>Nuova Unità
+                    </a>
+                    <a href="/persons/new" class="btn btn-outline-success">
+                        <i class="bi bi-person-plus me-2"></i>Nuova Persona
+                    </a>
+                    <a href="/assignments/new" class="btn btn-outline-info">
+                        <i class="bi bi-person-badge me-2"></i>Nuovo Incarico
+                    </a>
+                    <a href="/job-titles/new" class="btn btn-outline-warning">
+                        <i class="bi bi-briefcase me-2"></i>Nuovo Ruolo
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Hierarchy Overview -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-diagram-3 me-2"></i>Struttura Organizzativa
+                </h5>
+                <a href="/orgchart/tree" class="btn btn-sm btn-outline-primary">
+                    Vista completa
+                </a>
+            </div>
+            <div class="card-body">
+                {% if hierarchy_stats %}
+                <div class="hierarchy-preview">
+                    {% for unit in hierarchy_stats %}
+                    <div class="hierarchy-item" style="margin-left: {{ unit.level * 15 }}px">
+                        <div class="d-flex justify-content-between align-items-center py-1">
+                            <div>
+                                <i class="bi bi-{{ 'building' if unit.type == 'function' else 'diagram-2' }} me-2"></i>
+                                <strong>{{ unit.name }}</strong>
+                            </div>
+                            {% if unit.person_count > 0 %}
+                            <span class="badge bg-secondary">{{ unit.person_count }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    {% if hierarchy_stats|length >= 5 %}
+                    <div class="text-center mt-2">
+                        <small class="text-muted">... e altre unità</small>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="bi bi-diagram-3 display-4 text-muted"></i>
+                    <p class="text-muted mt-2">Nessuna struttura definita</p>
+                    <a href="/units/new" class="btn btn-sm btn-primary">
+                        Crea prima unità
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', path='/js/home.js') }}"></script>
+{% endblock %}
