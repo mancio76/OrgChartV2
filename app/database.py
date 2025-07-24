@@ -94,7 +94,14 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Failed to create database connection: {e}")
             raise
-    
+
+    def get_pool_status(self) -> Dict[str, int]:
+        """Monitoring delle connessioni"""
+        return {
+            'active_connections': self._connection_pool.qsize(),
+            'max_connections': MAX_CONNECTIONS
+        }
+
     def _get_connection_from_pool(self) -> sqlite3.Connection:
         """Get a connection from the pool"""
         try:

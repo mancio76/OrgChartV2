@@ -61,8 +61,10 @@ class Person(BaseModel):
             return False
         
         # RFC 5322 compliant email regex pattern
+        ##pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        ##return bool(re.match(pattern, email.strip()))
         pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        return bool(re.match(pattern, email.strip()))
+        return bool(re.match(pattern, email.strip())) if email else False
     
     def _is_valid_phone(self, phone: str) -> bool:
         """Basic phone validation - allows various international formats"""

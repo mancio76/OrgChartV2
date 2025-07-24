@@ -3,3 +3,4 @@ __pycache__
 orgchart.db
 *.db-shm
 *.db-wal
+.DS_Store

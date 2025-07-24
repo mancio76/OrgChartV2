@@ -73,6 +73,7 @@ class AssignmentService(BaseService):
             assignment.job_title_id,
             assignment.percentage,
             1 if assignment.is_ad_interim else 0,
+            1 if assignment.is_unit_boss else 0,
             assignment.notes,
             assignment.flags,
             assignment.valid_from.isoformat() if assignment.valid_from else None,
