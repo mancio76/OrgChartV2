@@ -261,6 +261,20 @@ class UnitService(BaseService):
             from app.services.base import ServiceValidationException
             raise ServiceValidationException(f"Unit with name '{unit.name}' already exists")
         
+        # Validate unit type exists if specified
+        if unit.unit_type_id and unit.unit_type_id != -1:
+            type = UnitTypeService().get_by_id(unit.unit_type_id)
+            if not type:
+                from app.services.base import ServiceValidationException
+                raise ServiceValidationException(f"Unit type with ID {unit.unit_type_id} does not exist")
+
+        # Validate parent unit exists if specified
+        if unit.parent_unit_id and unit.parent_unit_id != -1:
+            parent = self.get_by_id(unit.parent_unit_id)
+            if not parent:
+                from app.services.base import ServiceValidationException
+                raise ServiceValidationException(f"Parent unit with ID {unit.parent_unit_id} does not exist")
+
         # Validate parent unit exists if specified
         if unit.parent_unit_id and unit.parent_unit_id != -1:
             parent = self.get_by_id(unit.parent_unit_id)
