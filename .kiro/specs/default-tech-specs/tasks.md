@@ -79,7 +79,7 @@
 
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 6.1, 6.3_
 
-- [-] 6. Create responsive web interface with Bootstrap 5
+- [x] 6. Create responsive web interface with Bootstrap 5
 
   - [x] 6.1 Build base template infrastructure
 
@@ -151,11 +151,7 @@
     - [x] 6.2.6 Create dashboard templates with statistics and overview
       - _Requirements: 2.1, 2.2, 2.3_
 
-  - [ ] 6.3 Add form validation and user feedback
-
-
-
-
+  - [x] 6.3 Add form validation and user feedback
 
     - Implement client-side form validation with clear feedback
     - Create user-friendly error message display
@@ -170,15 +166,14 @@
     - Add unit statistics and personnel counts calculation
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-  - [ ] 7.2 Add unit type-specific rendering in templates
+  - [x] 7.2 Add unit type-specific rendering in templates
 
-
-    - Implement bold-framed boxes for function units (type="function") in templates
-    - Create normal-framed boxes for organizational units (type="OrganizationalUnit") in templates
+    - Implement bold-framed boxes for function units (unit_type_id=1) in templates
+    - Create normal-framed boxes for organizational units (unit_type_id=2) in templates
     - Add emoji/image display within unit boxes in templates
     - _Requirements: 6.6, 6.7, 6.8_
 
-  - [ ] 7.3 Build responsive chart functionality in frontend
+  - [x] 7.3 Build responsive chart functionality in frontend
     - Ensure chart adapts to different screen sizes
     - Implement progressive enhancement (basic functionality without JavaScript)
     - Add lazy loading for large organizational structures

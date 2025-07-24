@@ -901,6 +901,335 @@ FormValidator.setupCompletionFeedback = function() {
         completionIndicator.className = 'form-completion-indicator';
         completionIndicator.innerHTML = `
             <div class="completion-text">
+                <i class="bi bi-check-circle me-2"></i>
+                <span>Modulo completato!</span>
+            </div>
+        `;
+        
+        document.body.appendChild(completionIndicator);
+        
+        // Check completion on form changes
+        const checkCompletion = FormValidator.debounce(function() {
+            const requiredFields = form.querySelectorAll('[required]');
+            const completedFields = Array.from(requiredFields).filter(field => 
+                field.value.trim() && field.checkValidity()
+            );
+            
+            if (requiredFields.length > 0 && completedFields.length === requiredFields.length) {
+                completionIndicator.classList.add('show');
+                setTimeout(() => {
+                    completionIndicator.classList.remove('show');
+                }, 3000);
+            }
+        }, 500);
+        
+        form.addEventListener('input', checkCompletion);
+        form.addEventListener('change', checkCompletion);
+    });
+};
+
+/**
+ * Auto-save functionality
+ */
+FormValidator.setupAutoSave = function() {
+    const forms = document.querySelectorAll('[data-auto-save]');
+    
+    forms.forEach(function(form) {
+        const autoSaveIndicator = document.createElement('div');
+        autoSaveIndicator.className = 'auto-save-indicator';
+        autoSaveIndicator.innerHTML = `
+            <i class="bi bi-cloud-check me-1"></i>
+            <span>Salvato automaticamente</span>
+        `;
+        
+        document.body.appendChild(autoSaveIndicator);
+        
+        const autoSave = FormValidator.debounce(function() {
+            // Simulate auto-save (replace with actual implementation)
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Store in localStorage as fallback
+            localStorage.setItem(`autosave_${form.id || 'form'}`, JSON.stringify(data));
+            
+            // Show indicator
+            autoSaveIndicator.classList.add('show');
+            setTimeout(() => {
+                autoSaveIndicator.classList.remove('show');
+            }, 2000);
+        }, 2000);
+        
+        form.addEventListener('input', autoSave);
+        form.addEventListener('change', autoSave);
+        
+        // Restore auto-saved data on page load
+        const savedData = localStorage.getItem(`autosave_${form.id || 'form'}`);
+        if (savedData) {
+            try {
+                const data = JSON.parse(savedData);
+                Object.keys(data).forEach(key => {
+                    const field = form.querySelector(`[name="${key}"]`);
+                    if (field && !field.value) {
+                        field.value = data[key];
+                    }
+                });
+            } catch (e) {
+                console.warn('Failed to restore auto-saved data:', e);
+            }
+        }
+    });
+};
+
+/**
+ * Smart suggestions
+ */
+FormValidator.setupSmartSuggestions = function() {
+    const fieldsWithSuggestions = document.querySelectorAll('[data-suggestions]');
+    
+    fieldsWithSuggestions.forEach(function(field) {
+        const suggestionsData = field.getAttribute('data-suggestions');
+        let suggestions = [];
+        
+        try {
+            suggestions = JSON.parse(suggestionsData);
+        } catch (e) {
+            // If not JSON, treat as comma-separated values
+            suggestions = suggestionsData.split(',').map(s => s.trim());
+        }
+        
+        const suggestionContainer = document.createElement('div');
+        suggestionContainer.className = 'field-suggestion';
+        field.parentElement.appendChild(suggestionContainer);
+        
+        field.addEventListener('input', function() {
+            const value = this.value.toLowerCase();
+            const matches = suggestions.filter(suggestion => 
+                suggestion.toLowerCase().includes(value) && 
+                suggestion.toLowerCase() !== value
+            );
+            
+            if (matches.length > 0 && value.length > 1) {
+                suggestionContainer.innerHTML = `
+                    <i class="bi bi-lightbulb me-1"></i>
+                    Suggerimenti: ${matches.slice(0, 3).map(match => 
+                        `<span class="suggestion-item" onclick="FormValidator.applySuggestion('${field.id}', '${match}')">${match}</span>`
+                    ).join(', ')}
+                `;
+                suggestionContainer.style.display = 'block';
+            } else {
+                suggestionContainer.style.display = 'none';
+            }
+        });
+        
+        field.addEventListener('blur', function() {
+            setTimeout(() => {
+                suggestionContainer.style.display = 'none';
+            }, 200);
+        });
+    });
+};
+
+/**
+ * Apply suggestion to field
+ */
+FormValidator.applySuggestion = function(fieldId, suggestion) {
+    const field = document.getElementById(fieldId);
+    if (field) {
+        field.value = suggestion;
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        field.focus();
+    }
+};
+
+/**
+ * Accessibility enhancements
+ */
+FormValidator.setupAccessibilityFeatures = function() {
+    // Add ARIA labels and descriptions
+    const forms = document.querySelectorAll('.needs-validation');
+    
+    forms.forEach(function(form) {
+        // Add form description
+        if (!form.getAttribute('aria-describedby')) {
+            const description = document.createElement('div');
+            description.id = `form-description-${Date.now()}`;
+            description.className = 'visually-hidden';
+            description.textContent = 'Modulo con validazione in tempo reale. I campi obbligatori sono contrassegnati con asterisco.';
+            form.insertBefore(description, form.firstChild);
+            form.setAttribute('aria-describedby', description.id);
+        }
+        
+        // Enhance field accessibility
+        const fields = form.querySelectorAll('.form-control, .form-select');
+        fields.forEach(function(field) {
+            // Add aria-invalid attribute
+            field.addEventListener('invalid', function() {
+                this.setAttribute('aria-invalid', 'true');
+            });
+            
+            field.addEventListener('input', function() {
+                if (this.checkValidity()) {
+                    this.setAttribute('aria-invalid', 'false');
+                }
+            });
+            
+            // Link field to its error message
+            const errorMessage = field.parentElement.querySelector('.invalid-feedback');
+            if (errorMessage && !errorMessage.id) {
+                errorMessage.id = `error-${field.id || Date.now()}`;
+                field.setAttribute('aria-describedby', errorMessage.id);
+            }
+        });
+    });
+    
+    // Keyboard navigation enhancements
+    document.addEventListener('keydown', function(e) {
+        // Escape key to clear validation
+        if (e.key === 'Escape') {
+            const activeField = document.activeElement;
+            if (activeField && activeField.classList.contains('is-invalid')) {
+                FormValidator.clearFieldValidation(activeField);
+            }
+        }
+        
+        // Ctrl+Enter to submit form
+        if (e.ctrlKey && e.key === 'Enter') {
+            const form = document.activeElement.closest('form');
+            if (form && form.classList.contains('needs-validation')) {
+                form.dispatchEvent(new Event('submit', { bubbles: true }));
+            }
+        }
+    });
+};
+
+/**
+ * Set field error (utility function)
+ */
+FormValidator.setFieldError = function(field, message) {
+    FormValidator.setFieldValidationState(field, false, [message]);
+};
+
+/**
+ * Clear field error (utility function)
+ */
+FormValidator.clearFieldError = function(field) {
+    FormValidator.clearFieldValidation(field);
+};
+
+/**
+ * Enhanced form submission with better user feedback
+ */
+FormValidator.enhanceFormSubmission = function() {
+    const forms = document.querySelectorAll('.needs-validation');
+    
+    forms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const isValid = FormValidator.validateForm(form);
+            
+            if (isValid) {
+                // Show success feedback
+                FormValidator.showFormSuccess(form);
+                
+                // Submit after brief delay for user feedback
+                setTimeout(() => {
+                    if (form.hasAttribute('data-ajax-submit')) {
+                        FormValidator.submitFormAjax(form);
+                    } else {
+                        form.submit();
+                    }
+                }, 500);
+            } else {
+                // Show error feedback
+                FormValidator.showFormErrors(form);
+            }
+        });
+    });
+};
+
+/**
+ * Show form success feedback
+ */
+FormValidator.showFormSuccess = function(form) {
+    form.classList.add('form-success');
+    
+    if (window.OrgApp && window.OrgApp.showSuccess) {
+        window.OrgApp.showSuccess('Modulo validato correttamente!');
+    }
+};
+
+/**
+ * Show form error feedback
+ */
+FormValidator.showFormErrors = function(form) {
+    const invalidFields = form.querySelectorAll('.is-invalid');
+    const errors = Array.from(invalidFields).map(field => {
+        const label = form.querySelector(`label[for="${field.id}"]`);
+        const fieldName = label ? label.textContent.replace('*', '').trim() : field.name || 'Campo';
+        return fieldName;
+    });
+    
+    if (window.OrgApp && window.OrgApp.showFormError) {
+        window.OrgApp.showFormError(
+            'Correggi gli errori nel modulo prima di continuare.',
+            errors.map(name => `${name}: campo non valido`)
+        );
+    }
+};
+
+/**
+ * AJAX form submission
+ */
+FormValidator.submitFormAjax = function(form) {
+    const formData = new FormData(form);
+    const url = form.action || window.location.pathname;
+    const method = form.method || 'POST';
+    
+    fetch(url, {
+        method: method,
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        }
+        throw new Error('Network response was not ok');
+    })
+    .then(data => {
+        if (data.success) {
+            if (window.OrgApp && window.OrgApp.showSuccess) {
+                window.OrgApp.showSuccess(data.message || 'Operazione completata con successo!');
+            }
+            
+            if (data.redirect) {
+                setTimeout(() => {
+                    window.location.href = data.redirect;
+                }, 1000);
+            }
+        } else {
+            throw new Error(data.message || 'Errore durante l\'elaborazione');
+        }
+    })
+    .catch(error => {
+        if (window.OrgApp && window.OrgApp.showError) {
+            window.OrgApp.showError('Errore durante l\'invio del modulo: ' + error.message);
+        }
+    })
+    .finally(() => {
+        FormValidator.hideFormLoading(form);
+    });
+};
+
+// Initialize enhanced form submission when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    FormValidator.enhanceFormSubmission();
+});me = 'form-completion-indicator';
+        completionIndicator.innerHTML = `
+            <div class="completion-text">
                 <i class="bi bi-check-circle-fill me-2"></i>
                 <span>Modulo completato correttamente!</span>
             </div>

@@ -92,76 +92,163 @@
     </div>
 </div>
 
-<!-- Organizational Tree -->
+<!-- Enhanced Organizational Tree with Progressive Enhancement -->
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0">
             <i class="bi bi-diagram-3 me-2"></i>
             {{ 'Organigramma Completo' if not root_unit else 'Organigramma - ' + root_unit.name }}
         </h5>
-        <div class="btn-group btn-group-sm">
-            <button type="button" class="btn btn-outline-secondary" onclick="zoomIn()">
+        
+        <!-- Progressive Enhancement: Show controls only with JavaScript -->
+        <div class="btn-group btn-group-sm js-only orgchart-control">
+            <button type="button" class="btn btn-outline-secondary" onclick="zoomIn()" data-bs-toggle="tooltip" title="Ingrandisci">
                 <i class="bi bi-zoom-in"></i>
             </button>
-            <button type="button" class="btn btn-outline-secondary" onclick="zoomOut()">
+            <button type="button" class="btn btn-outline-secondary" onclick="zoomOut()" data-bs-toggle="tooltip" title="Rimpicciolisci">
                 <i class="bi bi-zoom-out"></i>
             </button>
-            <button type="button" class="btn btn-outline-secondary" onclick="resetZoom()">
+            <button type="button" class="btn btn-outline-secondary" onclick="resetZoom()" data-bs-toggle="tooltip" title="Ripristina zoom">
                 <i class="bi bi-arrows-fullscreen"></i>
             </button>
+            <button type="button" class="btn btn-outline-secondary complex-control" onclick="toggleFullscreen()" data-bs-toggle="tooltip" title="Schermo intero">
+                <i class="bi bi-fullscreen"></i>
+            </button>
         </div>
+        
+        <!-- No-JS Fallback: Simple navigation -->
+        <noscript>
+            <div class="no-js-show">
+                <small class="text-muted">Usa i controlli del browser per navigare</small>
+            </div>
+        </noscript>
     </div>
+    
     <div class="card-body p-0">
-        <div id="orgchart-container" class="orgchart-viewport">
-            <div id="orgchart-tree" class="orgchart-tree">
+        <!-- Responsive Container with Progressive Enhancement -->
+        <div id="orgchart-container" class="orgchart-viewport" role="application" aria-label="Organigramma interattivo">
+            
+            <!-- Loading State (Hidden by JavaScript when loaded) -->
+            <div class="orgchart-loading js-only" id="orgchart-loading">
+                <div class="loading-content">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Caricamento organigramma...</span>
+                    </div>
+                    <p class="mt-2">Caricamento organigramma in corso...</p>
+                </div>
+            </div>
+            
+            <!-- Main Tree Container -->
+            <div id="orgchart-tree" class="orgchart-tree" role="tree" aria-label="Struttura organizzativa">
                 {% if tree_data %}
+                    <!-- Progressive Loading: Load root nodes first -->
                     {% for root_node in tree_data %}
-                        {{ render_tree_node(root_node, 0, show_persons, show_vacant) }}
+                        {{ render_tree_node_responsive(root_node, 0, show_persons, show_vacant, loop.index0 < 3) }}
                     {% endfor %}
                 {% else %}
-                <div class="text-center py-5">
-                    <i class="bi bi-diagram-3 display-1 text-muted mb-3"></i>
+                <!-- Empty State -->
+                <div class="text-center py-5" role="status">
+                    <i class="bi bi-diagram-3 display-1 text-muted mb-3" aria-hidden="true"></i>
                     <h4 class="text-muted">Nessun dato organizzativo</h4>
                     <p class="text-muted">Non ci sono unità organizzative da visualizzare.</p>
                     <a href="/units/new" class="btn btn-primary">
-                        <i class="bi bi-plus-circle me-1"></i>Crea Prima Unità
+                        <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>Crea Prima Unità
                     </a>
                 </div>
                 {% endif %}
+            </div>
+            
+            <!-- No-JS Fallback Message -->
+            <noscript>
+                <div class="alert alert-info no-js-show mt-3">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Modalità base:</strong> Per un'esperienza completa, abilita JavaScript nel tuo browser.
+                </div>
+            </noscript>
+        </div>
+    </div>
+    
+    <!-- Responsive Controls Footer -->
+    <div class="card-footer js-only">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <small class="text-muted">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Usa i tasti freccia per navigare, Ctrl+F per cercare
+                </small>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="btn-group btn-group-sm essential-control">
+                    <button type="button" class="btn btn-outline-primary" onclick="OrgchartEnhancements.showSearchDialog()">
+                        <i class="bi bi-search me-1"></i>Cerca
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="centerOrgchart()">
+                        <i class="bi bi-arrows-move me-1"></i>Centra
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Vacant Positions Panel -->
+<!-- Enhanced Vacant Positions Panel -->
 {% if show_vacant and vacant_positions %}
-<div class="card mt-4">
-    <div class="card-header">
+<div class="card mt-4 border-warning">
+    <div class="card-header bg-warning bg-opacity-10">
         <h5 class="card-title mb-0">
             <i class="bi bi-exclamation-triangle text-warning me-2"></i>
             Posizioni Vacanti
-            <span class="badge bg-warning ms-2">{{ vacant_positions|length }}</span>
+            <span class="badge bg-warning text-dark ms-2">{{ vacant_positions|length }}</span>
         </h5>
     </div>
     <div class="card-body">
         <div class="row">
             {% for vacant in vacant_positions %}
             <div class="col-md-6 col-lg-4 mb-3">
-                <div class="card border-warning">
+                <div class="card {{ 'border-primary' if vacant.unit_type_id == 1 else 'border-info' }} h-100">
                     <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-{{ 'building' if vacant.unit_type_id == 1 else 'diagram-2' }} me-2 text-warning"></i>
-                            <div class="flex-grow-1">
-                                <h6 class="mb-0">{{ vacant.name }}</h6>
-                                {% if vacant.short_name %}
-                                <small class="text-muted">{{ vacant.short_name }}</small>
-                                {% endif %}
-                                {% if vacant.parent_name %}
-                                <br><small class="text-muted">in {{ vacant.parent_name }}</small>
+                        <div class="d-flex align-items-start">
+                            <!-- Unit Type Icon with Emoji Support -->
+                            <div class="me-3">
+                                {% if vacant.emoji %}
+                                <div class="unit-emoji" style="font-size: 1.5rem; width: 40px; height: 40px;">{{ vacant.emoji }}</div>
+                                {% elif vacant.image_url %}
+                                <img src="{{ vacant.image_url }}" alt="Immagine {{ vacant.name }}" class="unit-image" style="width: 40px; height: 40px;">
+                                {% else %}
+                                <div class="unit-emoji" style="font-size: 1.5rem; width: 40px; height: 40px;">
+                                    {% if vacant.unit_type_id == 1 %}🏢{% else %}🏛️{% endif %}
+                                </div>
                                 {% endif %}
                             </div>
-                            <a href="/assignments/new?unit_id={{ vacant.id }}" class="btn btn-sm btn-outline-success">
-                                <i class="bi bi-person-plus"></i>
+                            
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 {{ 'text-primary' if vacant.unit_type_id == 1 else 'text-info' }}">
+                                    {{ vacant.name }}
+                                </h6>
+                                {% if vacant.short_name %}
+                                <small class="text-muted d-block">{{ vacant.short_name }}</small>
+                                {% endif %}
+                                {% if vacant.parent_name %}
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-arrow-up me-1"></i>{{ vacant.parent_name }}
+                                </small>
+                                {% endif %}
+                                
+                                <!-- Unit Type Badge -->
+                                <div class="mt-2">
+                                    <span class="badge {{ 'bg-primary' if vacant.unit_type_id == 1 else 'bg-info' }} bg-opacity-10 {{ 'text-primary' if vacant.unit_type_id == 1 else 'text-info' }}">
+                                        {{ 'Funzione' if vacant.unit_type_id == 1 else 'Unità Org.' }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3 d-flex gap-2">
+                            <a href="/assignments/new?unit_id={{ vacant.id }}" class="btn btn-sm btn-success flex-grow-1">
+                                <i class="bi bi-person-plus me-1"></i>Assegna
+                            </a>
+                            <a href="/units/{{ vacant.id }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-eye"></i>
                             </a>
                         </div>
                     </div>
@@ -173,48 +260,82 @@
 </div>
 {% endif %}
 
-<!-- Tree Node Template Macro -->
-{% macro render_tree_node(node, level, show_persons, show_vacant) %}
-<div class="tree-node" data-unit-id="{{ node.id }}" data-level="{{ level }}">
-    <div class="unit-box {{ 'unit-function' if node.unit_type_id == 1 else 'unit-organizational' }} {{ 'unit-vacant' if show_vacant and node.person_count == 0 else '' }}">
-        <!-- Unit Header -->
+<!-- Enhanced Tree Node Template Macro with Responsive Support -->
+{% macro render_tree_node_responsive(node, level, show_persons, show_vacant, priority_load=false) %}
+<div class="tree-node {{ 'unit-placeholder' if not priority_load else '' }}" 
+     data-unit-id="{{ node.id }}" 
+     data-level="{{ level }}"
+     data-parent-id="{{ node.parent_unit_id or '' }}"
+     role="treeitem"
+     aria-expanded="{{ 'true' if node.children else 'false' }}"
+     aria-level="{{ level + 1 }}">
+    
+    <div class="unit-box {{ 'unit-function' if node.unit_type_id == 1 else 'unit-organizational' }} {{ 'unit-vacant' if show_vacant and node.person_count == 0 else '' }}"
+         style="{{ 'display: none;' if not priority_load else '' }}">
+        
+        <!-- Unit Type Indicator -->
+        <div class="unit-type-indicator"></div>
+        
+        <!-- Unit Header with Enhanced Layout -->
         <div class="unit-header">
             <div class="unit-info">
-                <div class="unit-name">
-                    <i class="bi bi-{{ 'building' if node.unit_type_id == 1 else 'diagram-2' }} me-2"></i>
-                    <strong>{{ node.name }}</strong>
-                    {% if node.short_name %}
-                    <small class="text-muted ms-2">({{ node.short_name }})</small>
-                    {% endif %}
+                <!-- Emoji/Image Display - Task 7.2 -->
+                {% if node.emoji %}
+                <div class="unit-emoji" title="Icona unità">{{ node.emoji }}</div>
+                {% elif node.image_url %}
+                <img src="{{ node.image_url }}" alt="Immagine {{ node.name }}" class="unit-image" title="Immagine unità" loading="lazy">
+                {% else %}
+                <div class="unit-emoji" title="Icona predefinita">
+                    {% if node.unit_type_id == 1 %}🏢{% else %}🏛️{% endif %}
                 </div>
-                <div class="unit-stats">
-                    <span class="badge bg-light text-dark me-1">
-                        <i class="bi bi-people me-1"></i>{{ node.person_count }}
-                    </span>
-                    {% if node.children_count > 0 %}
-                    <span class="badge bg-light text-dark">
-                        <i class="bi bi-diagram-2 me-1"></i>{{ node.children_count }}
-                    </span>
+                {% endif %}
+                
+                <div class="unit-details">
+                    <div class="unit-name">{{ node.name }}</div>
+                    {% if node.short_name %}
+                    <div class="unit-short-name">{{ node.short_name }}</div>
                     {% endif %}
+                    
+                    <!-- Enhanced Unit Statistics -->
+                    <div class="unit-stats">
+                        <span class="unit-stat-badge people">
+                            <i class="bi bi-people" aria-hidden="true"></i>{{ node.person_count }}
+                        </span>
+                        {% if node.children_count > 0 %}
+                        <span class="unit-stat-badge children">
+                            <i class="bi bi-diagram-2" aria-hidden="true"></i>{{ node.children_count }}
+                        </span>
+                        {% endif %}
+                        {% if node.assignment_count > 0 %}
+                        <span class="unit-stat-badge assignments">
+                            <i class="bi bi-person-badge" aria-hidden="true"></i>{{ node.assignment_count }}
+                        </span>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
+            
+            <!-- Enhanced Unit Actions -->
             <div class="unit-actions">
-                <a href="/units/{{ node.id }}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Dettagli unità">
-                    <i class="bi bi-eye"></i>
+                <a href="/units/{{ node.id }}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Dettagli unità" aria-label="Visualizza dettagli di {{ node.name }}">
+                    <i class="bi bi-eye" aria-hidden="true"></i>
                 </a>
-                <a href="/orgchart/unit/{{ node.id }}" class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="Contesto organizzativo">
-                    <i class="bi bi-diagram-3"></i>
+                <a href="/orgchart/unit/{{ node.id }}" class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="Contesto organizzativo" aria-label="Visualizza contesto organizzativo di {{ node.name }}">
+                    <i class="bi bi-diagram-3" aria-hidden="true"></i>
+                </a>
+                <a href="/units/{{ node.id }}/edit" class="btn btn-sm btn-outline-secondary complex-control" data-bs-toggle="tooltip" title="Modifica unità" aria-label="Modifica {{ node.name }}">
+                    <i class="bi bi-pencil" aria-hidden="true"></i>
                 </a>
             </div>
         </div>
         
-        <!-- Persons List -->
+        <!-- Enhanced Persons List -->
         {% if show_persons and node.persons %}
         <div class="persons-list">
             {% for person in node.persons %}
-            <div class="person-item">
+            <div class="person-item" role="listitem">
                 <div class="person-info">
-                    <div class="person-avatar">
+                    <div class="person-avatar" style="background-color: {{ person.avatar_color or 'var(--primary-color)' }}" aria-hidden="true">
                         {{ person.name[:2].upper() if person.name else '?' }}
                     </div>
                     <div class="person-details">
@@ -222,35 +343,170 @@
                         <div class="person-role">{{ person.job_title_name }}</div>
                         <div class="person-badges">
                             {% if person.is_unit_boss %}
-                            <span class="badge bg-info">
-                                <i class="bi bi-star me-1"></i>Boss
+                            <span class="badge boss" title="Responsabile dell'unità">
+                                <i class="bi bi-star me-1" aria-hidden="true"></i>Boss
                             </span>
                             {% endif %}
                             {% if person.is_ad_interim %}
-                            <span class="badge bg-warning">
-                                <i class="bi bi-hourglass-split me-1"></i>Interim
+                            <span class="badge interim" title="Incarico ad interim">
+                                <i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>Interim
                             </span>
                             {% endif %}
                             {% if person.percentage < 1.0 %}
-                            <span class="badge bg-secondary">
+                            <span class="badge percentage" title="Percentuale di impiego">
                                 {{ (person.percentage * 100)|round|int }}%
                             </span>
                             {% endif %}
                         </div>
                     </div>
                 </div>
-                <a href="/persons/{{ person.id }}" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-person"></i>
-                </a>
+                <div class="person-actions">
+                    <a href="/persons/{{ person.id }}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Profilo persona" aria-label="Visualizza profilo di {{ person.name }}">
+                        <i class="bi bi-person" aria-hidden="true"></i>
+                    </a>
+                    <a href="/assignments?person_id={{ person.id }}" class="btn btn-sm btn-outline-info essential-control" data-bs-toggle="tooltip" title="Incarichi" aria-label="Visualizza incarichi di {{ person.name }}">
+                        <i class="bi bi-person-badge" aria-hidden="true"></i>
+                    </a>
+                </div>
             </div>
             {% endfor %}
         </div>
         {% elif show_vacant and node.person_count == 0 %}
         <div class="vacant-indicator">
-            <i class="bi bi-exclamation-triangle text-warning me-2"></i>
-            <span class="text-warning">Posizione Vacante</span>
-            <a href="/assignments/new?unit_id={{ node.id }}" class="btn btn-sm btn-outline-success ms-2">
-                <i class="bi bi-person-plus"></i>
+            <div class="vacant-text">
+                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                <span>Posizione Vacante</span>
+            </div>
+            <a href="/assignments/new?unit_id={{ node.id }}" class="btn btn-sm btn-success">
+                <i class="bi bi-person-plus me-1" aria-hidden="true"></i>Assegna Persona
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Children Nodes with Lazy Loading -->
+    {% if node.children %}
+    <div class="children-container" role="group">
+        {% for child in node.children %}
+        <div class="child-connection">
+            {{ render_tree_node_responsive(child, level + 1, show_persons, show_vacant, level < 2) }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+<!-- Original Tree Node Template Macro (for backward compatibility) -->
+{% macro render_tree_node(node, level, show_persons, show_vacant) %}
+<div class="tree-node" data-unit-id="{{ node.id }}" data-level="{{ level }}">
+    <div class="unit-box {{ 'unit-function' if node.unit_type_id == 1 else 'unit-organizational' }} {{ 'unit-vacant' if show_vacant and node.person_count == 0 else '' }}">
+        <!-- Unit Type Indicator -->
+        <div class="unit-type-indicator"></div>
+        
+        <!-- Unit Header with Enhanced Layout -->
+        <div class="unit-header">
+            <div class="unit-info">
+                <!-- Emoji/Image Display - Task 7.2 -->
+                {% if node.emoji %}
+                <div class="unit-emoji" title="Icona unità">{{ node.emoji }}</div>
+                {% elif node.image_url %}
+                <img src="{{ node.image_url }}" alt="Immagine {{ node.name }}" class="unit-image" title="Immagine unità">
+                {% else %}
+                <div class="unit-emoji" title="Icona predefinita">
+                    {% if node.unit_type_id == 1 %}🏢{% else %}🏛️{% endif %}
+                </div>
+                {% endif %}
+                
+                <div class="unit-details">
+                    <div class="unit-name">{{ node.name }}</div>
+                    {% if node.short_name %}
+                    <div class="unit-short-name">{{ node.short_name }}</div>
+                    {% endif %}
+                    
+                    <!-- Enhanced Unit Statistics -->
+                    <div class="unit-stats">
+                        <span class="unit-stat-badge people">
+                            <i class="bi bi-people"></i>{{ node.person_count }}
+                        </span>
+                        {% if node.children_count > 0 %}
+                        <span class="unit-stat-badge children">
+                            <i class="bi bi-diagram-2"></i>{{ node.children_count }}
+                        </span>
+                        {% endif %}
+                        {% if node.assignment_count > 0 %}
+                        <span class="unit-stat-badge assignments">
+                            <i class="bi bi-person-badge"></i>{{ node.assignment_count }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Enhanced Unit Actions -->
+            <div class="unit-actions">
+                <a href="/units/{{ node.id }}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Dettagli unità">
+                    <i class="bi bi-eye"></i>
+                </a>
+                <a href="/orgchart/unit/{{ node.id }}" class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="Contesto organizzativo">
+                    <i class="bi bi-diagram-3"></i>
+                </a>
+                <a href="/units/{{ node.id }}/edit" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Modifica unità">
+                    <i class="bi bi-pencil"></i>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Enhanced Persons List -->
+        {% if show_persons and node.persons %}
+        <div class="persons-list">
+            {% for person in node.persons %}
+            <div class="person-item">
+                <div class="person-info">
+                    <div class="person-avatar" style="background-color: {{ person.avatar_color or 'var(--primary-color)' }}">
+                        {{ person.name[:2].upper() if person.name else '?' }}
+                    </div>
+                    <div class="person-details">
+                        <div class="person-name">{{ person.name }}</div>
+                        <div class="person-role">{{ person.job_title_name }}</div>
+                        <div class="person-badges">
+                            {% if person.is_unit_boss %}
+                            <span class="badge boss">
+                                <i class="bi bi-star me-1"></i>Boss
+                            </span>
+                            {% endif %}
+                            {% if person.is_ad_interim %}
+                            <span class="badge interim">
+                                <i class="bi bi-hourglass-split me-1"></i>Interim
+                            </span>
+                            {% endif %}
+                            {% if person.percentage < 1.0 %}
+                            <span class="badge percentage">
+                                {{ (person.percentage * 100)|round|int }}%
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="person-actions">
+                    <a href="/persons/{{ person.id }}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Profilo persona">
+                        <i class="bi bi-person"></i>
+                    </a>
+                    <a href="/assignments?person_id={{ person.id }}" class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="Incarichi">
+                        <i class="bi bi-person-badge"></i>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% elif show_vacant and node.person_count == 0 %}
+        <div class="vacant-indicator">
+            <div class="vacant-text">
+                <i class="bi bi-exclamation-triangle"></i>
+                <span>Posizione Vacante</span>
+            </div>
+            <a href="/assignments/new?unit_id={{ node.id }}" class="btn btn-sm btn-success">
+                <i class="bi bi-person-plus me-1"></i>Assegna Persona
             </a>
         </div>
         {% endif %}
@@ -271,223 +527,12 @@
 {% endblock %}
 
 {% block extra_css %}
-<style>
-.orgchart-viewport {
-    overflow: auto;
-    max-height: 80vh;
-    background: #f8f9fa;
-    position: relative;
-}
-
-.orgchart-tree {
-    padding: 2rem;
-    min-width: 100%;
-    transform-origin: top left;
-    transition: transform 0.3s ease;
-}
-
-.tree-node {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin: 1rem 0;
-    position: relative;
-}
-
-.unit-box {
-    background: white;
-    border: 2px solid #dee2e6;
-    border-radius: 0.5rem;
-    padding: 1rem;
-    min-width: 280px;
-    max-width: 350px;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    transition: all 0.3s ease;
-}
-
-.unit-box:hover {
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
-}
-
-.unit-function {
-    border-color: var(--bs-primary);
-    border-width: 3px;
-}
-
-.unit-organizational {
-    border-color: var(--bs-info);
-}
-
-.unit-vacant {
-    border-color: var(--bs-warning);
-    background: rgba(255, 193, 7, 0.1);
-}
-
-.unit-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 0.5rem;
-}
-
-.unit-info {
-    flex-grow: 1;
-}
-
-.unit-name {
-    font-size: 1rem;
-    margin-bottom: 0.25rem;
-}
-
-.unit-stats {
-    display: flex;
-    gap: 0.25rem;
-}
-
-.unit-actions {
-    display: flex;
-    gap: 0.25rem;
-}
-
-.persons-list {
-    border-top: 1px solid #dee2e6;
-    padding-top: 0.75rem;
-    margin-top: 0.75rem;
-}
-
-.person-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.5rem;
-    margin-bottom: 0.5rem;
-    background: rgba(0, 0, 0, 0.02);
-    border-radius: 0.25rem;
-}
-
-.person-info {
-    display: flex;
-    align-items: center;
-    flex-grow: 1;
-}
-
-.person-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--bs-primary);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 0.75rem;
-    margin-right: 0.75rem;
-    flex-shrink: 0;
-}
-
-.person-details {
-    flex-grow: 1;
-}
-
-.person-name {
-    font-weight: 600;
-    font-size: 0.9rem;
-}
-
-.person-role {
-    font-size: 0.8rem;
-    color: #6c757d;
-}
-
-.person-badges {
-    margin-top: 0.25rem;
-}
-
-.person-badges .badge {
-    font-size: 0.7rem;
-    margin-right: 0.25rem;
-}
-
-.vacant-indicator {
-    text-align: center;
-    padding: 0.75rem;
-    border-top: 1px solid #dee2e6;
-    margin-top: 0.75rem;
-}
-
-.children-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 2rem;
-    margin-top: 2rem;
-    position: relative;
-}
-
-.child-connection {
-    position: relative;
-}
-
-/* Connection Lines */
-.tree-node:not(:first-child) .unit-box::before {
-    content: '';
-    position: absolute;
-    top: -2rem;
-    left: 50%;
-    width: 2px;
-    height: 2rem;
-    background: #dee2e6;
-    transform: translateX(-50%);
-}
-
-.children-container::before {
-    content: '';
-    position: absolute;
-    top: -1rem;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: #dee2e6;
-}
-
-.children-container .child-connection:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    top: -1rem;
-    right: -1rem;
-    width: 2rem;
-    height: 2px;
-    background: #dee2e6;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .unit-box {
-        min-width: 250px;
-        max-width: 280px;
-    }
-    
-    .children-container {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .orgchart-tree {
-        padding: 1rem;
-    }
-}
-
-/* Zoom controls */
-.zoom-level-1 { transform: scale(0.8); }
-.zoom-level-2 { transform: scale(1.0); }
-.zoom-level-3 { transform: scale(1.2); }
-.zoom-level-4 { transform: scale(1.5); }
-</style>
+<link href="{{ url_for('static', path='/css/orgchart.css') }}" rel="stylesheet">
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', path='/js/orgchart-enhancements.js') }}"></script>
+<script src="{{ url_for('static', path='/js/orgchart-responsive.js') }}"></script>
 <script>
 let currentZoom = 2; // Default zoom level
 let showPersons = {{ 'true' if show_persons else 'false' }};
@@ -545,7 +590,7 @@ function updateURL() {
     window.location.href = url.toString();
 }
 
-// Initialize tooltips
+// Initialize tooltips and enhanced features
 document.addEventListener('DOMContentLoaded', function() {
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -553,29 +598,50 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Set up toggle controls
-    document.getElementById('show-persons-toggle').addEventListener('change', function() {
-        togglePersonsDisplay();
-    });
+    const showPersonsToggle = document.getElementById('show-persons-toggle');
+    const showVacantToggle = document.getElementById('show-vacant-toggle');
     
-    document.getElementById('show-vacant-toggle').addEventListener('change', function() {
-        toggleVacantPositions();
-    });
+    if (showPersonsToggle) {
+        showPersonsToggle.addEventListener('change', function() {
+            togglePersonsDisplay();
+        });
+    }
+    
+    if (showVacantToggle) {
+        showVacantToggle.addEventListener('change', function() {
+            toggleVacantPositions();
+        });
+    }
     
     // View mode controls
-    document.getElementById('view-compact').addEventListener('change', function() {
-        if (this.checked && expandAll) {
-            toggleTreeView();
-        }
-    });
+    const viewCompact = document.getElementById('view-compact');
+    const viewExpanded = document.getElementById('view-expanded');
     
-    document.getElementById('view-expanded').addEventListener('change', function() {
-        if (this.checked && !expandAll) {
-            toggleTreeView();
-        }
-    });
+    if (viewCompact) {
+        viewCompact.addEventListener('change', function() {
+            if (this.checked && expandAll) {
+                toggleTreeView();
+            }
+        });
+    }
+    
+    if (viewExpanded) {
+        viewExpanded.addEventListener('change', function() {
+            if (this.checked && !expandAll) {
+                toggleTreeView();
+            }
+        });
+    }
+    
+    // Restore zoom level
+    const savedZoom = localStorage.getItem('orgchart-zoom');
+    if (savedZoom) {
+        currentZoom = parseInt(savedZoom);
+        updateZoom();
+    }
 });
 
-// Keyboard shortcuts
+// Enhanced keyboard shortcuts
 document.addEventListener('keydown', function(e) {
     if (e.ctrlKey || e.metaKey) {
         switch(e.key) {
@@ -601,13 +667,69 @@ window.addEventListener('beforeunload', function() {
     localStorage.setItem('orgchart-zoom', currentZoom);
 });
 
-// Restore zoom level
-document.addEventListener('DOMContentLoaded', function() {
-    const savedZoom = localStorage.getItem('orgchart-zoom');
-    if (savedZoom) {
-        currentZoom = parseInt(savedZoom);
-        updateZoom();
+// Additional responsive functions
+function toggleFullscreen() {
+    const container = document.getElementById('orgchart-container');
+    if (!container) return;
+    
+    if (!document.fullscreenElement) {
+        container.requestFullscreen().catch(err => {
+            console.log('Error attempting to enable fullscreen:', err.message);
+        });
+    } else {
+        document.exitFullscreen();
     }
+}
+
+function centerOrgchart() {
+    const container = document.getElementById('orgchart-container');
+    const tree = document.getElementById('orgchart-tree');
+    
+    if (!container || !tree) return;
+    
+    // Calculate center position
+    const containerRect = container.getBoundingClientRect();
+    const treeRect = tree.getBoundingClientRect();
+    
+    const centerX = (containerRect.width - treeRect.width) / 2;
+    const centerY = (containerRect.height - treeRect.height) / 2;
+    
+    container.scrollTo({
+        left: Math.max(0, -centerX),
+        top: Math.max(0, -centerY),
+        behavior: 'smooth'
+    });
+}
+
+// Handle fullscreen changes
+document.addEventListener('fullscreenchange', function() {
+    const container = document.getElementById('orgchart-container');
+    if (container) {
+        if (document.fullscreenElement) {
+            container.classList.add('fullscreen-mode');
+        } else {
+            container.classList.remove('fullscreen-mode');
+        }
+    }
+});
+
+// Progressive enhancement check
+document.addEventListener('DOMContentLoaded', function() {
+    // Hide loading indicator after content is ready
+    const loadingIndicator = document.getElementById('orgchart-loading');
+    if (loadingIndicator) {
+        setTimeout(() => {
+            loadingIndicator.style.display = 'none';
+        }, 1000);
+    }
+    
+    // Initialize responsive features
+    if (window.OrgchartResponsive) {
+        OrgchartResponsive.init();
+    }
+    
+    // Add js-enabled class for progressive enhancement
+    document.documentElement.classList.add('js-enabled');
 });
 </script>
 {% endblock %}
