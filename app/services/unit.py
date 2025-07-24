@@ -96,7 +96,21 @@ class UnitService(BaseService):
     def get_root_units(self) -> List[Unit]:
         """Get all root units (no parent)"""
         try:
-            query = f"{self.get_list_query()} HAVING u.parent_unit_id IS NULL OR u.parent_unit_id = -1"
+            query = """
+            SELECT u.*,
+                   p.name as parent_name,
+                   COUNT(DISTINCT c.id) as children_count,
+                   COUNT(DISTINCT pja.id) as person_count
+            FROM units u
+            LEFT JOIN units p ON u.parent_unit_id = p.id
+            LEFT JOIN units c ON c.parent_unit_id = u.id
+            LEFT JOIN person_job_assignments pja ON pja.unit_id = u.id AND pja.is_current = 1
+            WHERE u.parent_unit_id IS NULL OR u.parent_unit_id = -1
+            GROUP BY u.id, u.name, u.short_name, u.type, u.parent_unit_id, 
+                     u.start_date, u.end_date, u.aliases, 
+                     u.datetime_created, u.datetime_updated, p.name
+            ORDER BY u.type, u.name
+            """
             rows = self.db_manager.fetch_all(query)
             return [Unit.from_sqlite_row(row) for row in rows]
         except Exception as e:
@@ -106,7 +120,21 @@ class UnitService(BaseService):
     def get_children(self, parent_id: int) -> List[Unit]:
         """Get all children of a unit"""
         try:
-            query = f"{self.get_list_query()} HAVING u.parent_unit_id = ?"
+            query = """
+            SELECT u.*,
+                   p.name as parent_name,
+                   COUNT(DISTINCT c.id) as children_count,
+                   COUNT(DISTINCT pja.id) as person_count
+            FROM units u
+            LEFT JOIN units p ON u.parent_unit_id = p.id
+            LEFT JOIN units c ON c.parent_unit_id = u.id
+            LEFT JOIN person_job_assignments pja ON pja.unit_id = u.id AND pja.is_current = 1
+            WHERE u.parent_unit_id = ?
+            GROUP BY u.id, u.name, u.short_name, u.type, u.parent_unit_id, 
+                     u.start_date, u.end_date, u.aliases, 
+                     u.datetime_created, u.datetime_updated, p.name
+            ORDER BY u.type, u.name
+            """
             rows = self.db_manager.fetch_all(query, (parent_id,))
             return [Unit.from_sqlite_row(row) for row in rows]
         except Exception as e:

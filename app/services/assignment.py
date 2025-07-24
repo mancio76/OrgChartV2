@@ -86,7 +86,21 @@ class AssignmentService(BaseService):
     def get_current_assignments(self) -> List[Assignment]:
         """Get all current assignments"""
         try:
-            query = f"{self.get_list_query()} WHERE pja.is_current = 1"
+            query = """
+            SELECT pja.*,
+                   p.name as person_name,
+                   p.short_name as person_short_name,
+                   u.name as unit_name,
+                   u.short_name as unit_short_name,
+                   jt.name as job_title_name,
+                   jt.short_name as job_title_short_name
+            FROM person_job_assignments pja
+            JOIN persons p ON pja.person_id = p.id
+            JOIN units u ON pja.unit_id = u.id
+            JOIN job_titles jt ON pja.job_title_id = jt.id
+            WHERE pja.is_current = 1
+            ORDER BY p.name, u.name, jt.name, pja.version DESC
+            """
             rows = self.db_manager.fetch_all(query)
             return [Assignment.from_sqlite_row(row) for row in rows]
         except Exception as e:
@@ -96,9 +110,23 @@ class AssignmentService(BaseService):
     def get_assignments_by_person(self, person_id: int, current_only: bool = False) -> List[Assignment]:
         """Get all assignments for a person"""
         try:
-            query = f"{self.get_list_query()} WHERE pja.person_id = ?"
+            query = """
+            SELECT pja.*,
+                   p.name as person_name,
+                   p.short_name as person_short_name,
+                   u.name as unit_name,
+                   u.short_name as unit_short_name,
+                   jt.name as job_title_name,
+                   jt.short_name as job_title_short_name
+            FROM person_job_assignments pja
+            JOIN persons p ON pja.person_id = p.id
+            JOIN units u ON pja.unit_id = u.id
+            JOIN job_titles jt ON pja.job_title_id = jt.id
+            WHERE pja.person_id = ?
+            """
             if current_only:
                 query += " AND pja.is_current = 1"
+            query += " ORDER BY p.name, u.name, jt.name, pja.version DESC"
             rows = self.db_manager.fetch_all(query, (person_id,))
             return [Assignment.from_sqlite_row(row) for row in rows]
         except Exception as e:
@@ -108,9 +136,23 @@ class AssignmentService(BaseService):
     def get_assignments_by_unit(self, unit_id: int, current_only: bool = False) -> List[Assignment]:
         """Get all assignments for a unit"""
         try:
-            query = f"{self.get_list_query()} WHERE pja.unit_id = ?"
+            query = """
+            SELECT pja.*,
+                   p.name as person_name,
+                   p.short_name as person_short_name,
+                   u.name as unit_name,
+                   u.short_name as unit_short_name,
+                   jt.name as job_title_name,
+                   jt.short_name as job_title_short_name
+            FROM person_job_assignments pja
+            JOIN persons p ON pja.person_id = p.id
+            JOIN units u ON pja.unit_id = u.id
+            JOIN job_titles jt ON pja.job_title_id = jt.id
+            WHERE pja.unit_id = ?
+            """
             if current_only:
                 query += " AND pja.is_current = 1"
+            query += " ORDER BY p.name, u.name, jt.name, pja.version DESC"
             rows = self.db_manager.fetch_all(query, (unit_id,))
             return [Assignment.from_sqlite_row(row) for row in rows]
         except Exception as e:
@@ -120,8 +162,18 @@ class AssignmentService(BaseService):
     def get_assignment_history(self, person_id: int, unit_id: int, job_title_id: int) -> List[Assignment]:
         """Get version history for a specific assignment combination"""
         try:
-            query = f"""
-            {self.get_list_query()} 
+            query = """
+            SELECT pja.*,
+                   p.name as person_name,
+                   p.short_name as person_short_name,
+                   u.name as unit_name,
+                   u.short_name as unit_short_name,
+                   jt.name as job_title_name,
+                   jt.short_name as job_title_short_name
+            FROM person_job_assignments pja
+            JOIN persons p ON pja.person_id = p.id
+            JOIN units u ON pja.unit_id = u.id
+            JOIN job_titles jt ON pja.job_title_id = jt.id
             WHERE pja.person_id = ? AND pja.unit_id = ? AND pja.job_title_id = ?
             ORDER BY pja.version DESC
             """
