@@ -238,11 +238,13 @@ class PersonService(BaseService):
             query = """
             SELECT pja.*,
                    u.name as unit_name,
-                   u.type as unit_type,
+                   u.unit_type_id,
+                   ut.name as unit_type,
                    jt.name as job_title_name,
                    jt.short_name as job_title_short_name
             FROM person_job_assignments pja
             JOIN units u ON pja.unit_id = u.id
+            JOIN unit_types ut ON u.unit_type_id = ut.id
             JOIN job_titles jt ON pja.job_title_id = jt.id
             WHERE pja.person_id = ?
             ORDER BY pja.valid_from ASC, pja.datetime_created ASC
@@ -285,7 +287,7 @@ class PersonService(BaseService):
         """Get competency areas based on assignments"""
         try:
             query = """
-            SELECT u.type as unit_type,
+            SELECT ut.name as unit_type,
                    u.name as unit_name,
                    jt.name as job_title_name,
                    COUNT(*) as assignment_count,
@@ -293,9 +295,10 @@ class PersonService(BaseService):
                    MAX(pja.datetime_created) as last_assignment_date
             FROM person_job_assignments pja
             JOIN units u ON pja.unit_id = u.id
+            JOIN unit_types ut ON u.unit_type_id = ut.id
             JOIN job_titles jt ON pja.job_title_id = jt.id
             WHERE pja.person_id = ?
-            GROUP BY u.type, u.name, jt.name
+            GROUP BY ut.name, u.name, jt.name
             ORDER BY assignment_count DESC, last_assignment_date DESC
             """
             

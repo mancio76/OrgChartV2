@@ -112,7 +112,7 @@
                 <div id="list-view" class="card-body" style="display: none;">
                     <div class="units-list">
                         {% for unit in all_units %}
-                        <div class="unit-item mb-2 p-2 border rounded" data-unit-type="{{ unit.type }}" data-unit-name="{{ unit.name.lower() }}">
+                        <div class="unit-item mb-2 p-2 border rounded" data-unit-type="{{ unit.unit_type_id }}" data-unit-name="{{ unit.name.lower() }}">
                             <div class="form-check">
                                 <input class="form-check-input unit-checkbox" type="checkbox" 
                                        name="assignable_unit_ids[]" value="{{ unit.id }}" 
@@ -121,7 +121,7 @@
                                        onchange="updateSelectedCount()">
                                 <label class="form-check-label w-100" for="unit_list_{{ unit.id }}">
                                     <div class="d-flex align-items-center">
-                                        <i class="bi bi-{{ 'building' if unit.type == 'function' else 'diagram-2' }} me-2 text-primary"></i>
+                                        <i class="bi bi-{{ 'building' if unit.unit_type_id == 1 else 'diagram-2' }} me-2 text-primary"></i>
                                         <div class="flex-grow-1">
                                             <strong>{{ unit.name }}</strong>
                                             {% if unit.short_name %}
@@ -260,7 +260,7 @@
                     {% endif %}
                     <div class="small text-muted">
                         <span class="badge bg-{{ 'warning' if unit.type == 'function' else 'info' }} me-1">
-                            {{ 'Funzione' if unit.type == 'function' else 'Organizzativa' }}
+                            {{ 'Funzione' if unit.unit_type_id == 1 else 'Unità Organizzativa' }}
                         </span>
                     </div>
                 </div>
@@ -344,9 +344,9 @@ function updateSelectedCount() {
     checkboxes.forEach(checkbox => {
         const unitItem = checkbox.closest('[data-unit-type]');
         if (unitItem) {
-            const type = unitItem.getAttribute('data-unit-type');
-            if (type === 'function') functionCount++;
-            else if (type === 'OrganizationalUnit') orgCount++;
+            const unit_type_id = unitItem.getAttribute('data-unit-type');
+            if (unit_type_id === 1) functionCount++;
+            else if (unit_type_id === 2) orgCount++;
         }
     });
     

@@ -1,0 +1,532 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="/assignments" class="btn btn-primary">
+        <i class="bi bi-person-badge me-1"></i>Incarichi Correnti
+    </a>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="/assignments">
+            <i class="bi bi-person-badge me-2"></i>Incarichi Correnti
+        </a></li>
+        <li><a class="dropdown-item" href="/assignments?filter_type=history">
+            <i class="bi bi-clock-history me-2"></i>Storico Completo
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/assignments/reports/statistics">
+            <i class="bi bi-bar-chart me-2"></i>Statistiche
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <form method="get" class="d-flex gap-2">
+            <!-- Person Filter -->
+            <select name="person_id" class="form-select" style="min-width: 200px;">
+                <option value="">Tutte le persone</option>
+                {% for person in all_persons %}
+                <option value="{{ person.id }}" {{ 'selected' if person_id == person.id else '' }}>
+                    {{ person.name }}
+                </option>
+                {% endfor %}
+            </select>
+            
+            <!-- Unit Filter -->
+            <select name="unit_id" class="form-select" style="min-width: 200px;">
+                <option value="">Tutte le unità</option>
+                {% for unit in all_units %}
+                <option value="{{ unit.id }}" {{ 'selected' if unit_id == unit.id else '' }}>
+                    {{ unit.name }}
+                </option>
+                {% endfor %}
+            </select>
+            
+            <!-- Job Title Filter -->
+            <select name="job_title_id" class="form-select" style="min-width: 200px;">
+                <option value="">Tutti i ruoli</option>
+                {% for job_title in all_job_titles %}
+                <option value="{{ job_title.id }}" {{ 'selected' if job_title_id == job_title.id else '' }}>
+                    {{ job_title.name }}
+                </option>
+                {% endfor %}
+            </select>
+            
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="bi bi-funnel"></i>
+            </button>
+            
+            {% if person_id or unit_id or job_title_id %}
+            <a href="/assignments/history" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle"></i>
+            </a>
+            {% endif %}
+        </form>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="btn-group w-100" role="group">
+            <button type="button" class="btn btn-outline-primary" onclick="toggleView('timeline')" id="btn-timeline">
+                <i class="bi bi-clock-history"></i> Timeline
+            </button>
+            <button type="button" class="btn btn-outline-primary" onclick="toggleView('grouped')" id="btn-grouped">
+                <i class="bi bi-collection"></i> Raggruppato
+            </button>
+            <button type="button" class="btn btn-outline-primary" onclick="toggleView('table')" id="btn-table">
+                <i class="bi bi-table"></i> Tabella
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- History Content -->
+{% if history %}
+
+<!-- Timeline View -->
+<div id="timeline-view">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-clock-history me-2"></i>{{ page_title }}
+                <span class="badge bg-info ms-2">{{ history|length }} versioni</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="timeline">
+                {% for assignment in history %}
+                <div class="timeline-item {{ 'timeline-current' if assignment.is_current else 'timeline-historical' }}">
+                    <div class="timeline-marker">
+                        <i class="bi bi-{{ 'check-circle-fill' if assignment.is_current else 'circle-fill' if assignment.status == 'TERMINATED' else 'clock-fill' }}"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <span class="badge bg-{{ 'primary' if assignment.is_current else 'secondary' }} me-2">
+                                                v{{ assignment.version }}
+                                            </span>
+                                            {{ assignment.person_name }} - {{ assignment.job_title_name }}
+                                        </h6>
+                                        <div class="text-muted small">
+                                            <i class="bi bi-building me-1"></i>{{ assignment.unit_name }}
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-{{ assignment.status_color }}">
+                                            {{ 'Corrente' if assignment.status == 'CURRENT' else 'Terminato' if assignment.status == 'TERMINATED' else 'Storico' }}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-2">
+                                            <strong>Percentuale:</strong>
+                                            <span class="badge bg-{{ 'success' if assignment.percentage == 1.0 else 'warning' }} ms-1">
+                                                {{ assignment.percentage_display }}
+                                            </span>
+                                        </div>
+                                        
+                                        {% if assignment.is_ad_interim or assignment.is_unit_boss %}
+                                        <div class="mb-2">
+                                            <strong>Caratteristiche:</strong>
+                                            {% if assignment.is_ad_interim %}
+                                            <span class="badge bg-warning ms-1">Ad Interim</span>
+                                            {% endif %}
+                                            {% if assignment.is_unit_boss %}
+                                            <span class="badge bg-info ms-1">Responsabile</span>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="mb-2">
+                                            <strong>Periodo:</strong>
+                                            <div class="small">
+                                                {% if assignment.valid_from %}
+                                                <i class="bi bi-calendar-event me-1"></i>{{ assignment.valid_from.strftime('%d/%m/%Y') }}
+                                                {% endif %}
+                                                {% if assignment.valid_to %}
+                                                - <i class="bi bi-calendar-x me-1"></i>{{ assignment.valid_to.strftime('%d/%m/%Y') }}
+                                                {% elif assignment.is_current %}
+                                                - <span class="text-success">In corso</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-2">
+                                            <strong>Creata:</strong>
+                                            <div class="small">
+                                                {{ assignment.datetime_created.strftime('%d/%m/%Y alle %H:%M') if assignment.datetime_created else 'N/A' }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {% if assignment.notes %}
+                                <div class="mt-2">
+                                    <strong>Note:</strong>
+                                    <div class="small text-muted">{{ assignment.notes }}</div>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="mt-2">
+                                    <a href="/assignments/{{ assignment.id }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye me-1"></i>Dettagli
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grouped View -->
+<div id="grouped-view" style="display: none;">
+    {% if grouped_history %}
+    {% for key, group in grouped_history.items() %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="card-title mb-0">
+                <i class="bi bi-person-badge me-2"></i>
+                {{ group.person_name }} - {{ group.job_title_name }}
+                <span class="badge bg-secondary ms-2">{{ group.versions|length }} versioni</span>
+            </h6>
+            <div class="small text-muted">
+                <i class="bi bi-building me-1"></i>{{ group.unit_name }}
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Versione</th>
+                            <th>Percentuale</th>
+                            <th>Caratteristiche</th>
+                            <th>Periodo</th>
+                            <th>Stato</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for version in group.versions %}
+                        <tr class="{{ 'table-success' if version.is_current else 'table-light' }}">
+                            <td>
+                                <span class="badge bg-{{ 'primary' if version.is_current else 'secondary' }}">
+                                    v{{ version.version }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if version.percentage == 1.0 else 'warning' }}">
+                                    {{ version.percentage_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if version.is_ad_interim %}
+                                <span class="badge bg-warning">Ad Interim</span>
+                                {% endif %}
+                                {% if version.is_unit_boss %}
+                                <span class="badge bg-info">Responsabile</span>
+                                {% endif %}
+                                {% if not version.is_ad_interim and not version.is_unit_boss %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="small">
+                                {% if version.valid_from %}
+                                {{ version.valid_from.strftime('%d/%m/%Y') }}
+                                {% endif %}
+                                {% if version.valid_to %}
+                                - {{ version.valid_to.strftime('%d/%m/%Y') }}
+                                {% elif version.is_current %}
+                                - <span class="text-success">In corso</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ version.status_color }}">
+                                    {{ 'Corrente' if version.status == 'CURRENT' else 'Terminato' if version.status == 'TERMINATED' else 'Storico' }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="/assignments/{{ version.id }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+
+<!-- Table View -->
+<div id="table-view" style="display: none;">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-table me-2"></i>{{ page_title }}
+                <span class="badge bg-info ms-2">{{ history|length }}</span>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Persona</th>
+                            <th>Unità</th>
+                            <th>Ruolo</th>
+                            <th>Versione</th>
+                            <th>Percentuale</th>
+                            <th>Caratteristiche</th>
+                            <th>Periodo</th>
+                            <th>Stato</th>
+                            <th>Creata</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for assignment in history %}
+                        <tr class="{{ 'table-success' if assignment.is_current else 'table-light' }}">
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle-small me-2">
+                                        {{ assignment.person_name[:2].upper() if assignment.person_name else '?' }}
+                                    </div>
+                                    <div>
+                                        <strong>{{ assignment.person_name or 'N/A' }}</strong>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <i class="bi bi-{{ 'building' if assignment.unit_name and 'function' in assignment.unit_name.lower() else 'diagram-2' }} me-1 text-primary"></i>
+                                {{ assignment.unit_name or 'N/A' }}
+                            </td>
+                            <td>
+                                <i class="bi bi-briefcase me-1 text-secondary"></i>
+                                {{ assignment.job_title_name or 'N/A' }}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'primary' if assignment.is_current else 'secondary' }}">
+                                    v{{ assignment.version }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if assignment.percentage == 1.0 else 'warning' if assignment.percentage >= 0.5 else 'info' }}">
+                                    {{ assignment.percentage_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if assignment.is_ad_interim %}
+                                <span class="badge bg-warning">Ad Interim</span>
+                                {% endif %}
+                                {% if assignment.is_unit_boss %}
+                                <span class="badge bg-info">Responsabile</span>
+                                {% endif %}
+                                {% if not assignment.is_ad_interim and not assignment.is_unit_boss %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="small">
+                                {% if assignment.valid_from %}
+                                {{ assignment.valid_from.strftime('%d/%m/%Y') }}
+                                {% endif %}
+                                {% if assignment.valid_to %}
+                                - {{ assignment.valid_to.strftime('%d/%m/%Y') }}
+                                {% elif assignment.is_current %}
+                                - <span class="text-success">In corso</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ assignment.status_color }}">
+                                    {{ 'Corrente' if assignment.status == 'CURRENT' else 'Terminato' if assignment.status == 'TERMINATED' else 'Storico' }}
+                                </span>
+                            </td>
+                            <td class="small">
+                                {{ assignment.datetime_created.strftime('%d/%m/%Y') if assignment.datetime_created else 'N/A' }}
+                            </td>
+                            <td>
+                                <a href="/assignments/{{ assignment.id }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-clock-history display-1 text-muted mb-3"></i>
+        <h4 class="text-muted">Nessuno storico trovato</h4>
+        <p class="text-muted mb-4">
+            {% if person_id or unit_id or job_title_id %}
+            Non ci sono versioni storiche per i filtri selezionati.
+            {% else %}
+            Non ci sono versioni storiche nel sistema.
+            {% endif %}
+        </p>
+        {% if person_id or unit_id or job_title_id %}
+        <a href="/assignments/history" class="btn btn-outline-primary me-2">
+            <i class="bi bi-arrow-left me-1"></i>Visualizza Tutto
+        </a>
+        {% endif %}
+        <a href="/assignments" class="btn btn-primary">
+            <i class="bi bi-person-badge me-1"></i>Incarichi Correnti
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 2rem;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -22px;
+    top: 10px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #dee2e6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+.timeline-current .timeline-marker {
+    border-color: var(--bs-success);
+    background: var(--bs-success);
+    color: white;
+}
+
+.timeline-historical .timeline-marker {
+    border-color: var(--bs-secondary);
+    background: var(--bs-secondary);
+    color: white;
+}
+
+.timeline-content {
+    margin-left: 20px;
+}
+
+.avatar-circle-small {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.table-success {
+    background-color: rgba(25, 135, 84, 0.1);
+}
+
+.table-light {
+    background-color: rgba(248, 249, 250, 0.5);
+}
+
+.btn-group .btn.active {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleView(viewType) {
+    const timelineView = document.getElementById('timeline-view');
+    const groupedView = document.getElementById('grouped-view');
+    const tableView = document.getElementById('table-view');
+    
+    const timelineBtn = document.getElementById('btn-timeline');
+    const groupedBtn = document.getElementById('btn-grouped');
+    const tableBtn = document.getElementById('btn-table');
+    
+    // Hide all views
+    timelineView.style.display = 'none';
+    groupedView.style.display = 'none';
+    tableView.style.display = 'none';
+    
+    // Remove active class from all buttons
+    timelineBtn.classList.remove('active');
+    groupedBtn.classList.remove('active');
+    tableBtn.classList.remove('active');
+    
+    // Show selected view and activate button
+    if (viewType === 'timeline') {
+        timelineView.style.display = 'block';
+        timelineBtn.classList.add('active');
+    } else if (viewType === 'grouped') {
+        groupedView.style.display = 'block';
+        groupedBtn.classList.add('active');
+    } else if (viewType === 'table') {
+        tableView.style.display = 'block';
+        tableBtn.classList.add('active');
+    }
+    
+    // Store preference
+    localStorage.setItem('assignmentHistoryView', viewType);
+}
+
+// Initialize view based on stored preference
+document.addEventListener('DOMContentLoaded', function() {
+    const savedView = localStorage.getItem('assignmentHistoryView') || 'timeline';
+    toggleView(savedView);
+});
+</script>
+{% endblock %}

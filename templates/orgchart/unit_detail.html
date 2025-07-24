@@ -1,0 +1,552 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="/units/{{ unit_detail.unit.id }}/edit" class="btn btn-primary">
+        <i class="bi bi-pencil me-1"></i>Modifica
+    </a>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="/assignments/new?unit_id={{ unit_detail.unit.id }}">
+            <i class="bi bi-person-plus me-2"></i>Nuovo Incarico
+        </a></li>
+        <li><a class="dropdown-item" href="/units/new?parent_id={{ unit_detail.unit.id }}">
+            <i class="bi bi-building me-2"></i>Nuova Sotto-unità
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/orgchart/tree?unit_id={{ unit_detail.unit.id }}">
+            <i class="bi bi-diagram-3 me-2"></i>Vista Albero
+        </a></li>
+        <li><a class="dropdown-item" href="/orgchart/reports/span-of-control">
+            <i class="bi bi-diagram-3-fill me-2"></i>Span of Control
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Main Unit Information -->
+    <div class="col-lg-8">
+        <!-- Unit Overview Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-building me-2"></i>Contesto Organizzativo
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="unit-icon me-3">
+                                <i class="bi bi-{{ 'building' if unit_detail.unit.unit_type_id == 1 else 'diagram-2' }} fs-1 text-primary"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-0">{{ unit_detail.unit.name }}</h4>
+                                {% if unit_detail.unit.short_name %}
+                                <p class="text-muted mb-0">{{ unit_detail.unit.short_name }}</p>
+                                {% endif %}
+                                <span class="badge bg-{{ 'primary' if unit_detail.unit.unit_type_id == 1 else 'info' }} mt-1">
+                                    {{ 'Funzione' if unit_detail.unit.unit_type_id == 1 else 'Unità Organizzativa' }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Organizational Path -->
+                        {% if unit_detail.path %}
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-2">Percorso Gerarchico:</h6>
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb">
+                                    <li class="breadcrumb-item">
+                                        <a href="/orgchart/tree">Radice</a>
+                                    </li>
+                                    {% for path_item in unit_detail.path %}
+                                    <li class="breadcrumb-item">
+                                        <a href="/orgchart/unit/{{ path_item.id }}">{{ path_item.name }}</a>
+                                    </li>
+                                    {% endfor %}
+                                    <li class="breadcrumb-item active">{{ unit_detail.unit.name }}</li>
+                                </ol>
+                            </nav>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <!-- Performance Metrics -->
+                        <div class="performance-metrics">
+                            <h6 class="text-muted mb-2">Metriche Performance:</h6>
+                            <div class="metric-item mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span>Efficienza:</span>
+                                    <span class="badge bg-{{ 'success' if performance_metrics.efficiency_score >= 80 else 'warning' if performance_metrics.efficiency_score >= 60 else 'danger' }}">
+                                        {{ performance_metrics.efficiency_score or 0 }}%
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="metric-item mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span>Equilibrio Workload:</span>
+                                    <span class="badge bg-{{ 'success' if performance_metrics.workload_balance == 'Good' else 'warning' if performance_metrics.workload_balance == 'Fair' else 'danger' }}">
+                                        {{ performance_metrics.workload_balance or 'N/A' }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="d-flex justify-content-between">
+                                    <span>Stabilità:</span>
+                                    <span class="badge bg-{{ 'success' if performance_metrics.assignment_stability == 'High' else 'warning' if performance_metrics.assignment_stability == 'Medium' else 'danger' }}">
+                                        {{ performance_metrics.assignment_stability or 'N/A' }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Current Assignments -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-person-badge me-2"></i>Incarichi Correnti
+                    {% if unit_detail.assignments %}
+                    <span class="badge bg-success ms-2">{{ unit_detail.assignments|length }}</span>
+                    {% endif %}
+                </h5>
+                <a href="/assignments/new?unit_id={{ unit_detail.unit.id }}" class="btn btn-sm btn-success">
+                    <i class="bi bi-person-plus me-1"></i>Nuovo Incarico
+                </a>
+            </div>
+            <div class="card-body">
+                {% if unit_detail.assignments %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Persona</th>
+                                <th>Ruolo</th>
+                                <th>Percentuale</th>
+                                <th>Caratteristiche</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assignment in unit_detail.assignments %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="person-avatar me-2">
+                                            {{ assignment.person_name[:2].upper() if assignment.person_name else '?' }}
+                                        </div>
+                                        <div>
+                                            <strong>{{ assignment.person_name }}</strong>
+                                            {% if assignment.person_short_name %}
+                                            <br><small class="text-muted">{{ assignment.person_short_name }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-medium">{{ assignment.job_title_name }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if assignment.percentage == 1.0 else 'warning' if assignment.percentage >= 0.5 else 'info' }}">
+                                        {{ (assignment.percentage * 100)|round|int }}%
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        {% if assignment.is_unit_boss %}
+                                        <span class="badge bg-info">
+                                            <i class="bi bi-star me-1"></i>Boss
+                                        </span>
+                                        {% endif %}
+                                        {% if assignment.is_ad_interim %}
+                                        <span class="badge bg-warning">
+                                            <i class="bi bi-hourglass-split me-1"></i>Interim
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="/persons/{{ assignment.person_id }}" class="btn btn-outline-primary">
+                                            <i class="bi bi-person"></i>
+                                        </a>
+                                        <a href="/assignments/{{ assignment.id if assignment.id else '#' }}" class="btn btn-outline-secondary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-person-x display-4 text-muted mb-3"></i>
+                    <h5 class="text-muted">Nessun incarico assegnato</h5>
+                    <p class="text-muted">Questa unità non ha persone assegnate.</p>
+                    <a href="/assignments/new?unit_id={{ unit_detail.unit.id }}" class="btn btn-primary">
+                        <i class="bi bi-person-plus me-1"></i>Assegna Prima Persona
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Sub-units -->
+        {% if unit_detail.children %}
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-diagram-2 me-2"></i>Sotto-unità
+                    <span class="badge bg-info ms-2">{{ unit_detail.children|length }}</span>
+                </h5>
+                <a href="/units/new?parent_id={{ unit_detail.unit.id }}" class="btn btn-sm btn-success">
+                    <i class="bi bi-building me-1"></i>Nuova Sotto-unità
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for child in unit_detail.children %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card border-{{ 'primary' if child.unit_type_id == 1 else 'info' }}">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="flex-grow-1">
+                                        <h6 class="card-title mb-1">
+                                            <i class="bi bi-{{ 'building' if child.unit_type_id == 1 else 'diagram-2' }} me-2"></i>
+                                            {{ child.name }}
+                                        </h6>
+                                        {% if child.short_name %}
+                                        <small class="text-muted">{{ child.short_name }}</small>
+                                        {% endif %}
+                                        <div class="mt-2">
+                                            <span class="badge bg-light text-dark">
+                                                <i class="bi bi-people me-1"></i>{{ child.person_count }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="btn-group-vertical btn-group-sm">
+                                        <a href="/orgchart/unit/{{ child.id }}" class="btn btn-outline-primary">
+                                            <i class="bi bi-diagram-3"></i>
+                                        </a>
+                                        <a href="/units/{{ child.id }}" class="btn btn-outline-secondary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Change History -->
+        {% if change_history %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-clock-history me-2"></i>Storico Modifiche
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% for change in change_history %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker">
+                            <i class="bi bi-{{ 'person-plus' if 'assignment' in change.type else 'building' if 'unit' in change.type else 'pencil' }}"></i>
+                        </div>
+                        <div class="timeline-content">
+                            <div class="timeline-description">{{ change.description }}</div>
+                            <small class="text-muted">{{ change.date.strftime('%d/%m/%Y alle %H:%M') if change.date else 'Data non disponibile' }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Organizational Position -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-diagram-3 me-2"></i>Posizione Organizzativa
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="org-position">
+                    <div class="position-level mb-3">
+                        <span class="text-muted">Livello Gerarchico:</span>
+                        <span class="badge bg-secondary ms-2">{{ unit_detail.unit.level or 0 }}</span>
+                    </div>
+                    
+                    <div class="position-stats">
+                        <div class="stat-item mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Persone Dirette:</span>
+                                <span class="fw-bold">{{ unit_detail.assignments|length if unit_detail.assignments else 0 }}</span>
+                            </div>
+                        </div>
+                        <div class="stat-item mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Sotto-unità:</span>
+                                <span class="fw-bold">{{ unit_detail.children|length if unit_detail.children else 0 }}</span>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Unità Sorelle:</span>
+                                <span class="fw-bold">{{ unit_detail.siblings|length if unit_detail.siblings else 0 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sibling Units -->
+        {% if unit_detail.siblings %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-diagram-2 me-2"></i>Unità Sorelle
+                </h6>
+            </div>
+            <div class="card-body">
+                {% for sibling in unit_detail.siblings %}
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="flex-grow-1">
+                        <div class="fw-medium">{{ sibling.name }}</div>
+                        {% if sibling.short_name %}
+                        <small class="text-muted">{{ sibling.short_name }}</small>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-light text-dark me-2">
+                            <i class="bi bi-people me-1"></i>{{ sibling.person_count }}
+                        </span>
+                        <a href="/orgchart/unit/{{ sibling.id }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-diagram-3"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Reporting Structure -->
+        {% if reporting_structure %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-arrow-up-down me-2"></i>Struttura Reporting
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if reporting_structure.reports_to %}
+                <div class="mb-3">
+                    <small class="text-muted">Riporta a:</small>
+                    {% for report in reporting_structure.reports_to %}
+                    <div class="mt-1">
+                        <a href="/orgchart/unit/{{ report.id }}" class="text-decoration-none">
+                            <i class="bi bi-arrow-up me-1"></i>{{ report.name }}
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                {% if reporting_structure.direct_reports %}
+                <div class="mb-3">
+                    <small class="text-muted">Report Diretti:</small>
+                    {% for report in reporting_structure.direct_reports %}
+                    <div class="mt-1">
+                        <a href="/orgchart/unit/{{ report.id }}" class="text-decoration-none">
+                            <i class="bi bi-arrow-down me-1"></i>{{ report.name }}
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                {% if reporting_structure.matrix_relationships %}
+                <div>
+                    <small class="text-muted">Relazioni Matriciali:</small>
+                    {% for relation in reporting_structure.matrix_relationships %}
+                    <div class="mt-1">
+                        <a href="/orgchart/unit/{{ relation.id }}" class="text-decoration-none">
+                            <i class="bi bi-arrow-left-right me-1"></i>{{ relation.name }}
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Azioni Rapide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/orgchart/tree?unit_id={{ unit_detail.unit.id }}" class="btn btn-outline-primary">
+                        <i class="bi bi-diagram-3 me-2"></i>Vista Albero
+                    </a>
+                    <a href="/assignments/new?unit_id={{ unit_detail.unit.id }}" class="btn btn-outline-success">
+                        <i class="bi bi-person-plus me-2"></i>Nuovo Incarico
+                    </a>
+                    <a href="/units/new?parent_id={{ unit_detail.unit.id }}" class="btn btn-outline-info">
+                        <i class="bi bi-building me-2"></i>Nuova Sotto-unità
+                    </a>
+                    <hr>
+                    <a href="/units/{{ unit_detail.unit.id }}/edit" class="btn btn-outline-warning">
+                        <i class="bi bi-pencil me-2"></i>Modifica Unità
+                    </a>
+                    <a href="/orgchart/matrix?view_type=hierarchy" class="btn btn-outline-secondary">
+                        <i class="bi bi-grid-3x3 me-2"></i>Vista Matrice
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.person-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--bs-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.unit-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(13, 110, 253, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.performance-metrics .metric-item {
+    padding: 0.25rem 0;
+}
+
+.timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -2rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--bs-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+}
+
+.timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: -1.5rem;
+    top: 32px;
+    width: 2px;
+    height: calc(100% - 16px);
+    background: #dee2e6;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    border-left: 3px solid var(--bs-primary);
+}
+
+.timeline-description {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.org-position .position-level {
+    text-align: center;
+    padding: 0.75rem;
+    background: rgba(13, 110, 253, 0.1);
+    border-radius: 0.375rem;
+}
+
+.stat-item {
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.stat-item:last-child {
+    border-bottom: none;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+// Auto-refresh performance metrics every 5 minutes
+setInterval(function() {
+    fetch(`/orgchart/api/performance-metrics/{{ unit_detail.unit.id }}`)
+        .then(response => response.json())
+        .then(data => {
+            // Update performance metrics display
+            console.log('Performance metrics updated:', data);
+        })
+        .catch(error => console.error('Error updating metrics:', error));
+}, 300000);
+</script>
+{% endblock %}

@@ -208,7 +208,7 @@
                     <div class="hierarchy-item" style="margin-left: {{ unit.level * 15 }}px">
                         <div class="d-flex justify-content-between align-items-center py-1">
                             <div>
-                                <i class="bi bi-{{ 'building' if unit.type == 'function' else 'diagram-2' }} me-2"></i>
+                                <i class="bi bi-{{ 'building' if unit.unit_type_id == 1 else 'diagram-2' }} me-2"></i>
                                 <strong>{{ unit.name }}</strong>
                             </div>
                             {% if unit.person_count > 0 %}

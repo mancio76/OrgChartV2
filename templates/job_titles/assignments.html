@@ -110,7 +110,7 @@
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <i class="bi bi-{{ 'building' if assignment.unit and assignment.unit.type == 'function' else 'diagram-2' }} me-2 text-primary"></i>
+                                        <i class="bi bi-{{ 'building' if assignment.unit and assignment.unit.unit_type_id == 1 else 'diagram-2' }} me-2 text-primary"></i>
                                         <div>
                                             {{ assignment.unit.name if assignment.unit else 'N/A' }}
                                             {% if assignment.unit and assignment.unit.short_name %}

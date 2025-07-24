@@ -81,7 +81,6 @@
 
 - [-] 6. Create responsive web interface with Bootstrap 5
 
-
   - [x] 6.1 Build base template infrastructure
 
     - Create base template with Bootstrap 5 integration
@@ -89,24 +88,17 @@
     - Add WCAG accessibility directives compliance
     - _Requirements: 2.1, 2.2, 2.6_
 
-  - [-] 6.2 Develop feature-specific templates
+  - [x] 6.2 Develop feature-specific templates
 
-
-    - [ ] 6.2.1 Create unit management templates with hierarchical display
-
-
-
-
+    - [x] 6.2.1 Create unit management templates with hierarchical display
 
       - Create units/list.html template for unit listing
       - Create units/detail.html template for unit details
       - Create units/create.html template for unit creation form
       - Create units/edit.html template for unit editing form
       - _Requirements: 2.1, 2.2, 3.1_
+
     - [x] 6.2.2 Build person management templates with form validation
-
-
-
 
       - Create persons/list.html template for person listing
       - Create persons/detail.html template for person details
@@ -119,11 +111,8 @@
       - Create persons/duplicates.html template for duplicate detection
       - Create persons/statistics.html template for person statistics
       - _Requirements: 2.1, 2.2, 3.2_
+
     - [x] 6.2.3 Implement job title templates with multilingual support
-
-
-
-
 
       - Create job_titles/list.html template for job title listing
       - Create job_titles/detail.html template for job title details
@@ -132,7 +121,9 @@
       - Create job_titles/assignments.html template for job title assignments
       - Create job_titles/assignable_units.html template for unit assignment management
       - _Requirements: 2.1, 2.2, 3.3_
-    - [ ] 6.2.4 Develop assignment templates with versioning display
+
+    - [x] 6.2.4 Develop assignment templates with versioning display
+
       - Create assignments/list.html template for assignment listing
       - Create assignments/detail.html template for assignment details
       - Create assignments/create.html template for assignment creation form
@@ -142,7 +133,9 @@
       - Create assignments/statistics.html template for assignment statistics
       - Create assignments/bulk_operations.html template for bulk operations
       - _Requirements: 2.1, 2.2, 3.4, 4.1, 4.2_
-    - [ ] 6.2.5 Create orgchart visualization templates
+
+    - [x] 6.2.5 Create orgchart visualization templates
+
       - Create orgchart/overview.html template for orgchart overview
       - Create orgchart/tree.html template for interactive tree visualization
       - Create orgchart/unit_detail.html template for unit organizational context
@@ -154,10 +147,16 @@
       - Create orgchart/organizational_health.html template for health assessment
       - Create orgchart/comparison.html template for structure comparison
       - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8_
+
     - [x] 6.2.6 Create dashboard templates with statistics and overview
       - _Requirements: 2.1, 2.2, 2.3_
 
   - [ ] 6.3 Add form validation and user feedback
+
+
+
+
+
     - Implement client-side form validation with clear feedback
     - Create user-friendly error message display
     - Add success notifications and status updates
@@ -172,11 +171,12 @@
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
   - [ ] 7.2 Add unit type-specific rendering in templates
+
+
     - Implement bold-framed boxes for function units (type="function") in templates
     - Create normal-framed boxes for organizational units (type="OrganizationalUnit") in templates
     - Add emoji/image display within unit boxes in templates
     - _Requirements: 6.6, 6.7, 6.8_
-
 
   - [ ] 7.3 Build responsive chart functionality in frontend
     - Ensure chart adapts to different screen sizes

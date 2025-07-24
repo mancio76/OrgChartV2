@@ -146,31 +146,294 @@ OrgApp.setFormLoading = function(form, loading) {
 };
 
 /**
- * Show success message
+ * Enhanced notification system - Task 6.3
  */
-OrgApp.showSuccess = function(message) {
-    OrgApp.showAlert('success', message);
+
+/**
+ * Show success message with enhanced features
+ */
+OrgApp.showSuccess = function(message, options = {}) {
+    const config = {
+        type: 'success',
+        message: message,
+        duration: options.duration || 5000,
+        persistent: options.persistent || false,
+        actions: options.actions || null,
+        ...options
+    };
+    OrgApp.showEnhancedNotification(config);
 };
 
 /**
- * Show error message
+ * Show error message with enhanced features
  */
-OrgApp.showError = function(message) {
-    OrgApp.showAlert('danger', message);
+OrgApp.showError = function(message, options = {}) {
+    const config = {
+        type: 'danger',
+        message: message,
+        duration: options.duration || 8000,
+        persistent: options.persistent || true,
+        actions: options.actions || null,
+        ...options
+    };
+    OrgApp.showEnhancedNotification(config);
 };
 
 /**
- * Show warning message
+ * Show warning message with enhanced features
  */
-OrgApp.showWarning = function(message) {
-    OrgApp.showAlert('warning', message);
+OrgApp.showWarning = function(message, options = {}) {
+    const config = {
+        type: 'warning',
+        message: message,
+        duration: options.duration || 6000,
+        persistent: options.persistent || false,
+        actions: options.actions || null,
+        ...options
+    };
+    OrgApp.showEnhancedNotification(config);
 };
 
 /**
- * Show info message
+ * Show info message with enhanced features
  */
-OrgApp.showInfo = function(message) {
-    OrgApp.showAlert('info', message);
+OrgApp.showInfo = function(message, options = {}) {
+    const config = {
+        type: 'info',
+        message: message,
+        duration: options.duration || 4000,
+        persistent: options.persistent || false,
+        actions: options.actions || null,
+        ...options
+    };
+    OrgApp.showEnhancedNotification(config);
+};
+
+/**
+ * Show enhanced notification
+ */
+OrgApp.showEnhancedNotification = function(config) {
+    const notificationId = 'notification_' + Date.now();
+    const alertsContainer = document.querySelector('.container-fluid') || document.body;
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.id = notificationId;
+    notification.className = `alert alert-${config.type} alert-dismissible fade show enhanced-notification`;
+    notification.setAttribute('role', 'alert');
+    notification.setAttribute('aria-live', 'polite');
+    
+    // Build notification content
+    let content = `
+        <div class="notification-content">
+            <div class="notification-header">
+                <i class="bi bi-${OrgApp.getAlertIcon(config.type)} me-2"></i>
+                <strong>${OrgApp.getAlertTitle(config.type)}</strong>
+            </div>
+            <div class="notification-message">${config.message}</div>
+    `;
+    
+    // Add actions if provided
+    if (config.actions && config.actions.length > 0) {
+        content += '<div class="notification-actions mt-2">';
+        config.actions.forEach(action => {
+            content += `<button type="button" class="btn btn-sm btn-outline-${config.type === 'danger' ? 'light' : 'dark'} me-2" onclick="${action.handler}">${action.label}</button>`;
+        });
+        content += '</div>';
+    }
+    
+    content += `
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Chiudi"></button>
+    `;
+    
+    notification.innerHTML = content;
+    
+    // Add to container
+    alertsContainer.insertBefore(notification, alertsContainer.firstElementChild);
+    
+    // Add progress bar for timed notifications
+    if (!config.persistent && config.duration > 0) {
+        const progressBar = document.createElement('div');
+        progressBar.className = 'notification-progress';
+        progressBar.innerHTML = '<div class="notification-progress-bar"></div>';
+        notification.appendChild(progressBar);
+        
+        // Animate progress bar
+        const progressBarElement = progressBar.querySelector('.notification-progress-bar');
+        progressBarElement.style.animationDuration = config.duration + 'ms';
+        progressBarElement.classList.add('animate');
+    }
+    
+    // Auto-hide if not persistent
+    if (!config.persistent && config.duration > 0) {
+        setTimeout(function() {
+            if (notification.parentElement) {
+                const bsAlert = new bootstrap.Alert(notification);
+                bsAlert.close();
+            }
+        }, config.duration);
+    }
+    
+    // Add sound notification if enabled
+    if (config.sound !== false) {
+        OrgApp.playNotificationSound(config.type);
+    }
+    
+    return notificationId;
+};
+
+/**
+ * Get alert title based on type
+ */
+OrgApp.getAlertTitle = function(type) {
+    const titles = {
+        'success': 'Operazione completata',
+        'danger': 'Errore',
+        'warning': 'Attenzione',
+        'info': 'Informazione'
+    };
+    return titles[type] || 'Notifica';
+};
+
+/**
+ * Play notification sound
+ */
+OrgApp.playNotificationSound = function(type) {
+    // Create audio context for notification sounds
+    if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
+        try {
+            const audioContext = new (AudioContext || webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // Different frequencies for different notification types
+            const frequencies = {
+                'success': 800,
+                'info': 600,
+                'warning': 400,
+                'danger': 300
+            };
+            
+            oscillator.frequency.setValueAtTime(frequencies[type] || 600, audioContext.currentTime);
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+        } catch (e) {
+            // Fallback: no sound if audio context fails
+            console.log('Audio notification not available');
+        }
+    }
+};
+
+/**
+ * Show form success with specific styling
+ */
+OrgApp.showFormSuccess = function(message, formElement) {
+    // Add success class to form
+    if (formElement) {
+        formElement.classList.add('form-success');
+        setTimeout(() => {
+            formElement.classList.remove('form-success');
+        }, 3000);
+    }
+    
+    OrgApp.showSuccess(message, {
+        actions: [
+            {
+                label: 'Continua',
+                handler: 'OrgApp.dismissNotification(this)'
+            }
+        ]
+    });
+};
+
+/**
+ * Show form error with validation details
+ */
+OrgApp.showFormError = function(message, errors = []) {
+    let fullMessage = message;
+    
+    if (errors.length > 0) {
+        fullMessage += '<ul class="mt-2 mb-0">';
+        errors.forEach(error => {
+            fullMessage += `<li>${error}</li>`;
+        });
+        fullMessage += '</ul>';
+    }
+    
+    OrgApp.showError(fullMessage, {
+        persistent: true,
+        actions: [
+            {
+                label: 'Correggi',
+                handler: 'OrgApp.focusFirstError()'
+            }
+        ]
+    });
+};
+
+/**
+ * Focus first error field
+ */
+OrgApp.focusFirstError = function() {
+    const firstError = document.querySelector('.is-invalid, .form-control:invalid');
+    if (firstError) {
+        firstError.focus();
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    OrgApp.dismissNotification();
+};
+
+/**
+ * Dismiss notification
+ */
+OrgApp.dismissNotification = function(buttonElement) {
+    const notification = buttonElement ? buttonElement.closest('.alert') : document.querySelector('.enhanced-notification');
+    if (notification) {
+        const bsAlert = new bootstrap.Alert(notification);
+        bsAlert.close();
+    }
+};
+
+/**
+ * Show loading notification
+ */
+OrgApp.showLoading = function(message = 'Caricamento in corso...') {
+    const loadingId = 'loading_' + Date.now();
+    
+    const loading = document.createElement('div');
+    loading.id = loadingId;
+    loading.className = 'loading-notification';
+    loading.innerHTML = `
+        <div class="loading-content">
+            <div class="spinner-border spinner-border-sm me-2" role="status">
+                <span class="visually-hidden">Caricamento...</span>
+            </div>
+            ${message}
+        </div>
+    `;
+    
+    document.body.appendChild(loading);
+    
+    return loadingId;
+};
+
+/**
+ * Hide loading notification
+ */
+OrgApp.hideLoading = function(loadingId) {
+    const loading = loadingId ? document.getElementById(loadingId) : document.querySelector('.loading-notification');
+    if (loading) {
+        loading.remove();
+    }
 };
 
 /**

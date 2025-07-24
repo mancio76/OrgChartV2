@@ -27,10 +27,10 @@ class UnitService(BaseService):
         LEFT JOIN units p ON u.parent_unit_id = p.id
         LEFT JOIN units c ON c.parent_unit_id = u.id
         LEFT JOIN person_job_assignments pja ON pja.unit_id = u.id AND pja.is_current = 1
-        GROUP BY u.id, u.name, u.short_name, u.type, u.parent_unit_id, 
+        GROUP BY u.id, u.name, u.short_name, u.unit_type_id, u.parent_unit_id, 
                  u.start_date, u.end_date, u.aliases, 
                  u.datetime_created, u.datetime_updated, p.name
-        ORDER BY u.type, u.name
+        ORDER BY u.unit_type_id, u.name
         """
     
     def get_by_id_query(self) -> str:
@@ -45,21 +45,21 @@ class UnitService(BaseService):
         LEFT JOIN units c ON c.parent_unit_id = u.id
         LEFT JOIN person_job_assignments pja ON pja.unit_id = u.id AND pja.is_current = 1
         WHERE u.id = ?
-        GROUP BY u.id, u.name, u.short_name, u.type, u.parent_unit_id, 
+        GROUP BY u.id, u.name, u.short_name, u.unit_type_id, u.parent_unit_id, 
                  u.start_date, u.end_date, u.aliases, 
                  u.datetime_created, u.datetime_updated, p.name
         """
     
     def get_insert_query(self) -> str:
         return """
-        INSERT INTO units (id, name, short_name, aliases, type, parent_unit_id, start_date, end_date)
+        INSERT INTO units (id, name, short_name, aliases, unit_type_id, parent_unit_id, start_date, end_date)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """
     
     def get_update_query(self) -> str:
         return """
         UPDATE units 
-        SET name = ?, short_name = ?, aliases = ?, type = ?, 
+        SET name = ?, short_name = ?, aliases = ?, unit_type_id = ?, 
             parent_unit_id = ?, start_date = ?, end_date = ?
         WHERE id = ?
         """
@@ -74,7 +74,7 @@ class UnitService(BaseService):
             unit.name,
             unit.short_name,
             unit.aliases_json,
-            unit.type,
+            unit.unit_type_id,
             unit.parent_unit_id,
             unit.start_date.isoformat() if unit.start_date else None,
             unit.end_date.isoformat() if unit.end_date else None
@@ -86,7 +86,7 @@ class UnitService(BaseService):
             unit.name,
             unit.short_name,
             unit.aliases_json,
-            unit.type,
+            unit.unit_type_id,
             unit.parent_unit_id,
             unit.start_date.isoformat() if unit.start_date else None,
             unit.end_date.isoformat() if unit.end_date else None,
@@ -98,18 +98,20 @@ class UnitService(BaseService):
         try:
             query = """
             SELECT u.*,
+                   ut.name as unit_type,
                    p.name as parent_name,
                    COUNT(DISTINCT c.id) as children_count,
                    COUNT(DISTINCT pja.id) as person_count
             FROM units u
+            JOIN unit_types ut ON u.unit_type_id = ut.id
             LEFT JOIN units p ON u.parent_unit_id = p.id
             LEFT JOIN units c ON c.parent_unit_id = u.id
             LEFT JOIN person_job_assignments pja ON pja.unit_id = u.id AND pja.is_current = 1
             WHERE u.parent_unit_id IS NULL OR u.parent_unit_id = -1
-            GROUP BY u.id, u.name, u.short_name, u.type, u.parent_unit_id, 
+            GROUP BY u.id, u.name, u.short_name, ut.name, u.parent_unit_id, 
                      u.start_date, u.end_date, u.aliases, 
                      u.datetime_created, u.datetime_updated, p.name
-            ORDER BY u.type, u.name
+            ORDER BY ut.name, u.name
             """
             rows = self.db_manager.fetch_all(query)
             return [Unit.from_sqlite_row(row) for row in rows]
@@ -122,18 +124,20 @@ class UnitService(BaseService):
         try:
             query = """
             SELECT u.*,
+                   ut.name as unit_type,
                    p.name as parent_name,
                    COUNT(DISTINCT c.id) as children_count,
                    COUNT(DISTINCT pja.id) as person_count
             FROM units u
+            JOIN unit_types ut ON u.unit_type_id = ut.id
             LEFT JOIN units p ON u.parent_unit_id = p.id
             LEFT JOIN units c ON c.parent_unit_id = u.id
             LEFT JOIN person_job_assignments pja ON pja.unit_id = u.id AND pja.is_current = 1
             WHERE u.parent_unit_id = ?
-            GROUP BY u.id, u.name, u.short_name, u.type, u.parent_unit_id, 
+            GROUP BY u.id, u.name, u.short_name, ut.name, u.parent_unit_id, 
                      u.start_date, u.end_date, u.aliases, 
                      u.datetime_created, u.datetime_updated, p.name
-            ORDER BY u.type, u.name
+            ORDER BY ut.name, u.name
             """
             rows = self.db_manager.fetch_all(query, (parent_id,))
             return [Unit.from_sqlite_row(row) for row in rows]
@@ -146,7 +150,7 @@ class UnitService(BaseService):
         try:
             query = """
             WITH RECURSIVE unit_tree AS (
-                SELECT id, name, short_name, type, parent_unit_id,
+                SELECT id, name, short_name, unit_type_id, parent_unit_id,
                        0 as level,
                        CAST(id AS TEXT) as path,
                        name as full_path
@@ -155,7 +159,7 @@ class UnitService(BaseService):
                 
                 UNION ALL
                 
-                SELECT u.id, u.name, u.short_name, u.type, u.parent_unit_id,
+                SELECT u.id, u.name, u.short_name, u.unit_type_id, u.parent_unit_id,
                        ut.level + 1,
                        ut.path || '/' || CAST(u.id AS TEXT),
                        ut.full_path || ' > ' || u.name

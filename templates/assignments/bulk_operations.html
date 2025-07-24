@@ -1,0 +1,32 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="/assignments" class="btn btn-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Torna agli Incarichi
+    </a>
+    <button type="button" class="btn btn-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="/assignments/new">
+            <i class="bi bi-person-plus me-2"></i>Nuovo Incarico
+        </a></li>
+        <li><a class="dropdown-item" href="/assignments/reports/statistics">
+            <i class="bi bi-bar-chart me-2"></i>Statistiche
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="#" onclick="resetForm()">
+            <i class="bi bi-arrow-clockwise me-2"></i>Reset Form
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <!-- Operation Selection -->
+        <div class="card mb-4">
+            <

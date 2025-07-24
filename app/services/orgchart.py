@@ -141,14 +141,14 @@ class OrgchartService:
             # Get hierarchical structure
             tree_query = """
             WITH RECURSIVE unit_tree AS (
-                SELECT id, name, short_name, type, parent_unit_id, 0 as level,
+                SELECT id, name, short_name, unit_type_id, parent_unit_id, 0 as level,
                        CAST(id AS TEXT) as path
                 FROM units 
                 WHERE parent_unit_id IS NULL OR parent_unit_id = -1
                 
                 UNION ALL
                 
-                SELECT u.id, u.name, u.short_name, u.type, u.parent_unit_id, ut.level + 1,
+                SELECT u.id, u.name, u.short_name, u.unit_type_id, u.parent_unit_id, ut.level + 1,
                        ut.path || '/' || CAST(u.id AS TEXT)
                 FROM units u
                 JOIN unit_tree ut ON u.parent_unit_id = ut.id
@@ -159,7 +159,7 @@ class OrgchartService:
             FROM unit_tree ut
             LEFT JOIN person_job_assignments pja ON ut.id = pja.unit_id AND pja.is_current = 1
             LEFT JOIN units child_units ON child_units.parent_unit_id = ut.id
-            GROUP BY ut.id, ut.name, ut.short_name, ut.type, ut.parent_unit_id, ut.level, ut.path
+            GROUP BY ut.id, ut.name, ut.short_name, ut.unit_type_id, ut.parent_unit_id, ut.level, ut.path
             ORDER BY ut.path
             """
             
@@ -174,7 +174,7 @@ class OrgchartService:
                     'id': unit_row['id'],
                     'name': unit_row['name'],
                     'short_name': unit_row['short_name'],
-                    'type': unit_row['type'],
+                    'unit_type_id': unit_row['unit_type_id'],
                     'level': unit_row['level'],
                     'person_count': unit_row['person_count'],
                     'children_count': unit_row['children_count'],
@@ -216,14 +216,14 @@ class OrgchartService:
             # Get subtree structure
             subtree_query = """
             WITH RECURSIVE unit_subtree AS (
-                SELECT id, name, short_name, type, parent_unit_id, 0 as level,
+                SELECT id, name, short_name, unit_type_id, parent_unit_id, 0 as level,
                        CAST(id AS TEXT) as path
                 FROM units 
                 WHERE id = ?
                 
                 UNION ALL
                 
-                SELECT u.id, u.name, u.short_name, u.type, u.parent_unit_id, us.level + 1,
+                SELECT u.id, u.name, u.short_name, u.unit_type_id, u.parent_unit_id, us.level + 1,
                        us.path || '/' || CAST(u.id AS TEXT)
                 FROM units u
                 JOIN unit_subtree us ON u.parent_unit_id = us.id
@@ -234,7 +234,7 @@ class OrgchartService:
             FROM unit_subtree us
             LEFT JOIN person_job_assignments pja ON us.id = pja.unit_id AND pja.is_current = 1
             LEFT JOIN units child_units ON child_units.parent_unit_id = us.id
-            GROUP BY us.id, us.name, us.short_name, us.type, us.parent_unit_id, us.level, us.path
+            GROUP BY us.id, us.name, us.short_name, us.unit_type_id, us.parent_unit_id, us.level, us.path
             ORDER BY us.path
             """
             
@@ -252,7 +252,7 @@ class OrgchartService:
                     'id': unit_row['id'],
                     'name': unit_row['name'],
                     'short_name': unit_row['short_name'],
-                    'type': unit_row['type'],
+                    'unit_type_id': unit_row['unit_type_id'],
                     'level': unit_row['level'],
                     'person_count': unit_row['person_count'],
                     'children_count': unit_row['children_count'],
@@ -325,12 +325,12 @@ class OrgchartService:
             
             # Get children units
             children_query = """
-            SELECT id, name, short_name, type,
+            SELECT u.id, u.name, u.short_name, u.unit_type_id,
                    COUNT(DISTINCT pja.person_id) as person_count
             FROM units u
             LEFT JOIN person_job_assignments pja ON u.id = pja.unit_id AND pja.is_current = 1
             WHERE u.parent_unit_id = ?
-            GROUP BY u.id, u.name, u.short_name, u.type
+            GROUP BY u.id, u.name, u.short_name, u.unit_type_id
             ORDER BY u.name
             """
             children = self.db_manager.fetch_all(children_query, (unit_id,))
@@ -346,7 +346,7 @@ class OrgchartService:
         """Get units without current assignments (vacant positions)"""
         try:
             vacant_query = """
-            SELECT u.id, u.name, u.short_name, u.type, pu.name as parent_name
+            SELECT u.id, u.name, u.short_name, u.unit_type_id, pu.name as parent_name
             FROM units u
             LEFT JOIN units pu ON u.parent_unit_id = pu.id
             LEFT JOIN person_job_assignments pja ON u.id = pja.unit_id AND pja.is_current = 1
@@ -439,12 +439,12 @@ class OrgchartService:
             # Add sibling units
             if unit_details.get('parent_unit_id'):
                 siblings_query = """
-                SELECT id, name, short_name, type,
+                SELECT u.id, u.name, u.short_name, u.unit_type_id,
                        COUNT(DISTINCT pja.person_id) as person_count
                 FROM units u
                 LEFT JOIN person_job_assignments pja ON u.id = pja.unit_id AND pja.is_current = 1
                 WHERE u.parent_unit_id = ? AND u.id != ?
-                GROUP BY u.id, u.name, u.short_name, u.type
+                GROUP BY u.id, u.name, u.short_name, u.unit_type_id
                 ORDER BY u.name
                 """
                 siblings = self.db_manager.fetch_all(siblings_query, (unit_details['parent_unit_id'], unit_id))
@@ -545,13 +545,14 @@ class OrgchartService:
             SELECT p.name as person_name,
                    jt.name as job_title_name,
                    u.name as unit_name,
-                   u.type as unit_type,
+                   ut.name as unit_type,
                    COUNT(*) as experience_count
             FROM person_job_assignments pja
             JOIN persons p ON pja.person_id = p.id
             JOIN job_titles jt ON pja.job_title_id = jt.id
             JOIN units u ON pja.unit_id = u.id
-            GROUP BY p.id, p.name, jt.name, u.name, u.type
+            JOUN unit_types ut ON u.unit_type_id = ut.id
+            GROUP BY p.id, p.name, jt.name, u.name, ut.name
             ORDER BY p.name, experience_count DESC
             """
             
@@ -710,7 +711,7 @@ class OrgchartService:
         """Search organizational units"""
         try:
             search_query = """
-            SELECT id, name, short_name, type
+            SELECT id, name, short_name, unit_type_id
             FROM units
             WHERE name LIKE ? OR short_name LIKE ?
             LIMIT ?

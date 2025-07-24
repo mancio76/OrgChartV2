@@ -18,14 +18,14 @@ from models.base import Alias, ValidationError, ModelValidationException
 
 
 def verify_unit_model():
-    """Verify Unit model with hierarchical structure and type validation"""
+    """Verify Unit model with hierarchical structure and unit_type_id validation"""
     print("✓ Verifying Unit model requirements...")
     
     # Requirement 3.1: Unit CRUD with hierarchical validation
     unit = Unit(
         name="Engineering Department",
         short_name="ENG",
-        type="OrganizationalUnit",
+        unit_type_id=1, #"OrganizationalUnit",
         parent_unit_id=1,
         start_date=date(2020, 1, 1),
         aliases=[Alias("Dipartimento Ingegneria", "it-IT")]
@@ -37,7 +37,7 @@ def verify_unit_model():
     assert unit.is_root == False, "Unit with parent should not be root"
     
     # Type validation
-    assert unit.type in ["function", "OrganizationalUnit"], "Unit type should be validated"
+    assert unit.unit_type_id in [1, 2], "Unit unit_type_id should be validated"
     
     # Validation framework
     errors = unit.validate()
@@ -211,7 +211,7 @@ def verify_base_functionality():
     print("✓ Verifying base model functionality...")
     
     models = [
-        Unit(name="Test Unit", type="function"),
+        Unit(name="Test Unit", unit_type_id=2),
         Person(first_name="John", last_name="Doe"),
         JobTitle(name="Test Job"),
         Assignment(person_id=1, unit_id=1, job_title_id=1)

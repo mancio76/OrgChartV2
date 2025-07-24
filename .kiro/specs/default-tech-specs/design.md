@@ -110,10 +110,15 @@ class BaseModel:
 
 #### 3. Domain Models
 
+**UnitType Model** (`app/models/unit_type.py`):
+
+- Type classification (function/OrganizationalUnit)
+- Multilingual aliases support
+
 **Unit Model** (`app/models/unit.py`):
 
 - Hierarchical organizational structure
-- Type classification (function/OrganizationalUnit)
+- Unit types with foreign key relationships
 - Date-based validity periods
 - Multilingual aliases support
 
@@ -161,6 +166,7 @@ class BaseModel:
 **Organization by Feature**:
 
 - `home.py`: Dashboard and statistics
+- `unit_types.py`: Unit type management endpoints
 - `units.py`: Unit management endpoints
 - `persons.py`: Personnel management endpoints
 - `job_titles.py`: Role management endpoints
@@ -214,7 +220,7 @@ erDiagram
         int id PK
         string name
         string short_name
-        string type
+        int unit_type_id FK
         int parent_unit_id FK
         date start_date
         date end_date
@@ -287,8 +293,8 @@ stateDiagram-v2
 
 1. **Units**:
    - Name is required and non-empty
-   - Type must be 'function' or 'OrganizationalUnit'
    - End date must be after start date
+   - Foreign key constraints
    - Cannot be self-parent
 
 2. **Persons**:

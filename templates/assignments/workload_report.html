@@ -1,0 +1,79 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-primary" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i>Stampa Report
+    </button>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#" onclick="exportToCSV()">
+            <i class="bi bi-file-earmark-spreadsheet me-2"></i>Esporta CSV
+        </a></li>
+        <li><a class="dropdown-item" href="/assignments/reports/statistics">
+            <i class="bi bi-bar-chart me-2"></i>Statistiche Generali
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/assignments">
+            <i class="bi bi-person-badge me-2"></i>Incarichi Correnti
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Summary Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-people fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ workload_stats.total_persons }}</h4>
+                        <small>Persone Totali</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-speedometer fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ workload_stats.avg_workload }}</h4>
+                        <small>Carico Medio</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-exclamation-triangle fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ workload_stats.overloaded_count }}</h4>
+                        <small>Sovraccariche</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-arrow-down-circle fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ workload_stats.low_workload_count }}</h4>
+                        <small>Sottoutilizzate</small>
+                    </div>
+                </div>
+            </div>
+        <

@@ -74,6 +74,19 @@ app.include_router(assignments.router, prefix="/assignments", tags=["Assignments
 app.include_router(orgchart.router, prefix="/orgchart", tags=["Orgchart"])
 app.include_router(api.router, prefix="/api", tags=["API"])
 
+# Test route for Task 6.3 - Form validation and user feedback
+@app.get("/test-validation", response_class=HTMLResponse)
+async def test_validation(request: Request):
+    """Test page for enhanced form validation features"""
+    return templates.TemplateResponse(
+        "test_validation.html",
+        {
+            "request": request,
+            "page_title": "Test Validazione Avanzata",
+            "page_subtitle": "Implementazione Task 6.3 - Form validation e user feedback"
+        }
+    )
+
 # Error handlers
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc):

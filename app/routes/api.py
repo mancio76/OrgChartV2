@@ -33,7 +33,7 @@ class UnitCreateRequest(BaseModel):
     id: Optional[int] = None
     name: str = Field(..., min_length=1, max_length=255)
     short_name: Optional[str] = Field(None, max_length=50)
-    type: str = Field(..., pattern="^(function|OrganizationalUnit)$")
+    unit_type_id: Optional[int] = None
     parent_unit_id: Optional[int] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
@@ -118,7 +118,7 @@ def parse_date_string(date_str: Optional[str]) -> Optional[date]:
 @router.get("/units")
 async def api_list_units(
     search: Optional[str] = Query(None),
-    type: Optional[str] = Query(None),
+    unit_type_id: Optional[str] = Query(None),
     parent_id: Optional[int] = Query(None),
     unit_service: UnitService = Depends(get_unit_service)
 ):
@@ -130,8 +130,8 @@ async def api_list_units(
             units = unit_service.get_all()
         
         # Apply filters
-        if type:
-            units = [u for u in units if u.type == type]
+        if unit_type_id:
+            units = [u for u in units if u.unit_type_id == unit_type_id]
         if parent_id is not None:
             units = [u for u in units if u.parent_unit_id == parent_id]
         
@@ -180,7 +180,7 @@ async def api_create_unit(
             id=unit_data.id,
             name=unit_data.name,
             short_name=unit_data.short_name,
-            type=unit_data.type,
+            unit_type_id=unit_data.unit_type_id,
             parent_unit_id=unit_data.parent_unit_id,
             start_date=parse_date_string(unit_data.start_date),
             end_date=parse_date_string(unit_data.end_date)
@@ -221,7 +221,7 @@ async def api_update_unit(
         # Update unit properties
         existing_unit.name = unit_data.name
         existing_unit.short_name = unit_data.short_name
-        existing_unit.type = unit_data.type
+        existing_unit.unit_type_id = unit_data.unit_type_id
         existing_unit.parent_unit_id = unit_data.parent_unit_id
         existing_unit.start_date = parse_date_string(unit_data.start_date)
         existing_unit.end_date = parse_date_string(unit_data.end_date)

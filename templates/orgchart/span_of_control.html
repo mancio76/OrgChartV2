@@ -1,0 +1,701 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-primary" onclick="refreshAnalysis()">
+        <i class="bi bi-arrow-clockwise me-1"></i>Aggiorna
+    </button>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#" onclick="exportAnalysis('pdf')">
+            <i class="bi bi-file-pdf me-2"></i>Esporta PDF
+        </a></li>
+        <li><a class="dropdown-item" href="#" onclick="exportAnalysis('excel')">
+            <i class="bi bi-file-earmark-spreadsheet me-2"></i>Esporta Excel
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/orgchart/simulation">
+            <i class="bi bi-diagram-2 me-2"></i>Simula Ottimizzazioni
+        </a></li>
+        <li><a class="dropdown-item" href="/orgchart/analysis/gaps">
+            <i class="bi bi-exclamation-diamond me-2"></i>Analisi Gap
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Span of Control Overview -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-diagram-3 fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ span_overview.average_span or 0 }}</h4>
+                        <small>Span Medio</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-check-circle fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ span_overview.optimal_units or 0 }}</h4>
+                        <small>Unità Ottimali</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-exclamation-triangle fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ span_overview.wide_span_units or 0 }}</h4>
+                        <small>Span Troppo Ampio</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-arrow-down fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ span_overview.narrow_span_units or 0 }}</h4>
+                        <small>Span Troppo Stretto</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Span Distribution Chart -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bar-chart me-2"></i>Distribuzione Span of Control
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="spanDistributionChart" width="400" height="200"></canvas>
+                </div>
+                <div class="chart-legend mt-3">
+                    <div class="row text-center">
+                        <div class="col-3">
+                            <div class="legend-item">
+                                <div class="legend-color bg-danger"></div>
+                                <small>Troppo Stretto (1-2)</small>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="legend-item">
+                                <div class="legend-color bg-success"></div>
+                                <small>Ottimale (3-7)</small>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="legend-item">
+                                <div class="legend-color bg-warning"></div>
+                                <small>Ampio (8-12)</small>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="legend-item">
+                                <div class="legend-color bg-danger"></div>
+                                <small>Troppo Ampio (13+)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-speedometer2 me-2"></i>Metriche Chiave
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="metric-item mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Span Ideale:</span>
+                        <span class="badge bg-success">3-7</span>
+                    </div>
+                </div>
+                <div class="metric-item mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Span Massimo:</span>
+                        <span class="fw-bold text-danger">{{ span_overview.max_span or 0 }}</span>
+                    </div>
+                </div>
+                <div class="metric-item mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Span Minimo:</span>
+                        <span class="fw-bold text-info">{{ span_overview.min_span or 0 }}</span>
+                    </div>
+                </div>
+                <div class="metric-item mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Efficienza Globale:</span>
+                        <span class="badge bg-{{ 'success' if span_overview.efficiency_score >= 80 else 'warning' if span_overview.efficiency_score >= 60 else 'danger' }}">
+                            {{ span_overview.efficiency_score or 0 }}%
+                        </span>
+                    </div>
+                </div>
+                <div class="metric-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Unità da Ottimizzare:</span>
+                        <span class="fw-bold text-warning">{{ span_overview.units_to_optimize or 0 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Analysis -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-list-ul me-2"></i>Analisi Dettagliata per Unità
+                </h5>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-secondary" onclick="sortUnits('span')" title="Ordina per Span">
+                        <i class="bi bi-sort-numeric-down"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="sortUnits('efficiency')" title="Ordina per Efficienza">
+                        <i class="bi bi-speedometer2"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="sortUnits('name')" title="Ordina per Nome">
+                        <i class="bi bi-sort-alpha-down"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if span_analysis %}
+                <div class="table-responsive">
+                    <table class="table table-hover" id="span-analysis-table">
+                        <thead>
+                            <tr>
+                                <th>Unità</th>
+                                <th>Span of Control</th>
+                                <th>Stato</th>
+                                <th>Efficienza</th>
+                                <th>Raccomandazioni</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for unit in span_analysis %}
+                            <tr class="unit-row" data-span="{{ unit.span_of_control }}" data-efficiency="{{ unit.efficiency_score }}" data-name="{{ unit.name }}">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-{{ 'building' if unit.unit_type_id == 1 else 'diagram-2' }} me-2 text-primary"></i>
+                                        <div>
+                                            <div class="fw-medium">{{ unit.name }}</div>
+                                            {% if unit.short_name %}
+                                            <small class="text-muted">{{ unit.short_name }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <span class="fw-bold me-2">{{ unit.span_of_control }}</span>
+                                        <div class="span-bar">
+                                            <div class="span-indicator bg-{{ 'danger' if unit.span_of_control <= 2 or unit.span_of_control >= 13 else 'warning' if unit.span_of_control >= 8 else 'success' }}" 
+                                                 style="width: {{ (unit.span_of_control / 15 * 100)|round }}%"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'danger' if unit.span_status == 'critical' else 'warning' if unit.span_status == 'suboptimal' else 'success' }}">
+                                        {{ unit.span_status.title() if unit.span_status else 'N/A' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <span class="fw-bold me-2">{{ unit.efficiency_score or 0 }}%</span>
+                                        <div class="progress" style="width: 60px; height: 8px;">
+                                            <div class="progress-bar bg-{{ 'success' if unit.efficiency_score >= 80 else 'warning' if unit.efficiency_score >= 60 else 'danger' }}" 
+                                                 style="width: {{ unit.efficiency_score or 0 }}%"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="recommendations">
+                                        {% if unit.recommendations %}
+                                        {% for rec in unit.recommendations %}
+                                        <div class="recommendation-item">
+                                            <i class="bi bi-arrow-right me-1 text-primary"></i>
+                                            <small>{{ rec }}</small>
+                                        </div>
+                                        {% endfor %}
+                                        {% else %}
+                                        <small class="text-muted">Nessuna raccomandazione</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="/orgchart/unit/{{ unit.id }}" class="btn btn-outline-primary" title="Dettagli">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-outline-info" onclick="optimizeUnit({{ unit.id }})" title="Ottimizza">
+                                            <i class="bi bi-gear"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-success" onclick="simulateChanges({{ unit.id }})" title="Simula">
+                                            <i class="bi bi-diagram-2"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-diagram-3 display-1 text-muted mb-3"></i>
+                    <h4 class="text-muted">Nessun dato disponibile</h4>
+                    <p class="text-muted">Non ci sono dati sufficienti per l'analisi dello span of control.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Optimization Recommendations -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightbulb me-2"></i>Raccomandazioni Principali
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if optimization_recommendations %}
+                {% for recommendation in optimization_recommendations %}
+                <div class="recommendation-card mb-3">
+                    <div class="d-flex align-items-start">
+                        <div class="recommendation-icon me-3">
+                            <i class="bi bi-{{ recommendation.icon }} text-{{ recommendation.priority_color }}"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ recommendation.title }}</h6>
+                            <p class="text-muted mb-2">{{ recommendation.description }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-{{ recommendation.priority_color }}">
+                                    {{ recommendation.priority.title() }}
+                                </span>
+                                <small class="text-muted">{{ recommendation.impact }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="bi bi-check-circle text-success display-4 mb-2"></i>
+                    <p class="text-muted mb-0">Struttura ottimale</p>
+                    <small class="text-muted">Non sono necessarie ottimizzazioni</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Span Categories -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-pie-chart me-2"></i>Categorie Span
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="span-categories">
+                    <div class="category-item mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="category-color bg-danger me-2"></div>
+                                <span>Troppo Stretto (1-2)</span>
+                            </div>
+                            <span class="badge bg-danger">{{ span_categories.too_narrow or 0 }}</span>
+                        </div>
+                        <div class="progress mt-1" style="height: 4px;">
+                            <div class="progress-bar bg-danger" style="width: {{ (span_categories.too_narrow / span_categories.total * 100)|round if span_categories.total > 0 else 0 }}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="category-item mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="category-color bg-success me-2"></div>
+                                <span>Ottimale (3-7)</span>
+                            </div>
+                            <span class="badge bg-success">{{ span_categories.optimal or 0 }}</span>
+                        </div>
+                        <div class="progress mt-1" style="height: 4px;">
+                            <div class="progress-bar bg-success" style="width: {{ (span_categories.optimal / span_categories.total * 100)|round if span_categories.total > 0 else 0 }}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="category-item mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="category-color bg-warning me-2"></div>
+                                <span>Ampio (8-12)</span>
+                            </div>
+                            <span class="badge bg-warning">{{ span_categories.wide or 0 }}</span>
+                        </div>
+                        <div class="progress mt-1" style="height: 4px;">
+                            <div class="progress-bar bg-warning" style="width: {{ (span_categories.wide / span_categories.total * 100)|round if span_categories.total > 0 else 0 }}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="category-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="category-color bg-danger me-2"></div>
+                                <span>Troppo Ampio (13+)</span>
+                            </div>
+                            <span class="badge bg-danger">{{ span_categories.too_wide or 0 }}</span>
+                        </div>
+                        <div class="progress mt-1" style="height: 4px;">
+                            <div class="progress-bar bg-danger" style="width: {{ (span_categories.too_wide / span_categories.total * 100)|round if span_categories.total > 0 else 0 }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Azioni Rapide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-success" onclick="optimizeAllUnits()">
+                        <i class="bi bi-gear me-2"></i>Ottimizza Tutto
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" onclick="generateOptimizationPlan()">
+                        <i class="bi bi-list-check me-2"></i>Piano Ottimizzazione
+                    </button>
+                    <a href="/orgchart/simulation?focus=span" class="btn btn-outline-info">
+                        <i class="bi bi-diagram-2 me-2"></i>Simula Modifiche
+                    </a>
+                    <hr>
+                    <button type="button" class="btn btn-outline-warning" onclick="setSpanTargets()">
+                        <i class="bi bi-target me-2"></i>Imposta Target
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="scheduleReview()">
+                        <i class="bi bi-calendar-event me-2"></i>Pianifica Revisione
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.span-bar {
+    width: 60px;
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.span-indicator {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.metric-item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.metric-item:last-child {
+    border-bottom: none;
+}
+
+.recommendation-card {
+    background: rgba(0, 0, 0, 0.02);
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    border-left: 3px solid var(--bs-primary);
+}
+
+.recommendation-icon {
+    width: 24px;
+    text-align: center;
+}
+
+.recommendation-item {
+    margin-bottom: 0.25rem;
+}
+
+.category-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+}
+
+.category-item {
+    padding: 0.25rem 0;
+}
+
+.chart-container {
+    position: relative;
+    height: 200px;
+}
+
+.chart-legend {
+    border-top: 1px solid #dee2e6;
+    padding-top: 1rem;
+}
+
+.legend-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.legend-color {
+    width: 20px;
+    height: 4px;
+    border-radius: 2px;
+    margin-bottom: 0.25rem;
+}
+
+.unit-row:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .recommendation-card {
+        padding: 0.5rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Span Distribution Chart
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('spanDistributionChart').getContext('2d');
+    
+    // Sample data - in real implementation this would come from the backend
+    const spanData = {
+        labels: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13+'],
+        datasets: [{
+            label: 'Numero di Unità',
+            data: [
+                {{ span_distribution.span_1 if span_distribution else 0 }},
+                {{ span_distribution.span_2 if span_distribution else 0 }},
+                {{ span_distribution.span_3 if span_distribution else 2 }},
+                {{ span_distribution.span_4 if span_distribution else 5 }},
+                {{ span_distribution.span_5 if span_distribution else 8 }},
+                {{ span_distribution.span_6 if span_distribution else 6 }},
+                {{ span_distribution.span_7 if span_distribution else 4 }},
+                {{ span_distribution.span_8 if span_distribution else 3 }},
+                {{ span_distribution.span_9 if span_distribution else 2 }},
+                {{ span_distribution.span_10 if span_distribution else 1 }},
+                {{ span_distribution.span_11 if span_distribution else 1 }},
+                {{ span_distribution.span_12 if span_distribution else 0 }},
+                {{ span_distribution.span_13_plus if span_distribution else 1 }}
+            ],
+            backgroundColor: function(context) {
+                const value = context.parsed.x;
+                if (value <= 2 || value >= 12) return '#dc3545'; // Danger
+                if (value >= 7) return '#ffc107'; // Warning
+                return '#198754'; // Success
+            },
+            borderColor: '#fff',
+            borderWidth: 1
+        }]
+    };
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: spanData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        title: function(context) {
+                            return `Span of Control: ${context[0].label}`;
+                        },
+                        label: function(context) {
+                            return `Unità: ${context.parsed.y}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Span of Control'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Numero di Unità'
+                    },
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+});
+
+function sortUnits(criteria) {
+    const table = document.getElementById('span-analysis-table');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('.unit-row'));
+    
+    rows.sort((a, b) => {
+        let valueA, valueB;
+        
+        switch(criteria) {
+            case 'span':
+                valueA = parseInt(a.dataset.span);
+                valueB = parseInt(b.dataset.span);
+                return valueB - valueA; // Descending
+            case 'efficiency':
+                valueA = parseInt(a.dataset.efficiency);
+                valueB = parseInt(b.dataset.efficiency);
+                return valueB - valueA; // Descending
+            case 'name':
+                valueA = a.dataset.name.toLowerCase();
+                valueB = b.dataset.name.toLowerCase();
+                return valueA.localeCompare(valueB); // Ascending
+            default:
+                return 0;
+        }
+    });
+    
+    // Clear tbody and append sorted rows
+    tbody.innerHTML = '';
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+function optimizeUnit(unitId) {
+    if (confirm('Vuoi ottimizzare lo span of control per questa unità?')) {
+        // In a real implementation, this would call an API
+        alert(`Ottimizzazione avviata per l'unità ${unitId}. Riceverai una notifica al completamento.`);
+    }
+}
+
+function simulateChanges(unitId) {
+    window.location.href = `/orgchart/simulation?unit_id=${unitId}&focus=span`;
+}
+
+function optimizeAllUnits() {
+    if (confirm('Vuoi ottimizzare lo span of control per tutte le unità che necessitano miglioramenti?')) {
+        alert('Ottimizzazione globale avviata. Il processo potrebbe richiedere alcuni minuti.');
+    }
+}
+
+function generateOptimizationPlan() {
+    window.open('/orgchart/reports/span-optimization-plan', '_blank');
+}
+
+function setSpanTargets() {
+    const minSpan = prompt('Span of Control minimo ideale:', '3');
+    const maxSpan = prompt('Span of Control massimo ideale:', '7');
+    
+    if (minSpan && maxSpan) {
+        alert(`Target impostati: ${minSpan}-${maxSpan}. L'analisi verrà aggiornata.`);
+        // In a real implementation, this would update the analysis parameters
+    }
+}
+
+function scheduleReview() {
+    alert('Apertura calendario per pianificazione revisione span of control...');
+}
+
+function refreshAnalysis() {
+    const refreshBtn = document.querySelector('[onclick="refreshAnalysis()"]');
+    const originalText = refreshBtn.innerHTML;
+    refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1 spin"></i>Aggiornamento...';
+    refreshBtn.disabled = true;
+    
+    setTimeout(() => {
+        window.location.reload();
+    }, 1500);
+}
+
+function exportAnalysis(format) {
+    const url = `/orgchart/export/span-analysis?format=${format}`;
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `span_of_control_analysis_${new Date().toISOString().split('T')[0]}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Add spin animation
+const style = document.createElement('style');
+style.textContent = `
+    .spin {
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

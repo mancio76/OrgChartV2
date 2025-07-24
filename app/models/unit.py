@@ -14,7 +14,7 @@ class Unit(BaseModel):
     id: Optional[int] = None
     name: str = ""
     short_name: Optional[str] = None
-    type: str = "function"  # function or OrganizationalUnit
+    unit_type_id: int = 1  # Function or OrganizationalUnit unit_type.id
     parent_unit_id: Optional[int] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
@@ -67,8 +67,8 @@ class Unit(BaseModel):
         if not self.name or not self.name.strip():
             errors.append(ValidationError("name", "Name is required"))
         
-        if self.type not in ["function", "OrganizationalUnit"]:
-            errors.append(ValidationError("type", "Type must be 'function' or 'OrganizationalUnit'"))
+        if self.unit_type_id <= 0:
+            errors.append(ValidationError("unit_type_id", "Unit Type is required"))
         
         if self.start_date and self.end_date and self.start_date > self.end_date:
             errors.append(ValidationError("end_date", "End date must be after start date"))

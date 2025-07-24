@@ -39,13 +39,13 @@
                             
                             <!-- Type -->
                             <div class="mb-3">
-                                <label for="type" class="form-label">Tipo Unità *</label>
-                                <select class="form-select" id="type" name="type" required>
+                                <label for="unit_type_id" class="form-label">Tipo Unità *</label>
+                                <select class="form-select" id="unit_type_id" name="unit_type_id" required>
                                     <option value="">Seleziona tipo...</option>
                                     {% for unit_type in unit_types %}
-                                    <option value="{{ unit_type }}" 
-                                            {% if (form_data and form_data.type == unit_type) or (not form_data and unit.type == unit_type) %}selected{% endif %}>
-                                        {{ 'Funzione' if unit_type == 'function' else 'Unità Organizzativa' }}
+                                    <option value="{{ unit_type.id }}" 
+                                            {% if (form_data and form_data.unit_type_id == unit_type.id|string) or (not form_data and unit.unit_type_id == unit_type.id) %}selected{% endif %}>
+                                        {{ 'Funzione' if unit_type.name == 'Function' else 'Unità Organizzativa' }}
                                     </option>
                                     {% endfor %}
                                 </select>
@@ -271,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Type change warning for units with assignments
-    const typeSelect = document.getElementById('type');
+    const typeSelect = document.getElementById('unit_type_id');
     const originalType = typeSelect.value;
     const hasAssignments = {{ 'true' if unit.person_count > 0 else 'false' }};
     

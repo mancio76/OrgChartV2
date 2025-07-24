@@ -25,7 +25,7 @@ def test_unit_model():
     unit = Unit(
         name="IT Department",
         short_name="IT",
-        type="OrganizationalUnit",
+        unit_type_id=1,
         parent_unit_id=1,
         start_date=date(2020, 1, 1),
         aliases=[Alias("Dipartimento IT", "it-IT")]
@@ -40,11 +40,11 @@ def test_unit_model():
     assert unit.is_root == False
     
     # Test invalid unit - empty name and invalid type
-    invalid_unit = Unit(name="", type="invalid_type")
+    invalid_unit = Unit(name="", unit_type_id=0)
     errors = invalid_unit.validate()
     assert len(errors) >= 2, f"Expected at least 2 errors, got {len(errors)}: {errors}"
     assert any(error.field == "name" for error in errors), "Should detect empty name"
-    assert any(error.field == "type" for error in errors), "Should detect invalid type"
+    assert any(error.field == "unit_type_id" for error in errors), "Should detect invalid unit_type_id"
     
     # Test self-parent validation
     self_parent_unit = Unit(id=1, name="Test", parent_unit_id=1)
@@ -218,7 +218,7 @@ def test_serialization():
     # Test Unit serialization
     unit = Unit(
         name="Test Unit",
-        type="function",
+        unit_type_id=1, ##"function",
         start_date=date(2023, 1, 1),
         aliases=[Alias("Unità Test", "it-IT")]
     )

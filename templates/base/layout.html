@@ -12,6 +12,7 @@
     
     <!-- Custom CSS -->
     <link href="{{ url_for('static', path='/css/base.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', path='/css/forms.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', path='/css/components.css') }}" rel="stylesheet">
     
     {% block extra_css %}{% endblock %}
@@ -101,6 +102,7 @@
     
     <!-- Custom JS -->
     <script src="{{ url_for('static', path='/js/base.js') }}"></script>
+    <script src="{{ url_for('static', path='/js/form-validation.js') }}"></script>
     <script src="{{ url_for('static', path='/js/components.js') }}"></script>
     
     {% block extra_js %}{% endblock %}

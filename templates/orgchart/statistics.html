@@ -1,0 +1,665 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-primary" onclick="refreshStatistics()">
+        <i class="bi bi-arrow-clockwise me-1"></i>Aggiorna
+    </button>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#" onclick="exportStatistics('pdf')">
+            <i class="bi bi-file-pdf me-2"></i>Esporta PDF
+        </a></li>
+        <li><a class="dropdown-item" href="#" onclick="exportStatistics('excel')">
+            <i class="bi bi-file-earmark-spreadsheet me-2"></i>Esporta Excel
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/orgchart/reports/organizational-health">
+            <i class="bi bi-heart-pulse me-2"></i>Report Salute
+        </a></li>
+        <li><a class="dropdown-item" href="/orgchart/analysis/gaps">
+            <i class="bi bi-exclamation-diamond me-2"></i>Analisi Gap
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Key Performance Indicators -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-building fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ org_statistics.total_units or 0 }}</h4>
+                        <small>Unità Totali</small>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small>Profondità: {{ org_statistics.organizational_depth or 0 }} livelli</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-people fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ org_statistics.total_persons or 0 }}</h4>
+                        <small>Persone</small>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small>Span medio: {{ org_statistics.avg_span_of_control or 0 }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-person-badge fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ org_statistics.active_assignments or 0 }}</h4>
+                        <small>Incarichi Attivi</small>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small>Interim: {{ org_statistics.interim_ratio or 0 }}%</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-exclamation-triangle fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ org_statistics.vacancy_rate or 0 }}%</h4>
+                        <small>Tasso Vacanza</small>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small>Posizioni vacanti</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pie-chart me-2"></i>Distribuzione Carico di Lavoro
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if org_statistics.workload_distribution %}
+                <div class="workload-chart">
+                    <canvas id="workloadChart" width="400" height="200"></canvas>
+                </div>
+                <div class="row mt-3 text-center">
+                    <div class="col-3">
+                        <div class="fw-bold text-success">{{ org_statistics.workload_distribution.optimal or 0 }}</div>
+                        <small class="text-muted">Ottimale</small>
+                    </div>
+                    <div class="col-3">
+                        <div class="fw-bold text-warning">{{ org_statistics.workload_distribution.overloaded or 0 }}</div>
+                        <small class="text-muted">Sovraccarico</small>
+                    </div>
+                    <div class="col-3">
+                        <div class="fw-bold text-info">{{ org_statistics.workload_distribution.underutilized or 0 }}</div>
+                        <small class="text-muted">Sottoutilizzo</small>
+                    </div>
+                    <div class="col-3">
+                        <div class="fw-bold text-primary">{{ org_statistics.workload_distribution.avg_workload or 0 }}%</div>
+                        <small class="text-muted">Media</small>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-info-circle text-muted"></i>
+                    <p class="text-muted mb-0">Dati non disponibili</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bar-chart me-2"></i>Distribuzione per Livello
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if distribution_data %}
+                <div class="hierarchy-chart">
+                    <canvas id="hierarchyChart" width="400" height="200"></canvas>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-diagram-3 display-4 text-muted mb-3"></i>
+                    <p class="text-muted">Dati distribuzione non disponibili</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Statistics Tables -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-speedometer2 me-2"></i>Metriche di Efficienza
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if efficiency_metrics %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td>Tasso di Copertura</td>
+                                <td class="text-end">
+                                    <span class="badge bg-{{ 'success' if efficiency_metrics.coverage_rate >= 90 else 'warning' if efficiency_metrics.coverage_rate >= 70 else 'danger' }}">
+                                        {{ efficiency_metrics.coverage_rate or 0 }}%
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Efficienza Assegnazioni</td>
+                                <td class="text-end">
+                                    <span class="badge bg-{{ 'success' if efficiency_metrics.assignment_efficiency >= 85 else 'warning' if efficiency_metrics.assignment_efficiency >= 70 else 'danger' }}">
+                                        {{ efficiency_metrics.assignment_efficiency or 0 }}%
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Stabilità Organizzativa</td>
+                                <td class="text-end">
+                                    <span class="badge bg-{{ 'success' if efficiency_metrics.stability_index >= 80 else 'warning' if efficiency_metrics.stability_index >= 60 else 'danger' }}">
+                                        {{ efficiency_metrics.stability_index or 0 }}%
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Indice di Flessibilità</td>
+                                <td class="text-end">
+                                    <span class="badge bg-{{ 'success' if efficiency_metrics.flexibility_index >= 70 else 'warning' if efficiency_metrics.flexibility_index >= 50 else 'danger' }}">
+                                        {{ efficiency_metrics.flexibility_index or 0 }}%
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-speedometer2 display-4 text-muted mb-3"></i>
+                    <p class="text-muted">Metriche di efficienza non disponibili</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Tendenze Temporali
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if trend_data %}
+                <div class="trend-chart">
+                    <canvas id="trendChart" width="400" height="200"></canvas>
+                </div>
+                <div class="mt-3">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="fw-bold text-{{ 'success' if trend_data.growth_rate > 0 else 'danger' if trend_data.growth_rate < 0 else 'secondary' }}">
+                                {{ trend_data.growth_rate or 0 }}%
+                            </div>
+                            <small class="text-muted">Crescita</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="fw-bold text-info">{{ trend_data.turnover_rate or 0 }}%</div>
+                            <small class="text-muted">Turnover</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="fw-bold text-warning">{{ trend_data.change_frequency or 0 }}</div>
+                            <small class="text-muted">Modifiche/Mese</small>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-graph-up display-4 text-muted mb-3"></i>
+                    <p class="text-muted">Dati di tendenza non disponibili</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Analysis -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-list-check me-2"></i>Analisi Dettagliata
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="analysisAccordion">
+                    <!-- Unit Analysis -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="unitsHeading">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#unitsCollapse">
+                                <i class="bi bi-building me-2"></i>Analisi Unità
+                            </button>
+                        </h2>
+                        <div id="unitsCollapse" class="accordion-collapse collapse show" data-bs-parent="#analysisAccordion">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Distribuzione per Tipo:</h6>
+                                        <ul class="list-unstyled">
+                                            <li class="mb-1">
+                                                <span class="badge bg-primary me-2">Funzioni</span>
+                                                {{ distribution_data.unit_types.function if distribution_data and distribution_data.unit_types else 0 }}
+                                            </li>
+                                            <li>
+                                                <span class="badge bg-info me-2">Organizzative</span>
+                                                {{ distribution_data.unit_types.organizational if distribution_data and distribution_data.unit_types else 0 }}
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Metriche Strutturali:</h6>
+                                        <ul class="list-unstyled">
+                                            <li class="mb-1">Profondità massima: {{ org_statistics.organizational_depth or 0 }} livelli</li>
+                                            <li>Span of control medio: {{ org_statistics.avg_span_of_control or 0 }}</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Personnel Analysis -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="personnelHeading">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#personnelCollapse">
+                                <i class="bi bi-people me-2"></i>Analisi Personale
+                            </button>
+                        </h2>
+                        <div id="personnelCollapse" class="accordion-collapse collapse" data-bs-parent="#analysisAccordion">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Distribuzione Carico:</h6>
+                                        {% if org_statistics.workload_distribution %}
+                                        <div class="progress mb-2" style="height: 20px;">
+                                            {% set total = (org_statistics.workload_distribution.optimal or 0) + (org_statistics.workload_distribution.overloaded or 0) + (org_statistics.workload_distribution.underutilized or 0) %}
+                                            {% if total > 0 %}
+                                            <div class="progress-bar bg-success" style="width: {{ (org_statistics.workload_distribution.optimal / total * 100)|round }}%">
+                                                Ottimale
+                                            </div>
+                                            <div class="progress-bar bg-warning" style="width: {{ (org_statistics.workload_distribution.overloaded / total * 100)|round }}%">
+                                                Sovraccarico
+                                            </div>
+                                            <div class="progress-bar bg-info" style="width: {{ (org_statistics.workload_distribution.underutilized / total * 100)|round }}%">
+                                                Sottoutilizzo
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Indicatori Chiave:</h6>
+                                        <ul class="list-unstyled">
+                                            <li class="mb-1">Carico medio: {{ org_statistics.workload_distribution.avg_workload if org_statistics.workload_distribution else 0 }}%</li>
+                                            <li>Incarichi interim: {{ org_statistics.interim_ratio or 0 }}%</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Assignment Analysis -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="assignmentsHeading">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#assignmentsCollapse">
+                                <i class="bi bi-person-badge me-2"></i>Analisi Incarichi
+                            </button>
+                        </h2>
+                        <div id="assignmentsCollapse" class="accordion-collapse collapse" data-bs-parent="#analysisAccordion">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Statistiche Generali:</h6>
+                                        <ul class="list-unstyled">
+                                            <li class="mb-1">Incarichi attivi: {{ org_statistics.active_assignments or 0 }}</li>
+                                            <li class="mb-1">Tasso vacanza: {{ org_statistics.vacancy_rate or 0 }}%</li>
+                                            <li>Incarichi interim: {{ org_statistics.interim_ratio or 0 }}%</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Qualità Assegnazioni:</h6>
+                                        <ul class="list-unstyled">
+                                            <li class="mb-1">Efficienza: {{ efficiency_metrics.assignment_efficiency if efficiency_metrics else 0 }}%</li>
+                                            <li>Stabilità: {{ efficiency_metrics.stability_index if efficiency_metrics else 0 }}%</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Aree di Attenzione
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="alert-item mb-3">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                        <div>
+                            <div class="fw-medium">Posizioni Vacanti</div>
+                            <small class="text-muted">{{ org_statistics.vacancy_rate or 0 }}% delle unità senza assegnazioni</small>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if org_statistics.workload_distribution and org_statistics.workload_distribution.overloaded > 0 %}
+                <div class="alert-item mb-3">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-speedometer2 text-danger me-2"></i>
+                        <div>
+                            <div class="fw-medium">Sovraccarico</div>
+                            <small class="text-muted">{{ org_statistics.workload_distribution.overloaded }} persone sovraccariche</small>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if org_statistics.interim_ratio and org_statistics.interim_ratio > 15 %}
+                <div class="alert-item mb-3">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-hourglass-split text-warning me-2"></i>
+                        <div>
+                            <div class="fw-medium">Incarichi Interim</div>
+                            <small class="text-muted">{{ org_statistics.interim_ratio }}% di incarichi temporanei</small>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="text-center mt-3">
+                    <a href="/orgchart/analysis/gaps" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-search me-1"></i>Analisi Completa
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Azioni Suggerite
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if org_statistics.vacancy_rate and org_statistics.vacancy_rate > 10 %}
+                    <a href="/assignments/new" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-person-plus me-1"></i>Assegna Posizioni
+                    </a>
+                    {% endif %}
+                    
+                    {% if org_statistics.workload_distribution and org_statistics.workload_distribution.overloaded > 0 %}
+                    <a href="/orgchart/matrix?view_type=workload" class="btn btn-outline-warning btn-sm">
+                        <i class="bi bi-speedometer2 me-1"></i>Bilancia Carichi
+                    </a>
+                    {% endif %}
+                    
+                    <a href="/orgchart/simulation" class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-diagram-2 me-1"></i>Simula Cambiamenti
+                    </a>
+                    
+                    <a href="/orgchart/reports/organizational-health" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-heart-pulse me-1"></i>Valuta Salute
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.alert-item {
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.375rem;
+    border-left: 3px solid var(--bs-warning);
+}
+
+.workload-chart, .hierarchy-chart, .trend-chart {
+    position: relative;
+    height: 200px;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.progress-bar {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.accordion-button {
+    font-weight: 600;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: rgba(13, 110, 253, 0.1);
+    border-color: rgba(13, 110, 253, 0.125);
+}
+
+@media print {
+    .btn, .card-header .dropdown, .accordion-button {
+        display: none !important;
+    }
+    
+    .accordion-collapse {
+        display: block !important;
+    }
+    
+    .card {
+        border: 1px solid #dee2e6 !important;
+        break-inside: avoid;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Workload Distribution Chart
+{% if org_statistics.workload_distribution %}
+const workloadCtx = document.getElementById('workloadChart').getContext('2d');
+new Chart(workloadCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Ottimale', 'Sovraccarico', 'Sottoutilizzo'],
+        datasets: [{
+            data: [
+                {{ org_statistics.workload_distribution.optimal or 0 }},
+                {{ org_statistics.workload_distribution.overloaded or 0 }},
+                {{ org_statistics.workload_distribution.underutilized or 0 }}
+            ],
+            backgroundColor: [
+                '#198754',
+                '#ffc107',
+                '#0dcaf0'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+{% endif %}
+
+// Hierarchy Distribution Chart
+{% if distribution_data %}
+const hierarchyCtx = document.getElementById('hierarchyChart').getContext('2d');
+new Chart(hierarchyCtx, {
+    type: 'bar',
+    data: {
+        labels: [{% for level in range(org_statistics.organizational_depth + 1) %}'Livello {{ level }}'{{ ',' if not loop.last }}{% endfor %}],
+        datasets: [{
+            label: 'Unità per Livello',
+            data: [{% for level in range(org_statistics.organizational_depth + 1) %}{{ distribution_data.levels[level] if distribution_data.levels and distribution_data.levels[level] else 0 }}{{ ',' if not loop.last }}{% endfor %}],
+            backgroundColor: 'rgba(13, 110, 253, 0.8)',
+            borderColor: 'rgba(13, 110, 253, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+{% endif %}
+
+// Trend Chart
+{% if trend_data %}
+const trendCtx = document.getElementById('trendChart').getContext('2d');
+new Chart(trendCtx, {
+    type: 'line',
+    data: {
+        labels: ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu'],
+        datasets: [{
+            label: 'Incarichi Attivi',
+            data: {{ trend_data.monthly_assignments if trend_data.monthly_assignments else '[0,0,0,0,0,0]' }},
+            borderColor: 'rgba(13, 110, 253, 1)',
+            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+{% endif %}
+
+function refreshStatistics() {
+    // Show loading state
+    const refreshBtn = document.querySelector('[onclick="refreshStatistics()"]');
+    const originalText = refreshBtn.innerHTML;
+    refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1 spin"></i>Aggiornamento...';
+    refreshBtn.disabled = true;
+    
+    // Simulate refresh (in real implementation, this would reload the page or fetch new data)
+    setTimeout(() => {
+        window.location.reload();
+    }, 1000);
+}
+
+function exportStatistics(format) {
+    const url = `/orgchart/export/statistics?format=${format}`;
+    
+    // Create a temporary link to trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `organizational_statistics_${new Date().toISOString().split('T')[0]}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Auto-refresh every 10 minutes
+setInterval(function() {
+    console.log('Auto-refresh statistics would happen here');
+}, 600000);
+
+// Add spin animation for refresh button
+const style = document.createElement('style');
+style.textContent = `
+    .spin {
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

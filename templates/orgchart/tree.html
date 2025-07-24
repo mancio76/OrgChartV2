@@ -1,0 +1,613 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-primary" onclick="toggleTreeView()">
+        <i class="bi bi-arrows-expand me-1"></i>
+        <span id="expand-text">{{ 'Comprimi' if expand_all else 'Espandi Tutto' }}</span>
+    </button>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#" onclick="togglePersonsDisplay()">
+            <i class="bi bi-{{ 'eye-slash' if show_persons else 'eye' }} me-2"></i>
+            {{ 'Nascondi' if show_persons else 'Mostra' }} Persone
+        </a></li>
+        <li><a class="dropdown-item" href="#" onclick="toggleVacantPositions()">
+            <i class="bi bi-{{ 'eye-slash' if show_vacant else 'eye' }} me-2"></i>
+            {{ 'Nascondi' if show_vacant else 'Mostra' }} Posizioni Vacanti
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/orgchart/export/orgchart?format_type=svg{{ '&unit_id=' + unit_id|string if unit_id else '' }}">
+            <i class="bi bi-download me-2"></i>Esporta SVG
+        </a></li>
+        <li><a class="dropdown-item" href="/orgchart/export/orgchart?format_type=pdf{{ '&unit_id=' + unit_id|string if unit_id else '' }}">
+            <i class="bi bi-file-pdf me-2"></i>Esporta PDF
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/orgchart">
+            <i class="bi bi-house me-2"></i>Panoramica
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Tree Controls and Statistics -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h6 class="mb-2">Controlli Visualizzazione</h6>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <input type="radio" class="btn-check" name="view-mode" id="view-compact" {{ 'checked' if not expand_all else '' }}>
+                            <label class="btn btn-outline-primary" for="view-compact">Compatta</label>
+                            
+                            <input type="radio" class="btn-check" name="view-mode" id="view-expanded" {{ 'checked' if expand_all else '' }}>
+                            <label class="btn btn-outline-primary" for="view-expanded">Espansa</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="show-persons-toggle" {{ 'checked' if show_persons else '' }}>
+                            <label class="form-check-label" for="show-persons-toggle">
+                                Mostra Persone
+                            </label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="show-vacant-toggle" {{ 'checked' if show_vacant else '' }}>
+                            <label class="form-check-label" for="show-vacant-toggle">
+                                Evidenzia Posizioni Vacanti
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="mb-2">Statistiche Albero</h6>
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="fw-bold text-primary">{{ tree_stats.total_units or 0 }}</div>
+                        <small class="text-muted">Unità</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="fw-bold text-success">{{ tree_stats.total_persons or 0 }}</div>
+                        <small class="text-muted">Persone</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="fw-bold text-warning">{{ tree_stats.max_depth or 0 }}</div>
+                        <small class="text-muted">Livelli</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Organizational Tree -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-diagram-3 me-2"></i>
+            {{ 'Organigramma Completo' if not root_unit else 'Organigramma - ' + root_unit.name }}
+        </h5>
+        <div class="btn-group btn-group-sm">
+            <button type="button" class="btn btn-outline-secondary" onclick="zoomIn()">
+                <i class="bi bi-zoom-in"></i>
+            </button>
+            <button type="button" class="btn btn-outline-secondary" onclick="zoomOut()">
+                <i class="bi bi-zoom-out"></i>
+            </button>
+            <button type="button" class="btn btn-outline-secondary" onclick="resetZoom()">
+                <i class="bi bi-arrows-fullscreen"></i>
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div id="orgchart-container" class="orgchart-viewport">
+            <div id="orgchart-tree" class="orgchart-tree">
+                {% if tree_data %}
+                    {% for root_node in tree_data %}
+                        {{ render_tree_node(root_node, 0, show_persons, show_vacant) }}
+                    {% endfor %}
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-diagram-3 display-1 text-muted mb-3"></i>
+                    <h4 class="text-muted">Nessun dato organizzativo</h4>
+                    <p class="text-muted">Non ci sono unità organizzative da visualizzare.</p>
+                    <a href="/units/new" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-1"></i>Crea Prima Unità
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vacant Positions Panel -->
+{% if show_vacant and vacant_positions %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+            Posizioni Vacanti
+            <span class="badge bg-warning ms-2">{{ vacant_positions|length }}</span>
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for vacant in vacant_positions %}
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card border-warning">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-{{ 'building' if vacant.unit_type_id == 1 else 'diagram-2' }} me-2 text-warning"></i>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-0">{{ vacant.name }}</h6>
+                                {% if vacant.short_name %}
+                                <small class="text-muted">{{ vacant.short_name }}</small>
+                                {% endif %}
+                                {% if vacant.parent_name %}
+                                <br><small class="text-muted">in {{ vacant.parent_name }}</small>
+                                {% endif %}
+                            </div>
+                            <a href="/assignments/new?unit_id={{ vacant.id }}" class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-person-plus"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Tree Node Template Macro -->
+{% macro render_tree_node(node, level, show_persons, show_vacant) %}
+<div class="tree-node" data-unit-id="{{ node.id }}" data-level="{{ level }}">
+    <div class="unit-box {{ 'unit-function' if node.unit_type_id == 1 else 'unit-organizational' }} {{ 'unit-vacant' if show_vacant and node.person_count == 0 else '' }}">
+        <!-- Unit Header -->
+        <div class="unit-header">
+            <div class="unit-info">
+                <div class="unit-name">
+                    <i class="bi bi-{{ 'building' if node.unit_type_id == 1 else 'diagram-2' }} me-2"></i>
+                    <strong>{{ node.name }}</strong>
+                    {% if node.short_name %}
+                    <small class="text-muted ms-2">({{ node.short_name }})</small>
+                    {% endif %}
+                </div>
+                <div class="unit-stats">
+                    <span class="badge bg-light text-dark me-1">
+                        <i class="bi bi-people me-1"></i>{{ node.person_count }}
+                    </span>
+                    {% if node.children_count > 0 %}
+                    <span class="badge bg-light text-dark">
+                        <i class="bi bi-diagram-2 me-1"></i>{{ node.children_count }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="unit-actions">
+                <a href="/units/{{ node.id }}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Dettagli unità">
+                    <i class="bi bi-eye"></i>
+                </a>
+                <a href="/orgchart/unit/{{ node.id }}" class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="Contesto organizzativo">
+                    <i class="bi bi-diagram-3"></i>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Persons List -->
+        {% if show_persons and node.persons %}
+        <div class="persons-list">
+            {% for person in node.persons %}
+            <div class="person-item">
+                <div class="person-info">
+                    <div class="person-avatar">
+                        {{ person.name[:2].upper() if person.name else '?' }}
+                    </div>
+                    <div class="person-details">
+                        <div class="person-name">{{ person.name }}</div>
+                        <div class="person-role">{{ person.job_title_name }}</div>
+                        <div class="person-badges">
+                            {% if person.is_unit_boss %}
+                            <span class="badge bg-info">
+                                <i class="bi bi-star me-1"></i>Boss
+                            </span>
+                            {% endif %}
+                            {% if person.is_ad_interim %}
+                            <span class="badge bg-warning">
+                                <i class="bi bi-hourglass-split me-1"></i>Interim
+                            </span>
+                            {% endif %}
+                            {% if person.percentage < 1.0 %}
+                            <span class="badge bg-secondary">
+                                {{ (person.percentage * 100)|round|int }}%
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <a href="/persons/{{ person.id }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-person"></i>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% elif show_vacant and node.person_count == 0 %}
+        <div class="vacant-indicator">
+            <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+            <span class="text-warning">Posizione Vacante</span>
+            <a href="/assignments/new?unit_id={{ node.id }}" class="btn btn-sm btn-outline-success ms-2">
+                <i class="bi bi-person-plus"></i>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Children Nodes -->
+    {% if node.children %}
+    <div class="children-container">
+        {% for child in node.children %}
+        <div class="child-connection">
+            {{ render_tree_node(child, level + 1, show_persons, show_vacant) }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.orgchart-viewport {
+    overflow: auto;
+    max-height: 80vh;
+    background: #f8f9fa;
+    position: relative;
+}
+
+.orgchart-tree {
+    padding: 2rem;
+    min-width: 100%;
+    transform-origin: top left;
+    transition: transform 0.3s ease;
+}
+
+.tree-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 1rem 0;
+    position: relative;
+}
+
+.unit-box {
+    background: white;
+    border: 2px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    min-width: 280px;
+    max-width: 350px;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: all 0.3s ease;
+}
+
+.unit-box:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.unit-function {
+    border-color: var(--bs-primary);
+    border-width: 3px;
+}
+
+.unit-organizational {
+    border-color: var(--bs-info);
+}
+
+.unit-vacant {
+    border-color: var(--bs-warning);
+    background: rgba(255, 193, 7, 0.1);
+}
+
+.unit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+}
+
+.unit-info {
+    flex-grow: 1;
+}
+
+.unit-name {
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.unit-stats {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.unit-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.persons-list {
+    border-top: 1px solid #dee2e6;
+    padding-top: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.person-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.25rem;
+}
+
+.person-info {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.person-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--bs-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.75rem;
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+}
+
+.person-details {
+    flex-grow: 1;
+}
+
+.person-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.person-role {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.person-badges {
+    margin-top: 0.25rem;
+}
+
+.person-badges .badge {
+    font-size: 0.7rem;
+    margin-right: 0.25rem;
+}
+
+.vacant-indicator {
+    text-align: center;
+    padding: 0.75rem;
+    border-top: 1px solid #dee2e6;
+    margin-top: 0.75rem;
+}
+
+.children-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 2rem;
+    position: relative;
+}
+
+.child-connection {
+    position: relative;
+}
+
+/* Connection Lines */
+.tree-node:not(:first-child) .unit-box::before {
+    content: '';
+    position: absolute;
+    top: -2rem;
+    left: 50%;
+    width: 2px;
+    height: 2rem;
+    background: #dee2e6;
+    transform: translateX(-50%);
+}
+
+.children-container::before {
+    content: '';
+    position: absolute;
+    top: -1rem;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #dee2e6;
+}
+
+.children-container .child-connection:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: -1rem;
+    right: -1rem;
+    width: 2rem;
+    height: 2px;
+    background: #dee2e6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .unit-box {
+        min-width: 250px;
+        max-width: 280px;
+    }
+    
+    .children-container {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .orgchart-tree {
+        padding: 1rem;
+    }
+}
+
+/* Zoom controls */
+.zoom-level-1 { transform: scale(0.8); }
+.zoom-level-2 { transform: scale(1.0); }
+.zoom-level-3 { transform: scale(1.2); }
+.zoom-level-4 { transform: scale(1.5); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentZoom = 2; // Default zoom level
+let showPersons = {{ 'true' if show_persons else 'false' }};
+let showVacant = {{ 'true' if show_vacant else 'false' }};
+let expandAll = {{ 'true' if expand_all else 'false' }};
+
+function zoomIn() {
+    if (currentZoom < 4) {
+        currentZoom++;
+        updateZoom();
+    }
+}
+
+function zoomOut() {
+    if (currentZoom > 1) {
+        currentZoom--;
+        updateZoom();
+    }
+}
+
+function resetZoom() {
+    currentZoom = 2;
+    updateZoom();
+}
+
+function updateZoom() {
+    const tree = document.getElementById('orgchart-tree');
+    tree.className = `orgchart-tree zoom-level-${currentZoom}`;
+}
+
+function toggleTreeView() {
+    expandAll = !expandAll;
+    const expandText = document.getElementById('expand-text');
+    expandText.textContent = expandAll ? 'Comprimi' : 'Espandi Tutto';
+    
+    // Update URL to reflect the change
+    updateURL();
+}
+
+function togglePersonsDisplay() {
+    showPersons = !showPersons;
+    updateURL();
+}
+
+function toggleVacantPositions() {
+    showVacant = !showVacant;
+    updateURL();
+}
+
+function updateURL() {
+    const url = new URL(window.location);
+    url.searchParams.set('expand_all', expandAll);
+    url.searchParams.set('show_persons', showPersons);
+    url.searchParams.set('show_vacant', showVacant);
+    window.location.href = url.toString();
+}
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Set up toggle controls
+    document.getElementById('show-persons-toggle').addEventListener('change', function() {
+        togglePersonsDisplay();
+    });
+    
+    document.getElementById('show-vacant-toggle').addEventListener('change', function() {
+        toggleVacantPositions();
+    });
+    
+    // View mode controls
+    document.getElementById('view-compact').addEventListener('change', function() {
+        if (this.checked && expandAll) {
+            toggleTreeView();
+        }
+    });
+    
+    document.getElementById('view-expanded').addEventListener('change', function() {
+        if (this.checked && !expandAll) {
+            toggleTreeView();
+        }
+    });
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey || e.metaKey) {
+        switch(e.key) {
+            case '+':
+            case '=':
+                e.preventDefault();
+                zoomIn();
+                break;
+            case '-':
+                e.preventDefault();
+                zoomOut();
+                break;
+            case '0':
+                e.preventDefault();
+                resetZoom();
+                break;
+        }
+    }
+});
+
+// Auto-save zoom level
+window.addEventListener('beforeunload', function() {
+    localStorage.setItem('orgchart-zoom', currentZoom);
+});
+
+// Restore zoom level
+document.addEventListener('DOMContentLoaded', function() {
+    const savedZoom = localStorage.getItem('orgchart-zoom');
+    if (savedZoom) {
+        currentZoom = parseInt(savedZoom);
+        updateZoom();
+    }
+});
+</script>
+{% endblock %}

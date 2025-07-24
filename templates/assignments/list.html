@@ -1,0 +1,434 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="/assignments/new" class="btn btn-success">
+        <i class="bi bi-person-plus me-1"></i>Nuovo Incarico
+    </a>
+    <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="/assignments">
+            <i class="bi bi-person-badge me-2"></i>Incarichi Correnti
+        </a></li>
+        <li><a class="dropdown-item" href="/assignments?filter_type=history">
+            <i class="bi bi-clock-history me-2"></i>Storico Completo
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/assignments/reports/workload">
+            <i class="bi bi-speedometer2 me-2"></i>Report Workload
+        </a></li>
+        <li><a class="dropdown-item" href="/assignments/reports/statistics">
+            <i class="bi bi-bar-chart me-2"></i>Statistiche
+        </a></li>
+        <li><a class="dropdown-item" href="/assignments/bulk/operations">
+            <i class="bi bi-list-check me-2"></i>Operazioni in Blocco
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Filters and Search -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <form method="get" class="d-flex gap-2">
+            <!-- Search -->
+            <input type="search" name="search" class="form-control" 
+                   placeholder="Cerca per persona, unità o ruolo..." 
+                   value="{{ search }}" 
+                   aria-label="Cerca incarichi">
+            
+            <!-- Person Filter -->
+            <select name="person_id" class="form-select" style="min-width: 150px;">
+                <option value="">Tutte le persone</option>
+                {% for person in all_persons %}
+                <option value="{{ person.id }}" {{ 'selected' if person_id == person.id else '' }}>
+                    {{ person.name }}
+                </option>
+                {% endfor %}
+            </select>
+            
+            <!-- Unit Filter -->
+            <select name="unit_id" class="form-select" style="min-width: 150px;">
+                <option value="">Tutte le unità</option>
+                {% for unit in all_units %}
+                <option value="{{ unit.id }}" {{ 'selected' if unit_id == unit.id else '' }}>
+                    {{ unit.name }}
+                </option>
+                {% endfor %}
+            </select>
+            
+            <!-- Job Title Filter -->
+            <select name="job_title_id" class="form-select" style="min-width: 150px;">
+                <option value="">Tutti i ruoli</option>
+                {% for job_title in all_job_titles %}
+                <option value="{{ job_title.id }}" {{ 'selected' if job_title_id == job_title.id else '' }}>
+                    {{ job_title.name }}
+                </option>
+                {% endfor %}
+            </select>
+            
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="bi bi-search"></i>
+            </button>
+            
+            {% if search or person_id or unit_id or job_title_id %}
+            <a href="/assignments" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle"></i>
+            </a>
+            {% endif %}
+        </form>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="btn-group w-100" role="group">
+            <button type="button" class="btn {{ 'btn-primary' if not filter_type or filter_type == 'current' else 'btn-outline-primary' }}" 
+                    onclick="setFilter('')">
+                <i class="bi bi-person-badge me-1"></i>Correnti
+            </button>
+            <button type="button" class="btn {{ 'btn-primary' if filter_type == 'history' else 'btn-outline-primary' }}" 
+                    onclick="setFilter('history')">
+                <i class="bi bi-clock-history me-1"></i>Storico
+            </button>
+            <button type="button" class="btn {{ 'btn-primary' if filter_type == 'interim' else 'btn-outline-primary' }}" 
+                    onclick="setFilter('interim')">
+                <i class="bi bi-hourglass-split me-1"></i>Ad Interim
+            </button>
+            <button type="button" class="btn {{ 'btn-primary' if filter_type == 'overloaded' else 'btn-outline-primary' }}" 
+                    onclick="setFilter('overloaded')">
+                <i class="bi bi-exclamation-triangle me-1"></i>Sovraccarichi
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Summary -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-person-badge fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ stats.total_assignments }}</h4>
+                        <small>Totale Incarichi</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-people fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ stats.unique_persons }}</h4>
+                        <small>Persone Coinvolte</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-hourglass-split fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ stats.interim_count }}</h4>
+                        <small>Ad Interim</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-diagram-2 fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ stats.unique_units }}</h4>
+                        <small>Unità Coinvolte</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assignments List -->
+{% if assignments %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-{{ 'person-badge' if not filter_type or filter_type == 'current' else 'clock-history' if filter_type == 'history' else 'hourglass-split' if filter_type == 'interim' else 'exclamation-triangle' }} me-2"></i>
+            {{ page_title }}
+            <span class="badge bg-{{ 'success' if not filter_type or filter_type == 'current' else 'info' if filter_type == 'history' else 'warning' if filter_type == 'interim' else 'danger' }} ms-2">
+                {{ assignments|length }}
+            </span>
+        </h5>
+        <div class="d-flex gap-2">
+            {% if search %}
+            <small class="text-muted">Risultati per: "{{ search }}"</small>
+            {% endif %}
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-three-dots"></i>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="/assignments/bulk/operations">
+                        <i class="bi bi-list-check me-2"></i>Operazioni in Blocco
+                    </a></li>
+                    <li><a class="dropdown-item" href="/assignments/reports/workload">
+                        <i class="bi bi-speedometer2 me-2"></i>Report Workload
+                    </a></li>
+                    <li><a class="dropdown-item" href="/assignments/reports/statistics">
+                        <i class="bi bi-bar-chart me-2"></i>Statistiche
+                    </a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Persona</th>
+                        <th>Unità</th>
+                        <th>Ruolo</th>
+                        <th>Percentuale</th>
+                        <th>Periodo</th>
+                        {% if filter_type == 'history' %}
+                        <th>Versione</th>
+                        {% endif %}
+                        <th>Stato</th>
+                        <th width="120">Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                    <tr class="{{ 'table-success' if assignment.is_current else 'table-light' }}">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle me-2">
+                                    {{ assignment.person_name[:2].upper() if assignment.person_name else '?' }}
+                                </div>
+                                <div>
+                                    <strong>{{ assignment.person_name or 'N/A' }}</strong>
+                                    {% if assignment.person_short_name %}
+                                    <br><small class="text-muted">{{ assignment.person_short_name }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-{{ 'building' if assignment.unit_name and 'function' in assignment.unit_name.lower() else 'diagram-2' }} me-2 text-primary"></i>
+                                <div>
+                                    {{ assignment.unit_name or 'N/A' }}
+                                    {% if assignment.unit_short_name %}
+                                    <br><small class="text-muted">{{ assignment.unit_short_name }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-briefcase me-2 text-secondary"></i>
+                                <div>
+                                    {{ assignment.job_title_name or 'N/A' }}
+                                    {% if assignment.job_title_short_name %}
+                                    <br><small class="text-muted">{{ assignment.job_title_short_name }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if assignment.percentage == 1.0 else 'warning' if assignment.percentage >= 0.5 else 'info' }}">
+                                {{ assignment.percentage_display }}
+                            </span>
+                            {% if assignment.percentage < 1.0 %}
+                            <br><small class="text-muted">Part-time</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="small">
+                                {% if assignment.valid_from %}
+                                <i class="bi bi-calendar-event me-1"></i>
+                                {{ assignment.valid_from.strftime('%d/%m/%Y') }}
+                                {% endif %}
+                                {% if assignment.valid_to %}
+                                <br><i class="bi bi-calendar-x me-1"></i>
+                                {{ assignment.valid_to.strftime('%d/%m/%Y') }}
+                                {% elif assignment.is_current %}
+                                <br><small class="text-success">In corso</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        {% if filter_type == 'history' %}
+                        <td>
+                            <span class="badge bg-secondary">v{{ assignment.version }}</span>
+                        </td>
+                        {% endif %}
+                        <td>
+                            <div class="d-flex flex-column gap-1">
+                                <span class="badge bg-{{ assignment.status_color }}">
+                                    <i class="bi bi-{{ 'check-circle' if assignment.status == 'CURRENT' else 'x-circle' if assignment.status == 'TERMINATED' else 'clock-history' }} me-1"></i>
+                                    {{ 'Corrente' if assignment.status == 'CURRENT' else 'Terminato' if assignment.status == 'TERMINATED' else 'Storico' }}
+                                </span>
+                                {% if assignment.is_ad_interim %}
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-hourglass-split me-1"></i>Ad Interim
+                                </span>
+                                {% endif %}
+                                {% if assignment.is_unit_boss %}
+                                <span class="badge bg-info">
+                                    <i class="bi bi-star me-1"></i>Responsabile
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/assignments/{{ assignment.id }}" class="btn btn-outline-primary" 
+                                   data-bs-toggle="tooltip" title="Visualizza dettagli">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if assignment.is_current %}
+                                <a href="/assignments/{{ assignment.id }}/edit" class="btn btn-outline-secondary"
+                                   data-bs-toggle="tooltip" title="Modifica">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                                {% if filter_type == 'history' %}
+                                <a href="/assignments/history?person_id={{ assignment.person_id }}&unit_id={{ assignment.unit_id }}&job_title_id={{ assignment.job_title_id }}" 
+                                   class="btn btn-outline-info"
+                                   data-bs-toggle="tooltip" title="Storico versioni">
+                                    <i class="bi bi-clock-history"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-{{ 'person-badge' if not filter_type or filter_type == 'current' else 'clock-history' if filter_type == 'history' else 'hourglass-split' if filter_type == 'interim' else 'exclamation-triangle' }} display-1 text-muted mb-3"></i>
+        <h4 class="text-muted">
+            {% if search %}
+            Nessun incarico trovato per "{{ search }}"
+            {% elif filter_type == 'history' %}
+            Nessun incarico storico
+            {% elif filter_type == 'interim' %}
+            Nessun incarico ad interim
+            {% elif filter_type == 'overloaded' %}
+            Nessuna persona sovraccarica
+            {% else %}
+            Nessun incarico corrente
+            {% endif %}
+        </h4>
+        <p class="text-muted mb-4">
+            {% if search %}
+            Prova a modificare i termini di ricerca o 
+            <a href="/assignments">visualizza tutti gli incarichi</a>.
+            {% elif filter_type == 'history' %}
+            Non ci sono incarichi storici nel sistema.
+            {% elif filter_type == 'interim' %}
+            Non ci sono incarichi ad interim attivi.
+            {% elif filter_type == 'overloaded' %}
+            Tutte le persone hanno un carico di lavoro normale.
+            {% else %}
+            Inizia creando il primo incarico per assegnare persone ai ruoli.
+            {% endif %}
+        </p>
+        {% if search or filter_type %}
+        <a href="/assignments" class="btn btn-outline-primary me-2">
+            <i class="bi bi-arrow-left me-1"></i>Torna all'elenco
+        </a>
+        {% endif %}
+        <a href="/assignments/new" class="btn btn-success">
+            <i class="bi bi-person-plus me-1"></i>Crea Primo Incarico
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.table-success {
+    background-color: rgba(25, 135, 84, 0.1);
+}
+
+.table-light {
+    background-color: rgba(248, 249, 250, 0.5);
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.card.bg-primary,
+.card.bg-success,
+.card.bg-warning,
+.card.bg-info {
+    transition: transform 0.2s ease;
+}
+
+.card.bg-primary:hover,
+.card.bg-success:hover,
+.card.bg-warning:hover,
+.card.bg-info:hover {
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function setFilter(filterType) {
+    const url = new URL(window.location);
+    if (filterType) {
+        url.searchParams.set('filter_type', filterType);
+    } else {
+        url.searchParams.delete('filter_type');
+    }
+    window.location.href = url.toString();
+}
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

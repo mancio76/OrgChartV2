@@ -1,0 +1,487 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+        <i class="bi bi-grid-3x3 me-1"></i>
+        {{ 'Competenze' if view_type == 'skills' else 'Carico Lavoro' if view_type == 'workload' else 'Gerarchia' }}
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item {{ 'active' if view_type == 'skills' else '' }}" href="/orgchart/matrix?view_type=skills">
+            <i class="bi bi-mortarboard me-2"></i>Matrice Competenze
+        </a></li>
+        <li><a class="dropdown-item {{ 'active' if view_type == 'workload' else '' }}" href="/orgchart/matrix?view_type=workload">
+            <i class="bi bi-speedometer2 me-2"></i>Matrice Carico Lavoro
+        </a></li>
+        <li><a class="dropdown-item {{ 'active' if view_type == 'hierarchy' else '' }}" href="/orgchart/matrix?view_type=hierarchy">
+            <i class="bi bi-diagram-3 me-2"></i>Matrice Gerarchica
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/orgchart/tree">
+            <i class="bi bi-diagram-3 me-2"></i>Vista Albero
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Matrix Type Selector -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="btn-group w-100" role="group">
+                    <input type="radio" class="btn-check" name="matrix-type" id="matrix-skills" {{ 'checked' if view_type == 'skills' else '' }}>
+                    <label class="btn btn-outline-primary" for="matrix-skills" onclick="changeMatrixType('skills')">
+                        <i class="bi bi-mortarboard me-2"></i>Competenze
+                    </label>
+                    
+                    <input type="radio" class="btn-check" name="matrix-type" id="matrix-workload" {{ 'checked' if view_type == 'workload' else '' }}>
+                    <label class="btn btn-outline-primary" for="matrix-workload" onclick="changeMatrixType('workload')">
+                        <i class="bi bi-speedometer2 me-2"></i>Carico Lavoro
+                    </label>
+                    
+                    <input type="radio" class="btn-check" name="matrix-type" id="matrix-hierarchy" {{ 'checked' if view_type == 'hierarchy' else '' }}>
+                    <label class="btn btn-outline-primary" for="matrix-hierarchy" onclick="changeMatrixType('hierarchy')">
+                        <i class="bi bi-diagram-3 me-2"></i>Gerarchia
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Skills Matrix -->
+{% if view_type == 'skills' %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-mortarboard me-2"></i>Matrice delle Competenze
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if matrix_data %}
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>Persona</th>
+                        <th>Competenze e Ruoli</th>
+                        <th>Livello Esperienza</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for person_name, person_data in matrix_data.items() %}
+                    <tr>
+                        <td class="fw-bold">{{ person_name }}</td>
+                        <td>
+                            {% for skill in person_data.skills %}
+                            <div class="skill-item mb-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ skill.area }}</strong>
+                                        <br><small class="text-muted">{{ skill.role }}</small>
+                                    </div>
+                                    <span class="badge bg-{{ 'success' if skill.level == 'Expert' else 'info' if skill.level == 'Experienced' else 'secondary' }}">
+                                        {{ skill.level }}
+                                    </span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% set total_experience = person_data.skills|sum(attribute='experience_count') %}
+                            <div class="text-center">
+                                <div class="fw-bold text-primary">{{ total_experience }}</div>
+                                <small class="text-muted">Esperienze Totali</small>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-mortarboard display-1 text-muted mb-3"></i>
+            <h4 class="text-muted">Dati competenze non disponibili</h4>
+            <p class="text-muted">La matrice delle competenze verrà popolata con i dati degli incarichi.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Workload Matrix -->
+{% if view_type == 'workload' %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-speedometer2 me-2"></i>Matrice Carico di Lavoro
+        </h5>
+        <div class="legend d-flex gap-3">
+            <span class="badge bg-success">Ottimale (80-100%)</span>
+            <span class="badge bg-warning">Alto (100-120%)</span>
+            <span class="badge bg-danger">Sovraccarico (>120%)</span>
+            <span class="badge bg-info">Basso (<80%)</span>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if matrix_data %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Persona</th>
+                        <th>Incarichi</th>
+                        <th>Carico Totale</th>
+                        <th>Stato</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for person_name, person_data in matrix_data.items() %}
+                    <tr class="table-{{ person_data.workload_color }}">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="person-avatar me-2">
+                                    {{ person_name[:2].upper() }}
+                                </div>
+                                <div>
+                                    <strong>{{ person_name }}</strong>
+                                    {% if person_data.person_short_name %}
+                                    <br><small class="text-muted">{{ person_data.person_short_name }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% for assignment in person_data.assignments %}
+                            <div class="assignment-item mb-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <small class="fw-medium">{{ assignment.unit_name }}</small>
+                                        <br><small class="text-muted">{{ assignment.job_title_name }}</small>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span class="badge bg-light text-dark">
+                                            {{ (assignment.percentage * 100)|round|int }}%
+                                        </span>
+                                        {% if assignment.is_ad_interim %}
+                                        <span class="badge bg-warning">Interim</span>
+                                        {% endif %}
+                                        {% if assignment.is_unit_boss %}
+                                        <span class="badge bg-info">Boss</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <div class="text-center">
+                                <div class="fw-bold text-{{ person_data.workload_color }}">
+                                    {{ (person_data.total_percentage * 100)|round|int }}%
+                                </div>
+                                <div class="progress mt-1" style="height: 8px;">
+                                    <div class="progress-bar bg-{{ person_data.workload_color }}" 
+                                         style="width: {{ [person_data.total_percentage * 100, 100]|min }}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ person_data.workload_color }}">
+                                {{ person_data.workload_status.title() }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/persons/{{ person_name|urlencode }}/workload" class="btn btn-outline-primary">
+                                    <i class="bi bi-speedometer2"></i>
+                                </a>
+                                <a href="/assignments/new?person_name={{ person_name|urlencode }}" class="btn btn-outline-success">
+                                    <i class="bi bi-plus-circle"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Workload Summary -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="fw-bold text-success">{{ matrix_data.values()|selectattr('workload_status', 'equalto', 'optimal')|list|length }}</div>
+                    <small class="text-muted">Carico Ottimale</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="fw-bold text-warning">{{ matrix_data.values()|selectattr('workload_status', 'equalto', 'high')|list|length }}</div>
+                    <small class="text-muted">Carico Alto</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="fw-bold text-danger">{{ matrix_data.values()|selectattr('workload_status', 'equalto', 'overloaded')|list|length }}</div>
+                    <small class="text-muted">Sovraccarico</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="fw-bold text-info">{{ matrix_data.values()|selectattr('workload_status', 'equalto', 'low')|list|length }}</div>
+                    <small class="text-muted">Carico Basso</small>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-speedometer2 display-1 text-muted mb-3"></i>
+            <h4 class="text-muted">Nessun dato di carico lavoro</h4>
+            <p class="text-muted">Non ci sono incarichi attivi da analizzare.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Hierarchy Matrix -->
+{% if view_type == 'hierarchy' %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-diagram-3 me-2"></i>Matrice Gerarchica
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if matrix_data %}
+        <div class="hierarchy-matrix">
+            {% for level, units in matrix_data.items() %}
+            <div class="hierarchy-level mb-4">
+                <div class="level-header mb-3">
+                    <h6 class="mb-0">
+                        <span class="badge bg-primary me-2">Livello {{ level }}</span>
+                        <span class="text-muted">({{ units|length }} unità)</span>
+                    </h6>
+                </div>
+                <div class="row">
+                    {% for unit in units %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card border-{{ 'primary' if level == 0 else 'secondary' }}">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="card-title mb-1">{{ unit.name }}</h6>
+                                        <div class="unit-stats">
+                                            <span class="badge bg-light text-dark">
+                                                <i class="bi bi-people me-1"></i>{{ unit.person_count }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="btn-group-vertical btn-group-sm">
+                                        <a href="/orgchart/unit/{{ unit.id }}" class="btn btn-outline-primary">
+                                            <i class="bi bi-diagram-3"></i>
+                                        </a>
+                                        <a href="/units/{{ unit.id }}" class="btn btn-outline-secondary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-diagram-3 display-1 text-muted mb-3"></i>
+            <h4 class="text-muted">Nessuna struttura gerarchica</h4>
+            <p class="text-muted">Non ci sono unità organizzative da visualizzare.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Export Options -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h6 class="card-title mb-0">
+            <i class="bi bi-download me-2"></i>Esporta Matrice
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-primary" onclick="exportMatrix('csv')">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i>CSV
+            </button>
+            <button type="button" class="btn btn-outline-secondary" onclick="exportMatrix('pdf')">
+                <i class="bi bi-file-pdf me-1"></i>PDF
+            </button>
+            <button type="button" class="btn btn-outline-info" onclick="printMatrix()">
+                <i class="bi bi-printer me-1"></i>Stampa
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.person-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--bs-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.skill-item {
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.25rem;
+    border-left: 3px solid var(--bs-primary);
+}
+
+.assignment-item {
+    padding: 0.25rem 0.5rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.25rem;
+    border-left: 2px solid var(--bs-info);
+}
+
+.hierarchy-level {
+    position: relative;
+}
+
+.level-header {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.table-success {
+    background-color: rgba(25, 135, 84, 0.1);
+}
+
+.table-warning {
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+.table-danger {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.table-info {
+    background-color: rgba(13, 202, 240, 0.1);
+}
+
+.progress {
+    border-radius: 4px;
+}
+
+.legend .badge {
+    font-size: 0.75rem;
+}
+
+.hierarchy-matrix {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+@media print {
+    .btn, .card-header, .legend {
+        display: none !important;
+    }
+    
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .table {
+        font-size: 0.8rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function changeMatrixType(type) {
+    window.location.href = `/orgchart/matrix?view_type=${type}`;
+}
+
+function exportMatrix(format) {
+    const matrixType = '{{ view_type }}';
+    const url = `/orgchart/export/matrix?format=${format}&view_type=${matrixType}`;
+    
+    // Create a temporary link to trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `matrix_${matrixType}_${new Date().toISOString().split('T')[0]}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function printMatrix() {
+    window.print();
+}
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+// Auto-refresh workload data every 2 minutes for workload matrix
+{% if view_type == 'workload' %}
+setInterval(function() {
+    // In a real implementation, you might want to refresh workload data
+    console.log('Workload data refresh would happen here');
+}, 120000);
+{% endif %}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey || e.metaKey) {
+        switch(e.key) {
+            case '1':
+                e.preventDefault();
+                changeMatrixType('skills');
+                break;
+            case '2':
+                e.preventDefault();
+                changeMatrixType('workload');
+                break;
+            case '3':
+                e.preventDefault();
+                changeMatrixType('hierarchy');
+                break;
+            case 'p':
+                e.preventDefault();
+                printMatrix();
+                break;
+        }
+    }
+});
+</script>
+{% endblock %}

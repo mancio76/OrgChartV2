@@ -1,0 +1,503 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="/assignments" class="btn btn-primary">
+        <i class="bi bi-arrow-left me-1"></i>Torna agli Incarichi
+    </a>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="/assignments/reports/workload">
+            <i class="bi bi-speedometer2 me-2"></i>Report Workload
+        </a></li>
+        <li><a class="dropdown-item" href="/assignments/history">
+            <i class="bi bi-clock-history me-2"></i>Storico Completo
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="#" onclick="refreshStatistics()">
+            <i class="bi bi-arrow-clockwise me-2"></i>Aggiorna Dati
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Main Statistics -->
+    <div class="col-lg-8">
+        <!-- Overview Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="icon me-3">
+                                <i class="bi bi-person-badge fs-1"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-0">{{ statistics.current_assignments or 0 }}</h4>
+                                <small>Incarichi Correnti</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="icon me-3">
+                                <i class="bi bi-clock-history fs-1"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-0">{{ statistics.total_assignments or 0 }}</h4>
+                                <small>Totale Storico</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="icon me-3">
+                                <i class="bi bi-hourglass-split fs-1"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-0">{{ statistics.interim_assignments or 0 }}</h4>
+                                <small>Ad Interim</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="icon me-3">
+                                <i class="bi bi-people fs-1"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-0">{{ statistics.people_with_assignments or 0 }}</h4>
+                                <small>Persone Coinvolte</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Assignment Distribution -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pie-chart me-2"></i>Distribuzione Incarichi
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Per Unità Organizzative</h6>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span>Unità con Incarichi</span>
+                                <span class="badge bg-primary">{{ statistics.units_with_assignments or 0 }}</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" 
+                                     style="width: {{ ((statistics.units_with_assignments or 0) / (statistics.total_units or 1) * 100)|round }}%">
+                                </div>
+                            </div>
+                            <small class="text-muted">
+                                {{ ((statistics.units_with_assignments or 0) / (statistics.total_units or 1) * 100)|round }}% delle unità totali
+                            </small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Per Persone</h6>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span>Persone con Incarichi</span>
+                                <span class="badge bg-success">{{ statistics.people_with_assignments or 0 }}</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ ((statistics.people_with_assignments or 0) / (statistics.total_people or 1) * 100)|round }}%">
+                                </div>
+                            </div>
+                            <small class="text-muted">
+                                {{ ((statistics.people_with_assignments or 0) / (statistics.total_people or 1) * 100)|round }}% delle persone totali
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Assignment Types -->
+                <div class="row mt-4">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="display-6 text-success">{{ statistics.full_time_assignments or 0 }}</div>
+                            <small class="text-muted">Full-time (100%)</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="display-6 text-warning">{{ statistics.part_time_assignments or 0 }}</div>
+                            <small class="text-muted">Part-time (&lt;100%)</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="display-6 text-info">{{ statistics.boss_assignments or 0 }}</div>
+                            <small class="text-muted">Responsabili Unità</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Versioning Statistics -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-layers me-2"></i>Statistiche Versioning
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="text-center mb-3">
+                            <h4 class="text-primary mb-0">{{ statistics.total_versions or 0 }}</h4>
+                            <small class="text-muted">Versioni Totali</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center mb-3">
+                            <h4 class="text-success mb-0">{{ statistics.current_versions or 0 }}</h4>
+                            <small class="text-muted">Versioni Correnti</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center mb-3">
+                            <h4 class="text-secondary mb-0">{{ statistics.historical_versions or 0 }}</h4>
+                            <small class="text-muted">Versioni Storiche</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Combinazioni Uniche:</span>
+                            <span class="badge bg-info">{{ statistics.unique_combinations or 0 }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Media Versioni per Combinazione:</span>
+                            <span class="badge bg-secondary">{{ statistics.avg_versions_per_combination or 0 }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Combinazioni Multi-versione:</span>
+                            <span class="badge bg-warning">{{ statistics.multi_version_combinations or 0 }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Durata Media Incarichi:</span>
+                            <span class="badge bg-primary">{{ statistics.avg_duration_days or 0 }} giorni</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Workload Analysis -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-speedometer2 me-2"></i>Analisi Carico di Lavoro
+                </h5>
+                <a href="/assignments/reports/workload" class="btn btn-sm btn-outline-primary">
+                    Report Dettagliato
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h5 text-danger mb-0">{{ statistics.overloaded_people or 0 }}</div>
+                            <small class="text-muted">Sovraccarichi (&gt;120%)</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h5 text-warning mb-0">{{ statistics.high_workload_people or 0 }}</div>
+                            <small class="text-muted">Alto Carico (100-120%)</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h5 text-success mb-0">{{ statistics.normal_workload_people or 0 }}</div>
+                            <small class="text-muted">Normale (50-100%)</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h5 text-info mb-0">{{ statistics.low_workload_people or 0 }}</div>
+                            <small class="text-muted">Basso (&lt;50%)</small>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if statistics.avg_workload_percentage %}
+                <hr>
+                <div class="text-center">
+                    <h6>Carico di Lavoro Medio</h6>
+                    <div class="progress mx-auto" style="width: 300px;">
+                        <div class="progress-bar bg-{{ 'danger' if statistics.avg_workload_percentage > 120 else 'warning' if statistics.avg_workload_percentage > 100 else 'success' }}" 
+                             role="progressbar" 
+                             style="width: {{ [statistics.avg_workload_percentage, 100]|min }}%">
+                            {{ statistics.avg_workload_percentage|round }}%
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Quick Stats -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Statistiche Rapide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Incarichi Attivi:</span>
+                    <span class="badge bg-success">{{ statistics.active_assignments or 0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Incarichi Terminati:</span>
+                    <span class="badge bg-danger">{{ statistics.terminated_assignments or 0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Incarichi Futuri:</span>
+                    <span class="badge bg-info">{{ statistics.future_assignments or 0 }}</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Ruoli Utilizzati:</span>
+                    <span class="badge bg-primary">{{ statistics.job_titles_in_use or 0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Unità Attive:</span>
+                    <span class="badge bg-secondary">{{ statistics.active_units or 0 }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Activity -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-activity me-2"></i>Attività Recente
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if statistics.recent_assignments %}
+                {% for assignment in statistics.recent_assignments[:5] %}
+                <div class="d-flex align-items-center mb-2">
+                    <div class="avatar-circle me-2">
+                        {{ assignment.person_initials or '?' }}
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="small">
+                            <strong>{{ assignment.person_name }}</strong>
+                            <br>{{ assignment.job_title_name }} in {{ assignment.unit_name }}
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted">
+                            {{ assignment.datetime_created.strftime('%d/%m') if assignment.datetime_created else 'N/A' }}
+                        </small>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center text-muted">
+                    <i class="bi bi-inbox display-4"></i>
+                    <p class="mt-2">Nessuna attività recente</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Data Quality -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-shield-check me-2"></i>Qualità Dati
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small">Completezza Dati</span>
+                        <span class="badge bg-success">{{ statistics.data_completeness_percentage or 95 }}%</span>
+                    </div>
+                    <div class="progress progress-sm">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {{ statistics.data_completeness_percentage or 95 }}%">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="small">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Incarichi con Note:</span>
+                        <span>{{ statistics.assignments_with_notes or 0 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Incarichi con Date:</span>
+                        <span>{{ statistics.assignments_with_dates or 0 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Errori Consistenza:</span>
+                        <span class="text-{{ 'danger' if statistics.consistency_errors > 0 else 'success' }}">
+                            {{ statistics.consistency_errors or 0 }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Export Options -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-download me-2"></i>Esportazione
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="exportStatistics('csv')">
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i>Esporta CSV
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportStatistics('json')">
+                        <i class="bi bi-file-earmark-code me-1"></i>Esporta JSON
+                    </button>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="printStatistics()">
+                        <i class="bi bi-printer me-1"></i>Stampa Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.progress-sm {
+    height: 0.5rem;
+}
+
+.card.bg-primary .icon,
+.card.bg-success .icon,
+.card.bg-info .icon,
+.card.bg-warning .icon {
+    opacity: 0.8;
+}
+
+.display-6 {
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+@media print {
+    .btn, .dropdown, .card-header .btn {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #dee2e6 !important;
+        box-shadow: none !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshStatistics() {
+    window.location.reload();
+}
+
+function exportStatistics(format) {
+    // Create export URL
+    const url = `/assignments/reports/statistics/export?format=${format}`;
+    
+    // Create temporary link and trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `assignment_statistics_${new Date().toISOString().split('T')[0]}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function printStatistics() {
+    window.print();
+}
+
+// Auto-refresh every 5 minutes
+setInterval(function() {
+    const refreshIndicator = document.createElement('div');
+    refreshIndicator.className = 'position-fixed top-0 end-0 p-3';
+    refreshIndicator.innerHTML = `
+        <div class="toast show" role="alert">
+            <div class="toast-header">
+                <i class="bi bi-arrow-clockwise text-primary me-2"></i>
+                <strong class="me-auto">Aggiornamento</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">
+                Statistiche aggiornate automaticamente
+            </div>
+        </div>
+    `;
+    document.body.appendChild(refreshIndicator);
+    
+    setTimeout(() => {
+        if (refreshIndicator.parentNode) {
+            refreshIndicator.parentNode.removeChild(refreshIndicator);
+        }
+    }, 3000);
+    
+    refreshStatistics();
+}, 300000); // 5 minutes
+</script>
+{% endblock %}

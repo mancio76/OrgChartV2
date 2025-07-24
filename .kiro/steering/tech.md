@@ -1,111 +1,108 @@
+---
+inclusion: always
+---
+
 # Tech Stack & Development Guidelines
 
-## Tech Stack
+## Core Technologies
 
-### Backend
+### Backend Stack
 
-- **FastAPI**: Web framework for building APIs with Python
-- **Uvicorn**: ASGI server for running FastAPI applications
-- **SQLite**: Embedded database with foreign key constraints enabled
+- **FastAPI**: Primary web framework - use for all API endpoints and route handlers
+- **Uvicorn**: ASGI server - standard for running the application
+- **SQLite**: Database with foreign key constraints ALWAYS enabled
 - **Jinja2**: Template engine for HTML rendering
 
-### Frontend
+### Frontend Stack
 
-- **Bootstrap 5**: CSS framework for responsive design
-- **Bootstrap Icons**: Icon library
-- **Vanilla JavaScript**: No external JS frameworks/libraries
-- **CSS Modules**: Organized by component and section
+- **Bootstrap 5**: CSS framework - use for responsive layouts and components
+- **Bootstrap Icons**: Icon library - prefer over custom icons
+- **Vanilla JavaScript**: No external JS frameworks - keep it simple
+- **Modular CSS**: Organize by component, use BEM methodology
 
-## Dependencies
+### Key Dependencies
 
-- fastapi==0.104.1
-- uvicorn[standard]==0.24.0
-- jinja2==3.1.2
-- python-multipart==0.0.6
-- aiofiles==23.2.1
-- python-dotenv==1.0.0
-
-## Database
-
-- SQLite with foreign key constraints enabled
-- Connection pooling with singleton pattern
-- Write-Ahead Logging (WAL) journal mode
-- Automatic versioning for assignments
-
-## Common Commands
-
-### Setup & Installation
-
-```bash
-# Create virtual environment
-python -m venv .venv
-.venv\Scripts\activate  # Windows
-# or
-source .venv/bin/activate  # Linux/Mac
-
-# Install dependencies
-pip install -r requirements.txt
+```plaintext
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+jinja2==3.1.2
+python-multipart==0.0.6
+aiofiles==23.2.1
+python-dotenv==1.0.0
 ```
 
-### Running the Application
+## Architecture Patterns
+
+### Database Layer
+
+- Use singleton pattern for database connections
+- Enable WAL journal mode for SQLite
+- Implement automatic versioning for assignments (critical requirement)
+- Always enable foreign key constraints
+
+### Code Organization
+
+- **Models**: Use dataclasses with validation methods
+- **Services**: Business logic layer between routes and models
+- **Routes**: Handle HTTP requests, delegate to services
+- **Templates**: Organize by feature (units/, persons/, assignments/, etc.)
+
+## Development Commands
+
+### Application Lifecycle
 
 ```bash
-# Start the application
+# Start application
 python run.py
 
-# Or directly with uvicorn
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-```
-
-### Database Operations
-
-```bash
-# Initialize database
+# Initialize database (required for new setups)
 python scripts/init_db.py
 
 # Seed test data
 python scripts/seed_data.py
-
-# Backup database
-python scripts/backup_db.py
 ```
 
 ### Testing
 
 ```bash
-# Run all tests
-pytest tests/
-
-# Run specific test file
-pytest tests/test_models.py
+pytest tests/                    # Run all tests
+pytest tests/test_models.py      # Run specific test file
 ```
 
-## Code Style & Conventions
+## Code Standards
 
-### Python
+### Python Requirements
 
-- Follow PEP 8 style guide
-- Use type hints for function parameters and return values
-- Include docstrings for modules, classes, and functions
-- Use dataclasses for models
-- Implement proper validation in model classes
+- **Type hints**: Required for all function parameters and return values
+- **Docstrings**: Required for modules, classes, and public functions
+- **PEP 8**: Follow style guide strictly
+- **Dataclasses**: Use for all model definitions
+- **Validation**: Implement in model classes, not routes
+- **Logging**: Use centralized logging system
 
-### HTML/Templates
+### Template Standards
 
-- Use semantic HTML5 elements
-- Follow accessibility best practices
-- Organize templates by feature/section
-- Use Jinja2 template inheritance
+- **Semantic HTML5**: Use appropriate elements
+- **Accessibility**: Follow WCAG guidelines
+- **Jinja2 inheritance**: Use base templates consistently
+- **Feature organization**: Group templates by entity type
 
-### CSS
+### CSS/JS Standards
 
-- Follow BEM methodology for class naming
-- Mobile-first responsive design
-- Modular CSS organization by component
+- **BEM methodology**: For CSS class naming
+- **Mobile-first**: Design approach
+- **ES6+ syntax**: For JavaScript
+- **JSDoc comments**: For JavaScript functions
+- **File organization**:
+  - `/static/css/base.css` - Global styles
+  - `/static/css/components.css` - Component styles
+  - `/static/js/base.js` - Global scripts
+  - `/static/js/components.js` - Component scripts
 
-### JavaScript
+## Critical Rules
 
-- ES6+ syntax
-- camelCase for variables and functions
-- JSDoc comments for functions
-- Avoid global scope pollution
+1. **Assignment versioning**: Every assignment change MUST create a new version
+2. **Foreign keys**: MUST be enabled in SQLite
+3. **Italian language**: Primary language for UI text and error messages
+4. **Hierarchical units**: Maintain parent-child relationships
+5. **No external JS frameworks**: Keep frontend dependencies minimal  

@@ -1,0 +1,611 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-primary" onclick="refreshAnalysis()">
+        <i class="bi bi-arrow-clockwise me-1"></i>Aggiorna Analisi
+    </button>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#" onclick="exportGapAnalysis('pdf')">
+            <i class="bi bi-file-pdf me-2"></i>Esporta PDF
+        </a></li>
+        <li><a class="dropdown-item" href="#" onclick="exportGapAnalysis('excel')">
+            <i class="bi bi-file-earmark-spreadsheet me-2"></i>Esporta Excel
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/orgchart/simulation">
+            <i class="bi bi-diagram-2 me-2"></i>Simula Soluzioni
+        </a></li>
+        <li><a class="dropdown-item" href="/orgchart/reports/organizational-health">
+            <i class="bi bi-heart-pulse me-2"></i>Report Salute
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Gap Analysis Summary -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-exclamation-triangle fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ gap_summary.critical_gaps or 0 }}</h4>
+                        <small>Gap Critici</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-exclamation-diamond fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ gap_summary.moderate_gaps or 0 }}</h4>
+                        <small>Gap Moderati</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-info-circle fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ gap_summary.minor_gaps or 0 }}</h4>
+                        <small>Gap Minori</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-check-circle fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ gap_summary.coverage_rate or 0 }}%</h4>
+                        <small>Copertura Totale</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gap Categories -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-funnel me-2"></i>Filtri Analisi
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="gap-type-filter" class="form-label">Tipo di Gap:</label>
+                            <select class="form-select" id="gap-type-filter" onchange="filterGaps()">
+                                <option value="all">Tutti i Gap</option>
+                                <option value="vacant">Posizioni Vacanti</option>
+                                <option value="overload">Sovraccarico</option>
+                                <option value="skills">Competenze Mancanti</option>
+                                <option value="interim">Incarichi Interim</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="severity-filter" class="form-label">Severità:</label>
+                            <select class="form-select" id="severity-filter" onchange="filterGaps()">
+                                <option value="all">Tutte le Severità</option>
+                                <option value="critical">Critico</option>
+                                <option value="moderate">Moderato</option>
+                                <option value="minor">Minore</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="unit-filter" class="form-label">Unità:</label>
+                            <select class="form-select" id="unit-filter" onchange="filterGaps()">
+                                <option value="all">Tutte le Unità</option>
+                                {% if units %}
+                                {% for unit in units %}
+                                <option value="{{ unit.id }}">{{ unit.name }}</option>
+                                {% endfor %}
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="priority-filter" class="form-label">Priorità:</label>
+                            <select class="form-select" id="priority-filter" onchange="filterGaps()">
+                                <option value="all">Tutte le Priorità</option>
+                                <option value="high">Alta</option>
+                                <option value="medium">Media</option>
+                                <option value="low">Bassa</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gap Analysis Results -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-list-ul me-2"></i>Gap Identificati
+                </h5>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-secondary" onclick="sortGaps('severity')">
+                        <i class="bi bi-sort-down me-1"></i>Severità
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="sortGaps('priority')">
+                        <i class="bi bi-sort-numeric-down me-1"></i>Priorità
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="sortGaps('unit')">
+                        <i class="bi bi-sort-alpha-down me-1"></i>Unità
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if gap_analysis %}
+                <div id="gaps-container">
+                    {% for gap in gap_analysis %}
+                    <div class="gap-item mb-3" data-gap-type="{{ gap.type }}" data-severity="{{ gap.severity }}" data-unit-id="{{ gap.unit_id }}" data-priority="{{ gap.priority }}">
+                        <div class="card border-{{ 'danger' if gap.severity == 'critical' else 'warning' if gap.severity == 'moderate' else 'info' }}">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="d-flex align-items-start">
+                                            <div class="gap-icon me-3">
+                                                <i class="bi bi-{{ 'exclamation-triangle' if gap.severity == 'critical' else 'exclamation-diamond' if gap.severity == 'moderate' else 'info-circle' }} fs-4 text-{{ 'danger' if gap.severity == 'critical' else 'warning' if gap.severity == 'moderate' else 'info' }}"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">{{ gap.title }}</h6>
+                                                <p class="text-muted mb-2">{{ gap.description }}</p>
+                                                <div class="gap-details">
+                                                    <span class="badge bg-light text-dark me-2">
+                                                        <i class="bi bi-building me-1"></i>{{ gap.unit_name }}
+                                                    </span>
+                                                    <span class="badge bg-{{ 'danger' if gap.severity == 'critical' else 'warning' if gap.severity == 'moderate' else 'info' }} me-2">
+                                                        {{ gap.severity.title() }}
+                                                    </span>
+                                                    <span class="badge bg-secondary">
+                                                        {{ gap.type.replace('_', ' ').title() }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="gap-metrics mb-2">
+                                            <div class="d-flex justify-content-between mb-1">
+                                                <small class="text-muted">Impatto:</small>
+                                                <span class="badge bg-{{ 'danger' if gap.impact == 'high' else 'warning' if gap.impact == 'medium' else 'info' }}">
+                                                    {{ gap.impact.title() }}
+                                                </span>
+                                            </div>
+                                            <div class="d-flex justify-content-between mb-1">
+                                                <small class="text-muted">Urgenza:</small>
+                                                <span class="badge bg-{{ 'danger' if gap.urgency == 'high' else 'warning' if gap.urgency == 'medium' else 'info' }}">
+                                                    {{ gap.urgency.title() }}
+                                                </span>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <small class="text-muted">Costo Stimato:</small>
+                                                <span class="fw-bold">{{ gap.estimated_cost or 'N/A' }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="gap-actions">
+                                            <div class="btn-group btn-group-sm w-100">
+                                                {% if gap.type == 'vacant' %}
+                                                <a href="/assignments/new?unit_id={{ gap.unit_id }}" class="btn btn-outline-success">
+                                                    <i class="bi bi-person-plus"></i>
+                                                </a>
+                                                {% endif %}
+                                                <button type="button" class="btn btn-outline-primary" onclick="viewGapDetails({{ gap.id }})">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-info" onclick="simulateSolution({{ gap.id }})">
+                                                    <i class="bi bi-diagram-2"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Recommended Actions -->
+                                {% if gap.recommendations %}
+                                <div class="gap-recommendations mt-3">
+                                    <h6 class="text-muted mb-2">Azioni Raccomandate:</h6>
+                                    <ul class="list-unstyled mb-0">
+                                        {% for recommendation in gap.recommendations %}
+                                        <li class="mb-1">
+                                            <i class="bi bi-arrow-right me-2 text-primary"></i>
+                                            {{ recommendation }}
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-check-circle display-1 text-success mb-3"></i>
+                    <h4 class="text-success">Nessun Gap Identificato</h4>
+                    <p class="text-muted">L'organizzazione sembra essere ben strutturata senza gap significativi.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Priority Matrix -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-grid me-2"></i>Matrice Priorità
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="priority-matrix">
+                    <div class="matrix-quadrant high-impact high-urgency mb-2">
+                        <div class="quadrant-header bg-danger text-white p-2 rounded">
+                            <small class="fw-bold">Alto Impatto / Alta Urgenza</small>
+                        </div>
+                        <div class="quadrant-content p-2">
+                            {% set critical_count = gap_analysis|selectattr('impact', 'equalto', 'high')|selectattr('urgency', 'equalto', 'high')|list|length if gap_analysis else 0 %}
+                            <div class="text-center">
+                                <div class="fw-bold text-danger">{{ critical_count }}</div>
+                                <small class="text-muted">Gap Critici</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="matrix-quadrant high-impact low-urgency mb-2">
+                        <div class="quadrant-header bg-warning text-white p-2 rounded">
+                            <small class="fw-bold">Alto Impatto / Bassa Urgenza</small>
+                        </div>
+                        <div class="quadrant-content p-2">
+                            {% set strategic_count = gap_analysis|selectattr('impact', 'equalto', 'high')|selectattr('urgency', 'equalto', 'low')|list|length if gap_analysis else 0 %}
+                            <div class="text-center">
+                                <div class="fw-bold text-warning">{{ strategic_count }}</div>
+                                <small class="text-muted">Strategici</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="matrix-quadrant low-impact high-urgency mb-2">
+                        <div class="quadrant-header bg-info text-white p-2 rounded">
+                            <small class="fw-bold">Basso Impatto / Alta Urgenza</small>
+                        </div>
+                        <div class="quadrant-content p-2">
+                            {% set tactical_count = gap_analysis|selectattr('impact', 'equalto', 'low')|selectattr('urgency', 'equalto', 'high')|list|length if gap_analysis else 0 %}
+                            <div class="text-center">
+                                <div class="fw-bold text-info">{{ tactical_count }}</div>
+                                <small class="text-muted">Tattici</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="matrix-quadrant low-impact low-urgency">
+                        <div class="quadrant-header bg-secondary text-white p-2 rounded">
+                            <small class="fw-bold">Basso Impatto / Bassa Urgenza</small>
+                        </div>
+                        <div class="quadrant-content p-2">
+                            {% set minor_count = gap_analysis|selectattr('impact', 'equalto', 'low')|selectattr('urgency', 'equalto', 'low')|list|length if gap_analysis else 0 %}
+                            <div class="text-center">
+                                <div class="fw-bold text-secondary">{{ minor_count }}</div>
+                                <small class="text-muted">Minori</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gap Types Distribution -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-pie-chart me-2"></i>Distribuzione per Tipo
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if gap_types_distribution %}
+                <div class="gap-types">
+                    {% for gap_type, count in gap_types_distribution.items() %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-{{ 'person-x' if gap_type == 'vacant' else 'speedometer2' if gap_type == 'overload' else 'mortarboard' if gap_type == 'skills' else 'hourglass-split' }} me-2 text-primary"></i>
+                            <span>{{ gap_type.replace('_', ' ').title() }}</span>
+                        </div>
+                        <span class="badge bg-primary">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="bi bi-info-circle text-muted"></i>
+                    <p class="text-muted mb-0">Nessun dato disponibile</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Azioni Rapide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-success" onclick="addressAllVacancies()">
+                        <i class="bi bi-person-plus me-2"></i>Risolvi Posizioni Vacanti
+                    </button>
+                    <button type="button" class="btn btn-outline-warning" onclick="balanceWorkloads()">
+                        <i class="bi bi-speedometer2 me-2"></i>Bilancia Carichi
+                    </button>
+                    <a href="/orgchart/simulation" class="btn btn-outline-info">
+                        <i class="bi bi-diagram-2 me-2"></i>Simula Soluzioni
+                    </a>
+                    <hr>
+                    <button type="button" class="btn btn-outline-primary" onclick="generateActionPlan()">
+                        <i class="bi bi-list-check me-2"></i>Piano d'Azione
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="scheduleReview()">
+                        <i class="bi bi-calendar-event me-2"></i>Pianifica Revisione
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.gap-item {
+    transition: all 0.3s ease;
+}
+
+.gap-item:hover {
+    transform: translateY(-2px);
+}
+
+.gap-icon {
+    width: 48px;
+    text-align: center;
+}
+
+.gap-metrics {
+    background: rgba(0, 0, 0, 0.02);
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+}
+
+.gap-recommendations {
+    background: rgba(13, 110, 253, 0.05);
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    border-left: 3px solid var(--bs-primary);
+}
+
+.priority-matrix .matrix-quadrant {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.quadrant-header {
+    font-size: 0.8rem;
+}
+
+.quadrant-content {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.gap-types .bi {
+    width: 16px;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .gap-item .row {
+        flex-direction: column;
+    }
+    
+    .gap-metrics {
+        margin-top: 1rem;
+    }
+    
+    .priority-matrix {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+}
+
+.hidden {
+    display: none !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentGaps = [];
+let filteredGaps = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize gaps data
+    currentGaps = Array.from(document.querySelectorAll('.gap-item')).map(item => ({
+        element: item,
+        type: item.dataset.gapType,
+        severity: item.dataset.severity,
+        unitId: item.dataset.unitId,
+        priority: item.dataset.priority
+    }));
+    filteredGaps = [...currentGaps];
+});
+
+function filterGaps() {
+    const typeFilter = document.getElementById('gap-type-filter').value;
+    const severityFilter = document.getElementById('severity-filter').value;
+    const unitFilter = document.getElementById('unit-filter').value;
+    const priorityFilter = document.getElementById('priority-filter').value;
+    
+    filteredGaps = currentGaps.filter(gap => {
+        return (typeFilter === 'all' || gap.type === typeFilter) &&
+               (severityFilter === 'all' || gap.severity === severityFilter) &&
+               (unitFilter === 'all' || gap.unitId === unitFilter) &&
+               (priorityFilter === 'all' || gap.priority === priorityFilter);
+    });
+    
+    // Show/hide gaps based on filter
+    currentGaps.forEach(gap => {
+        if (filteredGaps.includes(gap)) {
+            gap.element.classList.remove('hidden');
+        } else {
+            gap.element.classList.add('hidden');
+        }
+    });
+    
+    updateGapCount();
+}
+
+function sortGaps(criteria) {
+    const container = document.getElementById('gaps-container');
+    const sortOrder = {
+        'severity': ['critical', 'moderate', 'minor'],
+        'priority': ['high', 'medium', 'low'],
+        'unit': null // Alphabetical
+    };
+    
+    filteredGaps.sort((a, b) => {
+        if (criteria === 'unit') {
+            const unitA = a.element.querySelector('.gap-details .badge').textContent.trim();
+            const unitB = b.element.querySelector('.gap-details .badge').textContent.trim();
+            return unitA.localeCompare(unitB);
+        } else {
+            const orderA = sortOrder[criteria].indexOf(a[criteria]);
+            const orderB = sortOrder[criteria].indexOf(b[criteria]);
+            return orderA - orderB;
+        }
+    });
+    
+    // Reorder DOM elements
+    filteredGaps.forEach(gap => {
+        container.appendChild(gap.element);
+    });
+}
+
+function updateGapCount() {
+    const visibleCount = filteredGaps.length;
+    const totalCount = currentGaps.length;
+    
+    // Update any count displays if needed
+    console.log(`Showing ${visibleCount} of ${totalCount} gaps`);
+}
+
+function viewGapDetails(gapId) {
+    // In a real implementation, this would open a modal or navigate to a detail page
+    alert(`Visualizzazione dettagli gap ID: ${gapId}`);
+}
+
+function simulateSolution(gapId) {
+    // Navigate to simulation page with gap context
+    window.location.href = `/orgchart/simulation?gap_id=${gapId}`;
+}
+
+function refreshAnalysis() {
+    const refreshBtn = document.querySelector('[onclick="refreshAnalysis()"]');
+    const originalText = refreshBtn.innerHTML;
+    refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1 spin"></i>Aggiornamento...';
+    refreshBtn.disabled = true;
+    
+    setTimeout(() => {
+        window.location.reload();
+    }, 1500);
+}
+
+function exportGapAnalysis(format) {
+    const url = `/orgchart/export/gap-analysis?format=${format}`;
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `gap_analysis_${new Date().toISOString().split('T')[0]}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function addressAllVacancies() {
+    if (confirm('Vuoi procedere con l\'assegnazione automatica delle posizioni vacanti?')) {
+        // In a real implementation, this would trigger a bulk assignment process
+        alert('Processo di assegnazione automatica avviato. Verrai notificato al completamento.');
+    }
+}
+
+function balanceWorkloads() {
+    if (confirm('Vuoi procedere con il bilanciamento automatico dei carichi di lavoro?')) {
+        // In a real implementation, this would trigger workload rebalancing
+        alert('Processo di bilanciamento avviato. Verrai notificato al completamento.');
+    }
+}
+
+function generateActionPlan() {
+    // In a real implementation, this would generate a comprehensive action plan
+    window.open('/orgchart/reports/action-plan', '_blank');
+}
+
+function scheduleReview() {
+    // In a real implementation, this would open a scheduling interface
+    alert('Funzionalità di pianificazione revisione in sviluppo.');
+}
+
+// Add spin animation
+const style = document.createElement('style');
+style.textContent = `
+    .spin {
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

@@ -1,0 +1,794 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-primary" onclick="runSimulation()">
+        <i class="bi bi-play me-1"></i>Esegui Simulazione
+    </button>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#" onclick="saveSimulation()">
+            <i class="bi bi-save me-2"></i>Salva Scenario
+        </a></li>
+        <li><a class="dropdown-item" href="#" onclick="loadSimulation()">
+            <i class="bi bi-folder-open me-2"></i>Carica Scenario
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="#" onclick="exportSimulation('pdf')">
+            <i class="bi bi-file-pdf me-2"></i>Esporta PDF
+        </a></li>
+        <li><a class="dropdown-item" href="#" onclick="resetSimulation()">
+            <i class="bi bi-arrow-clockwise me-2"></i>Reset
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Simulation Controls -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-sliders me-2"></i>Controlli Simulazione
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="simulation-type" class="form-label">Tipo Simulazione:</label>
+                            <select class="form-select" id="simulation-type" onchange="updateSimulationType()">
+                                <option value="restructure">Ristrutturazione</option>
+                                <option value="growth">Crescita Organico</option>
+                                <option value="optimization">Ottimizzazione</option>
+                                <option value="merger">Fusione/Acquisizione</option>
+                                <option value="downsizing">Ridimensionamento</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="time-horizon" class="form-label">Orizzonte Temporale:</label>
+                            <select class="form-select" id="time-horizon">
+                                <option value="3">3 Mesi</option>
+                                <option value="6" selected>6 Mesi</option>
+                                <option value="12">1 Anno</option>
+                                <option value="24">2 Anni</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="budget-constraint" class="form-label">Vincolo Budget:</label>
+                            <div class="input-group">
+                                <span class="input-group-text">€</span>
+                                <input type="number" class="form-control" id="budget-constraint" placeholder="0" min="0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="risk-tolerance" class="form-label">Tolleranza Rischio:</label>
+                            <select class="form-select" id="risk-tolerance">
+                                <option value="low">Bassa</option>
+                                <option value="medium" selected>Media</option>
+                                <option value="high">Alta</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Simulation Workspace -->
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Current vs Simulated Structure -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="structure-tabs">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="current-tab" data-bs-toggle="tab" data-bs-target="#current-structure">
+                            <i class="bi bi-diagram-3 me-1"></i>Struttura Attuale
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="simulated-tab" data-bs-toggle="tab" data-bs-target="#simulated-structure">
+                            <i class="bi bi-diagram-2 me-1"></i>Struttura Simulata
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="comparison-tab" data-bs-toggle="tab" data-bs-target="#comparison-view">
+                            <i class="bi bi-arrow-left-right me-1"></i>Confronto
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="structure-content">
+                    <!-- Current Structure -->
+                    <div class="tab-pane fade show active" id="current-structure">
+                        <div class="structure-view">
+                            {% if current_structure %}
+                            <div class="org-tree current-tree">
+                                {% for unit in current_structure %}
+                                <div class="tree-node" data-unit-id="{{ unit.id }}">
+                                    <div class="unit-box current-unit">
+                                        <div class="unit-header">
+                                            <div class="unit-info">
+                                                <div class="unit-name">
+                                                    <i class="bi bi-{{ 'building' if unit.unit_type_id == 1 else 'diagram-2' }} me-2"></i>
+                                                    <strong>{{ unit.name }}</strong>
+                                                </div>
+                                                <div class="unit-stats">
+                                                    <span class="badge bg-light text-dark">
+                                                        <i class="bi bi-people me-1"></i>{{ unit.person_count }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4">
+                                <i class="bi bi-diagram-3 display-4 text-muted mb-3"></i>
+                                <p class="text-muted">Caricamento struttura attuale...</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Simulated Structure -->
+                    <div class="tab-pane fade" id="simulated-structure">
+                        <div class="structure-view">
+                            <div id="simulated-tree" class="org-tree simulated-tree">
+                                <div class="text-center py-4">
+                                    <i class="bi bi-diagram-2 display-4 text-muted mb-3"></i>
+                                    <p class="text-muted">Configura i parametri e esegui la simulazione per vedere i risultati.</p>
+                                    <button type="button" class="btn btn-primary" onclick="runSimulation()">
+                                        <i class="bi bi-play me-1"></i>Avvia Simulazione
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Comparison View -->
+                    <div class="tab-pane fade" id="comparison-view">
+                        <div class="comparison-container">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-muted mb-3">Struttura Attuale</h6>
+                                    <div class="comparison-current">
+                                        <!-- Current structure summary will be populated here -->
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-muted mb-3">Struttura Simulata</h6>
+                                    <div class="comparison-simulated">
+                                        <!-- Simulated structure summary will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Simulation Changes -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-list-check me-2"></i>Modifiche Proposte
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="proposed-changes">
+                    <div class="text-center py-4">
+                        <i class="bi bi-info-circle display-4 text-muted mb-3"></i>
+                        <p class="text-muted">Le modifiche proposte appariranno qui dopo l'esecuzione della simulazione.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Simulation Parameters -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-gear me-2"></i>Parametri Avanzati
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="parameter-group mb-3">
+                    <label class="form-label">Crescita Prevista (%)</label>
+                    <input type="range" class="form-range" id="growth-rate" min="0" max="50" value="10" oninput="updateGrowthRate(this.value)">
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">0%</small>
+                        <small class="text-primary fw-bold" id="growth-rate-value">10%</small>
+                        <small class="text-muted">50%</small>
+                    </div>
+                </div>
+                
+                <div class="parameter-group mb-3">
+                    <label class="form-label">Efficienza Target (%)</label>
+                    <input type="range" class="form-range" id="efficiency-target" min="70" max="100" value="85" oninput="updateEfficiencyTarget(this.value)">
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">70%</small>
+                        <small class="text-primary fw-bold" id="efficiency-target-value">85%</small>
+                        <small class="text-muted">100%</small>
+                    </div>
+                </div>
+                
+                <div class="parameter-group mb-3">
+                    <label class="form-label">Span of Control Max</label>
+                    <input type="range" class="form-range" id="span-control" min="3" max="15" value="7" oninput="updateSpanControl(this.value)">
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">3</small>
+                        <small class="text-primary fw-bold" id="span-control-value">7</small>
+                        <small class="text-muted">15</small>
+                    </div>
+                </div>
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="preserve-hierarchy" checked>
+                    <label class="form-check-label" for="preserve-hierarchy">
+                        Preserva Gerarchia Esistente
+                    </label>
+                </div>
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="minimize-disruption" checked>
+                    <label class="form-check-label" for="minimize-disruption">
+                        Minimizza Interruzioni
+                    </label>
+                </div>
+                
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="consider-skills">
+                    <label class="form-check-label" for="consider-skills">
+                        Considera Competenze
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Simulation Results -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Risultati Simulazione
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="simulation-results">
+                    <div class="text-center py-3">
+                        <i class="bi bi-hourglass text-muted"></i>
+                        <p class="text-muted mb-0">In attesa di simulazione</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Impact Analysis -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-speedometer2 me-2"></i>Analisi Impatto
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="impact-analysis">
+                    <div class="impact-metric mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Costo Stimato:</span>
+                            <span class="fw-bold" id="estimated-cost">€ --</span>
+                        </div>
+                    </div>
+                    <div class="impact-metric mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Tempo Implementazione:</span>
+                            <span class="fw-bold" id="implementation-time">-- settimane</span>
+                        </div>
+                    </div>
+                    <div class="impact-metric mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Rischio:</span>
+                            <span class="badge bg-secondary" id="risk-level">--</span>
+                        </div>
+                    </div>
+                    <div class="impact-metric">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">ROI Previsto:</span>
+                            <span class="fw-bold text-success" id="expected-roi">--%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Azioni Rapide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-success" onclick="applySimulation()" disabled id="apply-btn">
+                        <i class="bi bi-check-circle me-2"></i>Applica Modifiche
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" onclick="createActionPlan()" disabled id="plan-btn">
+                        <i class="bi bi-list-check me-2"></i>Crea Piano d'Azione
+                    </button>
+                    <button type="button" class="btn btn-outline-info" onclick="scheduleImplementation()" disabled id="schedule-btn">
+                        <i class="bi bi-calendar-event me-2"></i>Pianifica Implementazione
+                    </button>
+                    <hr>
+                    <button type="button" class="btn btn-outline-warning" onclick="saveScenario()">
+                        <i class="bi bi-save me-2"></i>Salva Scenario
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="shareSimulation()">
+                        <i class="bi bi-share me-2"></i>Condividi
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Simulation Progress Modal -->
+<div class="modal fade" id="simulationModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-gear me-2"></i>Esecuzione Simulazione
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Caricamento...</span>
+                </div>
+                <p class="mb-0">Elaborazione in corso...</p>
+                <small class="text-muted" id="simulation-status">Inizializzazione parametri</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.org-tree {
+    padding: 1rem;
+    min-height: 300px;
+    background: #f8f9fa;
+    border-radius: 0.375rem;
+}
+
+.tree-node {
+    margin: 0.5rem 0;
+}
+
+.unit-box {
+    background: white;
+    border: 2px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    margin: 0.25rem;
+    transition: all 0.3s ease;
+}
+
+.current-unit {
+    border-color: var(--bs-info);
+}
+
+.simulated-unit {
+    border-color: var(--bs-success);
+}
+
+.unit-box:hover {
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.unit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.unit-info {
+    flex-grow: 1;
+}
+
+.unit-name {
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.parameter-group {
+    background: rgba(0, 0, 0, 0.02);
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    border-left: 3px solid var(--bs-primary);
+}
+
+.form-range {
+    margin: 0.5rem 0;
+}
+
+.impact-metric {
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.impact-metric:last-child {
+    border-bottom: none;
+}
+
+.structure-view {
+    min-height: 400px;
+    overflow: auto;
+}
+
+.comparison-container {
+    min-height: 300px;
+}
+
+.change-item {
+    background: rgba(0, 0, 0, 0.02);
+    border-left: 3px solid var(--bs-primary);
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0.375rem;
+}
+
+.change-item.addition {
+    border-left-color: var(--bs-success);
+    background: rgba(25, 135, 84, 0.05);
+}
+
+.change-item.removal {
+    border-left-color: var(--bs-danger);
+    background: rgba(220, 53, 69, 0.05);
+}
+
+.change-item.modification {
+    border-left-color: var(--bs-warning);
+    background: rgba(255, 193, 7, 0.05);
+}
+
+@media (max-width: 768px) {
+    .org-tree {
+        padding: 0.5rem;
+    }
+    
+    .unit-box {
+        padding: 0.5rem;
+    }
+    
+    .comparison-container .row {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let simulationData = {
+    type: 'restructure',
+    parameters: {
+        growthRate: 10,
+        efficiencyTarget: 85,
+        spanControl: 7,
+        preserveHierarchy: true,
+        minimizeDisruption: true,
+        considerSkills: false
+    },
+    results: null
+};
+
+function updateSimulationType() {
+    simulationData.type = document.getElementById('simulation-type').value;
+    updateParameterVisibility();
+}
+
+function updateParameterVisibility() {
+    // Show/hide parameters based on simulation type
+    const type = simulationData.type;
+    
+    // This would control which parameters are relevant for each simulation type
+    console.log(`Simulation type changed to: ${type}`);
+}
+
+function updateGrowthRate(value) {
+    simulationData.parameters.growthRate = parseInt(value);
+    document.getElementById('growth-rate-value').textContent = value + '%';
+}
+
+function updateEfficiencyTarget(value) {
+    simulationData.parameters.efficiencyTarget = parseInt(value);
+    document.getElementById('efficiency-target-value').textContent = value + '%';
+}
+
+function updateSpanControl(value) {
+    simulationData.parameters.spanControl = parseInt(value);
+    document.getElementById('span-control-value').textContent = value;
+}
+
+function runSimulation() {
+    // Show progress modal
+    const modal = new bootstrap.Modal(document.getElementById('simulationModal'));
+    modal.show();
+    
+    // Simulate progress steps
+    const steps = [
+        'Inizializzazione parametri',
+        'Analisi struttura attuale',
+        'Calcolo ottimizzazioni',
+        'Generazione alternative',
+        'Valutazione impatti',
+        'Finalizzazione risultati'
+    ];
+    
+    let currentStep = 0;
+    const statusElement = document.getElementById('simulation-status');
+    
+    const progressInterval = setInterval(() => {
+        if (currentStep < steps.length) {
+            statusElement.textContent = steps[currentStep];
+            currentStep++;
+        } else {
+            clearInterval(progressInterval);
+            modal.hide();
+            displaySimulationResults();
+        }
+    }, 1000);
+}
+
+function displaySimulationResults() {
+    // Simulate results data
+    const mockResults = {
+        proposedChanges: [
+            {
+                type: 'addition',
+                title: 'Nuova Unità: Digital Innovation',
+                description: 'Creazione di una nuova unità per l\'innovazione digitale',
+                impact: 'high',
+                cost: 150000
+            },
+            {
+                type: 'modification',
+                title: 'Ristrutturazione IT Department',
+                description: 'Riorganizzazione del dipartimento IT con nuovi team specializzati',
+                impact: 'medium',
+                cost: 75000
+            },
+            {
+                type: 'removal',
+                title: 'Eliminazione Posizioni Ridondanti',
+                description: 'Rimozione di 3 posizioni duplicate nel settore amministrativo',
+                impact: 'low',
+                cost: -45000
+            }
+        ],
+        metrics: {
+            estimatedCost: 180000,
+            implementationTime: 12,
+            riskLevel: 'medium',
+            expectedROI: 25
+        }
+    };
+    
+    // Update proposed changes
+    const changesContainer = document.getElementById('proposed-changes');
+    changesContainer.innerHTML = '';
+    
+    mockResults.proposedChanges.forEach(change => {
+        const changeElement = document.createElement('div');
+        changeElement.className = `change-item ${change.type}`;
+        changeElement.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">${change.title}</h6>
+                    <p class="text-muted mb-2">${change.description}</p>
+                    <div class="d-flex gap-2">
+                        <span class="badge bg-${change.impact === 'high' ? 'danger' : change.impact === 'medium' ? 'warning' : 'info'}">
+                            Impatto ${change.impact}
+                        </span>
+                        <span class="badge bg-${change.cost > 0 ? 'danger' : 'success'}">
+                            ${change.cost > 0 ? '+' : ''}€${Math.abs(change.cost).toLocaleString()}
+                        </span>
+                    </div>
+                </div>
+                <div class="change-actions">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewChangeDetails('${change.title}')">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        changesContainer.appendChild(changeElement);
+    });
+    
+    // Update impact analysis
+    document.getElementById('estimated-cost').textContent = `€${mockResults.metrics.estimatedCost.toLocaleString()}`;
+    document.getElementById('implementation-time').textContent = `${mockResults.metrics.implementationTime} settimane`;
+    document.getElementById('risk-level').textContent = mockResults.metrics.riskLevel;
+    document.getElementById('risk-level').className = `badge bg-${mockResults.metrics.riskLevel === 'high' ? 'danger' : mockResults.metrics.riskLevel === 'medium' ? 'warning' : 'success'}`;
+    document.getElementById('expected-roi').textContent = `${mockResults.metrics.expectedROI}%`;
+    
+    // Update simulation results
+    const resultsContainer = document.getElementById('simulation-results');
+    resultsContainer.innerHTML = `
+        <div class="result-metric mb-2">
+            <div class="d-flex justify-content-between">
+                <span class="text-muted">Efficienza Migliorata:</span>
+                <span class="fw-bold text-success">+${mockResults.metrics.expectedROI}%</span>
+            </div>
+        </div>
+        <div class="result-metric mb-2">
+            <div class="d-flex justify-content-between">
+                <span class="text-muted">Posizioni Ottimizzate:</span>
+                <span class="fw-bold">15</span>
+            </div>
+        </div>
+        <div class="result-metric">
+            <div class="d-flex justify-content-between">
+                <span class="text-muted">Livelli Gerarchici:</span>
+                <span class="fw-bold">-1</span>
+            </div>
+        </div>
+    `;
+    
+    // Enable action buttons
+    document.getElementById('apply-btn').disabled = false;
+    document.getElementById('plan-btn').disabled = false;
+    document.getElementById('schedule-btn').disabled = false;
+    
+    // Switch to simulated structure tab
+    document.getElementById('simulated-tab').click();
+    
+    // Update simulated structure view
+    updateSimulatedStructure();
+}
+
+function updateSimulatedStructure() {
+    const simulatedTree = document.getElementById('simulated-tree');
+    simulatedTree.innerHTML = `
+        <div class="tree-node">
+            <div class="unit-box simulated-unit">
+                <div class="unit-header">
+                    <div class="unit-info">
+                        <div class="unit-name">
+                            <i class="bi bi-building me-2"></i>
+                            <strong>CEO Office</strong>
+                            <span class="badge bg-success ms-2">Ottimizzato</span>
+                        </div>
+                        <div class="unit-stats">
+                            <span class="badge bg-light text-dark">
+                                <i class="bi bi-people me-1"></i>3
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="tree-node">
+            <div class="unit-box simulated-unit">
+                <div class="unit-header">
+                    <div class="unit-info">
+                        <div class="unit-name">
+                            <i class="bi bi-diagram-2 me-2"></i>
+                            <strong>Digital Innovation</strong>
+                            <span class="badge bg-primary ms-2">Nuovo</span>
+                        </div>
+                        <div class="unit-stats">
+                            <span class="badge bg-light text-dark">
+                                <i class="bi bi-people me-1"></i>8
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function viewChangeDetails(changeTitle) {
+    alert(`Dettagli per: ${changeTitle}`);
+}
+
+function applySimulation() {
+    if (confirm('Sei sicuro di voler applicare tutte le modifiche proposte dalla simulazione?')) {
+        alert('Implementazione avviata. Riceverai notifiche sui progressi.');
+    }
+}
+
+function createActionPlan() {
+    window.open('/orgchart/reports/action-plan?simulation=true', '_blank');
+}
+
+function scheduleImplementation() {
+    alert('Apertura calendario per pianificazione implementazione...');
+}
+
+function saveScenario() {
+    const scenarioName = prompt('Nome dello scenario:');
+    if (scenarioName) {
+        alert(`Scenario "${scenarioName}" salvato con successo.`);
+    }
+}
+
+function shareSimulation() {
+    if (navigator.share) {
+        navigator.share({
+            title: 'Simulazione Organizzativa',
+            text: 'Condivido i risultati della simulazione organizzativa',
+            url: window.location.href
+        });
+    } else {
+        // Fallback for browsers that don't support Web Share API
+        navigator.clipboard.writeText(window.location.href);
+        alert('Link copiato negli appunti!');
+    }
+}
+
+function saveSimulation() {
+    alert('Funzionalità di salvataggio in sviluppo.');
+}
+
+function loadSimulation() {
+    alert('Funzionalità di caricamento in sviluppo.');
+}
+
+function exportSimulation(format) {
+    const url = `/orgchart/export/simulation?format=${format}`;
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `simulation_${new Date().toISOString().split('T')[0]}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function resetSimulation() {
+    if (confirm('Sei sicuro di voler resettare la simulazione?')) {
+        location.reload();
+    }
+}
+
+// Initialize form controls
+document.addEventListener('DOMContentLoaded', function() {
+    // Set up parameter change listeners
+    document.getElementById('preserve-hierarchy').addEventListener('change', function() {
+        simulationData.parameters.preserveHierarchy = this.checked;
+    });
+    
+    document.getElementById('minimize-disruption').addEventListener('change', function() {
+        simulationData.parameters.minimizeDisruption = this.checked;
+    });
+    
+    document.getElementById('consider-skills').addEventListener('change', function() {
+        simulationData.parameters.considerSkills = this.checked;
+    });
+});
+</script>
+{% endblock %}

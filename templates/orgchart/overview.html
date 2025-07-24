@@ -1,0 +1,372 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="/orgchart/tree" class="btn btn-primary">
+        <i class="bi bi-diagram-3 me-1"></i>Vista Albero
+    </a>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="/orgchart/matrix">
+            <i class="bi bi-grid-3x3 me-2"></i>Vista Matrice
+        </a></li>
+        <li><a class="dropdown-item" href="/orgchart/stats">
+            <i class="bi bi-bar-chart me-2"></i>Statistiche
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/orgchart/analysis/gaps">
+            <i class="bi bi-exclamation-diamond me-2"></i>Analisi Gap
+        </a></li>
+        <li><a class="dropdown-item" href="/orgchart/simulation">
+            <i class="bi bi-diagram-2 me-2"></i>Simulazione
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Organization Overview Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-building fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ overview.total_units or 0 }}</h4>
+                        <small>Unità Totali</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-people fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ overview.total_persons or 0 }}</h4>
+                        <small>Persone</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-person-badge fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ overview.active_assignments or 0 }}</h4>
+                        <small>Incarichi Attivi</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-briefcase fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ overview.total_job_titles or 0 }}</h4>
+                        <small>Ruoli</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Metrics Row -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-speedometer2 me-2"></i>Metriche Organizzative
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <div class="text-center">
+                            <h4 class="text-primary mb-0">{{ overview.organizational_depth or 0 }}</h4>
+                            <small class="text-muted">Livelli Gerarchici</small>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="text-center">
+                            <h4 class="text-info mb-0">{{ overview.avg_span_of_control or 0 }}</h4>
+                            <small class="text-muted">Span of Control Medio</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h4 class="text-warning mb-0">{{ metrics.interim_ratio or 0 }}%</h4>
+                            <small class="text-muted">Incarichi Ad Interim</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h4 class="text-danger mb-0">{{ metrics.vacancy_rate or 0 }}%</h4>
+                            <small class="text-muted">Posizioni Vacanti</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pie-chart me-2"></i>Distribuzione Carico di Lavoro
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if metrics.workload_distribution %}
+                <div class="row text-center">
+                    <div class="col-3">
+                        <div class="mb-2">
+                            <h5 class="text-success mb-0">{{ metrics.workload_distribution.optimal or 0 }}</h5>
+                            <small class="text-muted">Ottimale</small>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="mb-2">
+                            <h5 class="text-warning mb-0">{{ metrics.workload_distribution.overloaded or 0 }}</h5>
+                            <small class="text-muted">Sovraccarico</small>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="mb-2">
+                            <h5 class="text-info mb-0">{{ metrics.workload_distribution.underutilized or 0 }}</h5>
+                            <small class="text-muted">Sottoutilizzo</small>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="mb-2">
+                            <h5 class="text-primary mb-0">{{ metrics.workload_distribution.avg_workload or 0 }}%</h5>
+                            <small class="text-muted">Media</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Workload Progress Bar -->
+                <div class="progress mt-3" style="height: 20px;">
+                    {% set total_people = (metrics.workload_distribution.optimal or 0) + (metrics.workload_distribution.overloaded or 0) + (metrics.workload_distribution.underutilized or 0) %}
+                    {% if total_people > 0 %}
+                    <div class="progress-bar bg-success" style="width: {{ (metrics.workload_distribution.optimal / total_people * 100)|round }}%">
+                        Ottimale
+                    </div>
+                    <div class="progress-bar bg-warning" style="width: {{ (metrics.workload_distribution.overloaded / total_people * 100)|round }}%">
+                        Sovraccarico
+                    </div>
+                    <div class="progress-bar bg-info" style="width: {{ (metrics.workload_distribution.underutilized / total_people * 100)|round }}%">
+                        Sottoutilizzo
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-3">
+                    <i class="bi bi-info-circle me-2"></i>Dati non disponibili
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Changes and Quick Actions -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-clock-history me-2"></i>Modifiche Recenti
+                </h5>
+                <a href="/assignments/history" class="btn btn-sm btn-outline-primary">
+                    Visualizza Tutte
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_changes %}
+                <div class="timeline">
+                    {% for change in recent_changes %}
+                    <div class="timeline-item mb-3">
+                        <div class="d-flex">
+                            <div class="timeline-marker me-3">
+                                <i class="bi bi-{{ 'person-plus' if change.change_type == 'assignment' else 'building' if change.change_type == 'unit' else 'briefcase' }} text-primary"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-medium">{{ change.description }}</div>
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar me-1"></i>
+                                    {{ change.change_date.strftime('%d/%m/%Y alle %H:%M') if change.change_date else 'Data non disponibile' }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-info-circle display-4 mb-3"></i>
+                    <p>Nessuna modifica recente</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Azioni Rapide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/orgchart/tree" class="btn btn-primary">
+                        <i class="bi bi-diagram-3 me-2"></i>Visualizza Organigramma
+                    </a>
+                    <a href="/orgchart/matrix?view_type=workload" class="btn btn-outline-warning">
+                        <i class="bi bi-speedometer2 me-2"></i>Analisi Workload
+                    </a>
+                    <a href="/orgchart/analysis/gaps" class="btn btn-outline-danger">
+                        <i class="bi bi-exclamation-diamond me-2"></i>Identifica Gap
+                    </a>
+                    <a href="/orgchart/simulation" class="btn btn-outline-info">
+                        <i class="bi bi-diagram-2 me-2"></i>Simula Cambiamenti
+                    </a>
+                    <hr>
+                    <a href="/assignments/new" class="btn btn-outline-success">
+                        <i class="bi bi-person-plus me-2"></i>Nuovo Incarico
+                    </a>
+                    <a href="/units/new" class="btn btn-outline-secondary">
+                        <i class="bi bi-building me-2"></i>Nuova Unità
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Health Status Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-heart-pulse me-2"></i>Stato di Salute
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted">Copertura Incarichi:</span>
+                    <span class="badge bg-{{ 'success' if (metrics.vacancy_rate or 0) < 10 else 'warning' if (metrics.vacancy_rate or 0) < 20 else 'danger' }}">
+                        {{ 100 - (metrics.vacancy_rate or 0) }}%
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted">Equilibrio Workload:</span>
+                    <span class="badge bg-{{ 'success' if (metrics.workload_distribution.overloaded or 0) < 5 else 'warning' if (metrics.workload_distribution.overloaded or 0) < 15 else 'danger' }}">
+                        {{ 'Buono' if (metrics.workload_distribution.overloaded or 0) < 5 else 'Medio' if (metrics.workload_distribution.overloaded or 0) < 15 else 'Critico' }}
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-muted">Stabilità Incarichi:</span>
+                    <span class="badge bg-{{ 'success' if (metrics.interim_ratio or 0) < 10 else 'warning' if (metrics.interim_ratio or 0) < 20 else 'danger' }}">
+                        {{ 'Alta' if (metrics.interim_ratio or 0) < 10 else 'Media' if (metrics.interim_ratio or 0) < 20 else 'Bassa' }}
+                    </span>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <a href="/orgchart/reports/organizational-health" class="btn btn-sm btn-outline-primary">
+                        Report Completo
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline {
+    position: relative;
+}
+
+.timeline-item {
+    position: relative;
+}
+
+.timeline-marker {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(13, 110, 253, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 32px;
+    width: 2px;
+    height: calc(100% - 16px);
+    background: #dee2e6;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.progress-bar {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.card-hover {
+    transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Add hover effects to cards
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+        if (!card.classList.contains('bg-primary') && 
+            !card.classList.contains('bg-success') && 
+            !card.classList.contains('bg-info') && 
+            !card.classList.contains('bg-warning')) {
+            card.classList.add('card-hover');
+        }
+    });
+});
+
+// Auto-refresh data every 5 minutes
+setInterval(function() {
+    // In a real implementation, you might want to refresh specific data
+    // without reloading the entire page
+    console.log('Auto-refresh would happen here');
+}, 300000);
+</script>
+{% endblock %}

@@ -73,7 +73,7 @@
                     <tr>
                         <td>
                             <div class="d-flex align-items-center">
-                                <i class="bi bi-{{ 'building' if unit.type == 'function' else 'diagram-2' }} me-2 text-primary"></i>
+                                <i class="bi bi-{{ 'building' if unit.unit_type == 'Function' else 'diagram-2' }} me-2 text-primary"></i>
                                 <div>
                                     <strong>{{ unit.name }}</strong>
                                     {% if unit.short_name %}
@@ -83,8 +83,8 @@
                             </div>
                         </td>
                         <td>
-                            <span class="badge bg-{{ 'primary' if unit.type == 'function' else 'info' }}">
-                                {{ 'Funzione' if unit.type == 'function' else 'Org. Unit' }}
+                            <span class="badge bg-{{ 'primary' if unit.unit_type == 'Function' else 'info' }}">
+                                {{ 'Funzione' if unit.unit_type == 'Function' else 'Org. Unit' }}
                             </span>
                         </td>
                         <td>
@@ -150,7 +150,7 @@
             <div class="hierarchy-item root-unit" data-level="0">
                 <div class="unit-card">
                     <div class="unit-header">
-                        <i class="bi bi-{{ 'building' if unit.type == 'function' else 'diagram-2' }} me-2"></i>
+                        <i class="bi bi-{{ 'building' if unit.unit_type == 'Function' else 'diagram-2' }} me-2"></i>
                         <strong>{{ unit.name }}</strong>
                         {% if unit.short_name %}
                         <small class="text-muted ms-2">({{ unit.short_name }})</small>

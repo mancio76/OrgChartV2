@@ -80,8 +80,8 @@ This document outlines the technical requirements for the Organigramma Web App, 
 3. WHEN navigating the orgchart THEN the system SHALL provide interactive elements for exploration
 4. WHEN units have parent-child relationships THEN the system SHALL display proper hierarchical structure
 5. WHEN organizational data changes THEN the system SHALL reflect updates in the orgchart view
-6. WHEN displaying units with type="function" THEN the system SHALL render them with bold-framed boxes
-7. WHEN displaying units with type="OrganizationalUnit" THEN the system SHALL render them with normal-framed boxes
+6. WHEN displaying units with unit_type_id=1 (Functions) THEN the system SHALL render them with bold-framed boxes
+7. WHEN displaying units with unit_type_id=2 (Organizational Units) THEN the system SHALL render them with normal-framed boxes
 8. WHEN a unit has an emoji or image THEN the system SHALL display it within the unit box
 
 ### Requirement 7

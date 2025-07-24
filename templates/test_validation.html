@@ -1,0 +1,375 @@
+{% extends "base/layout.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-check2-square me-2"></i>Test Validazione Avanzata - Task 6.3
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate data-auto-save="30000">
+                    <div class="row">
+                        <!-- Basic Validation -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Validazione Base</h6>
+                            
+                            <!-- Required field -->
+                            <div class="form-field mb-3">
+                                <label for="required_field" class="form-label required">Campo Obbligatorio</label>
+                                <input type="text" class="form-control" id="required_field" name="required_field" 
+                                       required minlength="3" maxlength="50"
+                                       data-validate-length="true"
+                                       data-help="Questo campo è obbligatorio e deve contenere tra 3 e 50 caratteri">
+                                <div class="form-hint">
+                                    <i class="bi bi-info-circle"></i>
+                                    Campo obbligatorio con validazione lunghezza
+                                </div>
+                            </div>
+                            
+                            <!-- Email with async validation -->
+                            <div class="form-field mb-3">
+                                <label for="email_field" class="form-label">Email (Validazione Asincrona)</label>
+                                <input type="email" class="form-control" id="email_field" name="email_field" 
+                                       data-async-validate="email-unique"
+                                       placeholder="test@example.com">
+                                <div class="form-hint">
+                                    <i class="bi bi-at"></i>
+                                    Prova con "admin@example.com" per vedere l'errore di unicità
+                                </div>
+                            </div>
+                            
+                            <!-- Number with range validation -->
+                            <div class="form-field mb-3">
+                                <label for="percentage_field" class="form-label">Percentuale</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="percentage_field" name="percentage_field" 
+                                           min="0" max="100" step="1" value="50">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <div class="form-hint success">
+                                    <i class="bi bi-check-circle"></i>
+                                    Valore tra 0 e 100
+                                </div>
+                            </div>
+                            
+                            <!-- Custom validation -->
+                            <div class="form-field mb-3">
+                                <label for="phone_field" class="form-label">Telefono Italiano</label>
+                                <input type="tel" class="form-control" id="phone_field" name="phone_field" 
+                                       data-validate-custom="validateItalianPhone"
+                                       placeholder="+39 123 456 7890">
+                                <div class="form-hint">
+                                    <i class="bi bi-telephone"></i>
+                                    Formato italiano: +39 xxx xxx xxxx
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Advanced Validation -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Validazione Avanzata</h6>
+                            
+                            <!-- Date range validation -->
+                            <div class="form-field mb-3">
+                                <label for="start_date" class="form-label">Data Inizio</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date">
+                                <div class="form-hint">
+                                    <i class="bi bi-calendar"></i>
+                                    Data di inizio del periodo
+                                </div>
+                            </div>
+                            
+                            <div class="form-field mb-3">
+                                <label for="end_date" class="form-label">Data Fine</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date">
+                                <div class="form-hint warning">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    Deve essere successiva alla data di inizio
+                                </div>
+                            </div>
+                            
+                            <!-- Conditional validation -->
+                            <div class="form-field mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="has_special_requirements" name="has_special_requirements">
+                                    <label class="form-check-label" for="has_special_requirements">
+                                        Ha requisiti speciali
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="form-field mb-3">
+                                <label for="special_requirements" class="form-label">Requisiti Speciali</label>
+                                <textarea class="form-control" id="special_requirements" name="special_requirements" 
+                                          rows="3" data-conditional-required="has_special_requirements=true"
+                                          placeholder="Descrivi i requisiti speciali..."></textarea>
+                                <div class="form-hint danger">
+                                    <i class="bi bi-exclamation-circle"></i>
+                                    Obbligatorio se "Ha requisiti speciali" è selezionato
+                                </div>
+                            </div>
+                            
+                            <!-- Smart suggestions -->
+                            <div class="form-field mb-3">
+                                <label for="full_name" class="form-label">Nome Completo</label>
+                                <input type="text" class="form-control" id="full_name" name="full_name" 
+                                       placeholder="Mario Rossi">
+                                <div class="form-hint">
+                                    <i class="bi bi-lightbulb"></i>
+                                    Il sistema suggerirà automaticamente il nome breve
+                                </div>
+                            </div>
+                            
+                            <div class="form-field mb-3">
+                                <label for="short_name" class="form-label">Nome Breve</label>
+                                <input type="text" class="form-control" id="short_name" name="short_name" 
+                                       placeholder="Verrà suggerito automaticamente">
+                                <div class="form-hint">
+                                    <i class="bi bi-magic"></i>
+                                    Suggerimento automatico basato sul nome completo
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Test Buttons -->
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Test Notifiche</h6>
+                            <div class="btn-group-vertical d-grid gap-2">
+                                <button type="button" class="btn btn-success btn-sm" onclick="testSuccessNotification()">
+                                    <i class="bi bi-check-circle me-1"></i>Test Successo
+                                </button>
+                                <button type="button" class="btn btn-danger btn-sm" onclick="testErrorNotification()">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Test Errore
+                                </button>
+                                <button type="button" class="btn btn-warning btn-sm" onclick="testWarningNotification()">
+                                    <i class="bi bi-exclamation-circle me-1"></i>Test Avviso
+                                </button>
+                                <button type="button" class="btn btn-info btn-sm" onclick="testInfoNotification()">
+                                    <i class="bi bi-info-circle me-1"></i>Test Info
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Test Funzionalità</h6>
+                            <div class="btn-group-vertical d-grid gap-2">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="testFormValidation()">
+                                    <i class="bi bi-check2-square me-1"></i>Valida Modulo
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="testLoadingState()">
+                                    <i class="bi bi-hourglass-split me-1"></i>Test Caricamento
+                                </button>
+                                <button type="button" class="btn btn-outline-info btn-sm" onclick="showFormProgress()">
+                                    <i class="bi bi-bar-chart me-1"></i>Mostra Progresso
+                                </button>
+                                <button type="button" class="btn btn-outline-success btn-sm" onclick="triggerAutoSave()">
+                                    <i class="bi bi-cloud-check me-1"></i>Test Auto-Save
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Form Actions -->
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Reset
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-1"></i>Invia Modulo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Feature Documentation -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-book me-2"></i>Funzionalità Implementate - Task 6.3
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6>Validazione Client-Side</h6>
+                        <ul class="list-unstyled small">
+                            <li class="mb-1">
+                                <i class="bi bi-check text-success me-2"></i>
+                                Validazione in tempo reale
+                            </li>
+                            <li class="mb-1">
+                                <i class="bi bi-check text-success me-2"></i>
+                                Validazione cross-field
+                            </li>
+                            <li class="mb-1">
+                                <i class="bi bi-check text-success me-2"></i>
+                                Validazione condizionale
+                            </li>
+                            <li class="mb-1">
+                                <i class="bi bi-check text-success me-2"></i>
+                                Validazione asincrona
+                            </li>
+                            <li class="mb-1">
+                                <i class="bi bi-check text-success me-2"></i>
+                                Regole personalizzate
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Feedback Utente</h6>
+                        <ul class="list-unstyled small">
+                            <li class="mb-1">
+                                <i class="bi bi-check text-success me-2"></i>
+                                Messaggi di errore chiari
+                            </li>
+                            <li class="mb-1">
+                                <i class="bi bi-check text-success me-2"></i>
+                                Indicatori di successo
+                            </li>
+                            <li class="mb-1">
+                                <i class="bi bi-check text-success me-2"></i>
+                                Suggerimenti intelligenti
+                            </li>
+                            <li class="mb-1">
+                                <i class="bi bi-check text-success me-2"></i>
+                                Barra di progresso
+                            </li>
+                            <li class="mb-1">
+                                <i class="bi bi-check text-success me-2"></i>
+                                Auto-save con feedback
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Notifiche Avanzate</h6>
+                        <ul class="list-unstyled small">
+                            <li class="mb-1">
+                                <i class="bi bi-check text-success me-2"></i>
+                                Notifiche con azioni
+                            </li>
+                            <li class="mb-1">
+                                <i class="bi bi-check text-success me-2"></i>
+                                Durata personalizzabile
+                            </li>
+                            <li class="mb-1">
+                                <i class="bi bi-check text-success me-2"></i>
+                                Suoni di notifica
+                            </li>
+                            <li class="mb-1">
+                                <i class="bi bi-check text-success me-2"></i>
+                                Indicatori di caricamento
+                            </li>
+                            <li class="mb-1">
+                                <i class="bi bi-check text-success me-2"></i>
+                                Accessibilità migliorata
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Test functions for validation features
+function testSuccessNotification() {
+    OrgApp.showSuccess('Operazione completata con successo! Tutti i dati sono stati salvati correttamente.', {
+        actions: [
+            {
+                label: 'Visualizza',
+                handler: 'alert("Azione: Visualizza")'
+            },
+            {
+                label: 'Continua',
+                handler: 'OrgApp.dismissNotification(this)'
+            }
+        ]
+    });
+}
+
+function testErrorNotification() {
+    OrgApp.showFormError('Si sono verificati errori durante la validazione del modulo', [
+        'Il campo email non è valido',
+        'La password deve contenere almeno 8 caratteri',
+        'Le date non sono coerenti'
+    ]);
+}
+
+function testWarningNotification() {
+    OrgApp.showWarning('Attenzione: alcuni campi potrebbero richiedere la tua attenzione prima di procedere.', {
+        actions: [
+            {
+                label: 'Controlla',
+                handler: 'alert("Controllo campi...")'
+            }
+        ]
+    });
+}
+
+function testInfoNotification() {
+    OrgApp.showInfo('Informazione: il sistema salva automaticamente i tuoi progressi ogni 30 secondi.');
+}
+
+function testFormValidation() {
+    const form = document.querySelector('.needs-validation');
+    FormValidator.validateForm(form);
+}
+
+function testLoadingState() {
+    const loadingId = OrgApp.showLoading('Elaborazione dati in corso...');
+    
+    setTimeout(() => {
+        OrgApp.hideLoading(loadingId);
+        OrgApp.showSuccess('Elaborazione completata!');
+    }, 3000);
+}
+
+function showFormProgress() {
+    const form = document.querySelector('.needs-validation');
+    FormValidator.updateFormProgress(form);
+    FormValidator.updateCompletionStatus(form);
+}
+
+function triggerAutoSave() {
+    const form = document.querySelector('.needs-validation');
+    FormValidator.performAutoSave(form);
+}
+
+function resetForm() {
+    const form = document.querySelector('.needs-validation');
+    form.reset();
+    form.classList.remove('was-validated');
+    
+    // Clear all validation states
+    const fields = form.querySelectorAll('.form-control, .form-select');
+    fields.forEach(field => {
+        FormValidator.clearFieldValidation(field);
+    });
+    
+    OrgApp.showInfo('Modulo ripristinato allo stato iniziale.');
+}
+
+// Initialize demo features
+document.addEventListener('DOMContentLoaded', function() {
+    // Add some demo data
+    setTimeout(() => {
+        document.getElementById('required_field').value = 'Test';
+        document.getElementById('percentage_field').value = '75';
+        
+        // Trigger validation
+        document.getElementById('required_field').dispatchEvent(new Event('blur'));
+        document.getElementById('percentage_field').dispatchEvent(new Event('input'));
+    }, 1000);
+});
+</script>
+{% endblock %}

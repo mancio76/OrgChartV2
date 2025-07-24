@@ -210,7 +210,7 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <i class="bi bi-{{ 'building' if assignment.unit and assignment.unit.type == 'function' else 'diagram-2' }} me-1"></i>
+                                    <i class="bi bi-{{ 'building' if assignment.unit and assignment.unit.unit_type_id == 1 else 'diagram-2' }} me-1"></i>
                                     {{ assignment.unit.name if assignment.unit else 'N/A' }}
                                 </td>
                                 <td>

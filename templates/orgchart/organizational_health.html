@@ -1,0 +1,878 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-primary" onclick="refreshHealthReport()">
+        <i class="bi bi-arrow-clockwise me-1"></i>Aggiorna Report
+    </button>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#" onclick="exportHealthReport('pdf')">
+            <i class="bi bi-file-pdf me-2"></i>Esporta PDF
+        </a></li>
+        <li><a class="dropdown-item" href="#" onclick="exportHealthReport('excel')">
+            <i class="bi bi-file-earmark-spreadsheet me-2"></i>Esporta Excel
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/orgchart/analysis/gaps">
+            <i class="bi bi-exclamation-diamond me-2"></i>Analisi Gap
+        </a></li>
+        <li><a class="dropdown-item" href="/orgchart/simulation">
+            <i class="bi bi-diagram-2 me-2"></i>Simula Miglioramenti
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Health Score Overview -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-gradient-primary text-white">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="mb-1">Salute Organizzativa</h2>
+                        <p class="mb-0">Valutazione complessiva dello stato dell'organizzazione</p>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="health-score-circle">
+                            <div class="score-value">{{ health_score.overall_score or 0 }}</div>
+                            <div class="score-label">Punteggio Globale</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Health Dimensions -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card health-dimension">
+            <div class="card-body text-center">
+                <div class="dimension-icon mb-3">
+                    <i class="bi bi-diagram-3 fs-1 text-primary"></i>
+                </div>
+                <h5 class="card-title">Struttura</h5>
+                <div class="dimension-score mb-2">
+                    <span class="score-number">{{ health_dimensions.structure_score or 0 }}</span>
+                    <span class="score-max">/100</span>
+                </div>
+                <div class="progress mb-2">
+                    <div class="progress-bar bg-{{ 'success' if health_dimensions.structure_score >= 80 else 'warning' if health_dimensions.structure_score >= 60 else 'danger' }}" 
+                         style="width: {{ health_dimensions.structure_score or 0 }}%"></div>
+                </div>
+                <small class="text-muted">{{ health_dimensions.structure_status or 'N/A' }}</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card health-dimension">
+            <div class="card-body text-center">
+                <div class="dimension-icon mb-3">
+                    <i class="bi bi-people fs-1 text-success"></i>
+                </div>
+                <h5 class="card-title">Personale</h5>
+                <div class="dimension-score mb-2">
+                    <span class="score-number">{{ health_dimensions.personnel_score or 0 }}</span>
+                    <span class="score-max">/100</span>
+                </div>
+                <div class="progress mb-2">
+                    <div class="progress-bar bg-{{ 'success' if health_dimensions.personnel_score >= 80 else 'warning' if health_dimensions.personnel_score >= 60 else 'danger' }}" 
+                         style="width: {{ health_dimensions.personnel_score or 0 }}%"></div>
+                </div>
+                <small class="text-muted">{{ health_dimensions.personnel_status or 'N/A' }}</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card health-dimension">
+            <div class="card-body text-center">
+                <div class="dimension-icon mb-3">
+                    <i class="bi bi-speedometer2 fs-1 text-info"></i>
+                </div>
+                <h5 class="card-title">Efficienza</h5>
+                <div class="dimension-score mb-2">
+                    <span class="score-number">{{ health_dimensions.efficiency_score or 0 }}</span>
+                    <span class="score-max">/100</span>
+                </div>
+                <div class="progress mb-2">
+                    <div class="progress-bar bg-{{ 'success' if health_dimensions.efficiency_score >= 80 else 'warning' if health_dimensions.efficiency_score >= 60 else 'danger' }}" 
+                         style="width: {{ health_dimensions.efficiency_score or 0 }}%"></div>
+                </div>
+                <small class="text-muted">{{ health_dimensions.efficiency_status or 'N/A' }}</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card health-dimension">
+            <div class="card-body text-center">
+                <div class="dimension-icon mb-3">
+                    <i class="bi bi-shield-check fs-1 text-warning"></i>
+                </div>
+                <h5 class="card-title">Stabilità</h5>
+                <div class="dimension-score mb-2">
+                    <span class="score-number">{{ health_dimensions.stability_score or 0 }}</span>
+                    <span class="score-max">/100</span>
+                </div>
+                <div class="progress mb-2">
+                    <div class="progress-bar bg-{{ 'success' if health_dimensions.stability_score >= 80 else 'warning' if health_dimensions.stability_score >= 60 else 'danger' }}" 
+                         style="width: {{ health_dimensions.stability_score or 0 }}%"></div>
+                </div>
+                <small class="text-muted">{{ health_dimensions.stability_status or 'N/A' }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Health Trends and Detailed Analysis -->
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Health Trends Chart -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Tendenze Salute Organizzativa
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="healthTrendsChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Detailed Health Analysis -->
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="health-analysis-tabs">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="structure-tab" data-bs-toggle="tab" data-bs-target="#structure-analysis">
+                            <i class="bi bi-diagram-3 me-1"></i>Struttura
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="personnel-tab" data-bs-toggle="tab" data-bs-target="#personnel-analysis">
+                            <i class="bi bi-people me-1"></i>Personale
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="efficiency-tab" data-bs-toggle="tab" data-bs-target="#efficiency-analysis">
+                            <i class="bi bi-speedometer2 me-1"></i>Efficienza
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="stability-tab" data-bs-toggle="tab" data-bs-target="#stability-analysis">
+                            <i class="bi bi-shield-check me-1"></i>Stabilità
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="health-analysis-content">
+                    <!-- Structure Analysis -->
+                    <div class="tab-pane fade show active" id="structure-analysis">
+                        <div class="analysis-section">
+                            <h6 class="mb-3">Analisi Strutturale</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="metric-card">
+                                        <div class="metric-header">
+                                            <i class="bi bi-diagram-3 text-primary me-2"></i>
+                                            <span>Profondità Gerarchica</span>
+                                        </div>
+                                        <div class="metric-value">
+                                            <span class="value">{{ structure_metrics.hierarchy_depth or 0 }}</span>
+                                            <span class="unit">livelli</span>
+                                            <span class="badge bg-{{ 'success' if structure_metrics.hierarchy_depth <= 5 else 'warning' if structure_metrics.hierarchy_depth <= 7 else 'danger' }} ms-2">
+                                                {{ 'Ottimale' if structure_metrics.hierarchy_depth <= 5 else 'Accettabile' if structure_metrics.hierarchy_depth <= 7 else 'Eccessiva' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="metric-card">
+                                        <div class="metric-header">
+                                            <i class="bi bi-arrows-expand text-primary me-2"></i>
+                                            <span>Span of Control Medio</span>
+                                        </div>
+                                        <div class="metric-value">
+                                            <span class="value">{{ structure_metrics.avg_span_control or 0 }}</span>
+                                            <span class="unit">persone</span>
+                                            <span class="badge bg-{{ 'success' if 3 <= (structure_metrics.avg_span_control or 0) <= 7 else 'warning' if (structure_metrics.avg_span_control or 0) <= 10 else 'danger' }} ms-2">
+                                                {{ 'Ottimale' if 3 <= (structure_metrics.avg_span_control or 0) <= 7 else 'Accettabile' if (structure_metrics.avg_span_control or 0) <= 10 else 'Problematico' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="issues-section mt-4">
+                                <h6 class="mb-3">Problemi Strutturali Identificati</h6>
+                                {% if structure_issues %}
+                                {% for issue in structure_issues %}
+                                <div class="issue-item">
+                                    <div class="d-flex align-items-start">
+                                        <i class="bi bi-{{ issue.icon }} text-{{ issue.severity_color }} me-3 mt-1"></i>
+                                        <div class="flex-grow-1">
+                                            <div class="issue-title">{{ issue.title }}</div>
+                                            <div class="issue-description text-muted">{{ issue.description }}</div>
+                                            <div class="issue-impact mt-1">
+                                                <span class="badge bg-{{ issue.severity_color }}">{{ issue.severity.title() }}</span>
+                                                <small class="text-muted ms-2">Impatto: {{ issue.impact }}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                {% else %}
+                                <div class="text-center py-3">
+                                    <i class="bi bi-check-circle text-success display-4 mb-2"></i>
+                                    <p class="text-muted mb-0">Nessun problema strutturale identificato</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Personnel Analysis -->
+                    <div class="tab-pane fade" id="personnel-analysis">
+                        <div class="analysis-section">
+                            <h6 class="mb-3">Analisi del Personale</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="metric-card">
+                                        <div class="metric-header">
+                                            <i class="bi bi-person-check text-success me-2"></i>
+                                            <span>Tasso di Copertura</span>
+                                        </div>
+                                        <div class="metric-value">
+                                            <span class="value">{{ personnel_metrics.coverage_rate or 0 }}</span>
+                                            <span class="unit">%</span>
+                                            <span class="badge bg-{{ 'success' if personnel_metrics.coverage_rate >= 90 else 'warning' if personnel_metrics.coverage_rate >= 75 else 'danger' }} ms-2">
+                                                {{ 'Eccellente' if personnel_metrics.coverage_rate >= 90 else 'Buono' if personnel_metrics.coverage_rate >= 75 else 'Critico' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="metric-card">
+                                        <div class="metric-header">
+                                            <i class="bi bi-hourglass-split text-warning me-2"></i>
+                                            <span>Incarichi Interim</span>
+                                        </div>
+                                        <div class="metric-value">
+                                            <span class="value">{{ personnel_metrics.interim_ratio or 0 }}</span>
+                                            <span class="unit">%</span>
+                                            <span class="badge bg-{{ 'success' if personnel_metrics.interim_ratio <= 10 else 'warning' if personnel_metrics.interim_ratio <= 20 else 'danger' }} ms-2">
+                                                {{ 'Basso' if personnel_metrics.interim_ratio <= 10 else 'Moderato' if personnel_metrics.interim_ratio <= 20 else 'Alto' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="workload-analysis mt-4">
+                                <h6 class="mb-3">Distribuzione Carico di Lavoro</h6>
+                                <div class="row">
+                                    <div class="col-md-3 text-center">
+                                        <div class="workload-stat">
+                                            <div class="stat-value text-success">{{ workload_distribution.optimal or 0 }}</div>
+                                            <div class="stat-label">Ottimale</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 text-center">
+                                        <div class="workload-stat">
+                                            <div class="stat-value text-warning">{{ workload_distribution.overloaded or 0 }}</div>
+                                            <div class="stat-label">Sovraccarico</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 text-center">
+                                        <div class="workload-stat">
+                                            <div class="stat-value text-info">{{ workload_distribution.underutilized or 0 }}</div>
+                                            <div class="stat-label">Sottoutilizzo</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 text-center">
+                                        <div class="workload-stat">
+                                            <div class="stat-value text-primary">{{ workload_distribution.avg_workload or 0 }}%</div>
+                                            <div class="stat-label">Media</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Efficiency Analysis -->
+                    <div class="tab-pane fade" id="efficiency-analysis">
+                        <div class="analysis-section">
+                            <h6 class="mb-3">Analisi dell'Efficienza</h6>
+                            <div class="efficiency-metrics">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="metric-card">
+                                            <div class="metric-header">
+                                                <i class="bi bi-speedometer2 text-info me-2"></i>
+                                                <span>Efficienza Operativa</span>
+                                            </div>
+                                            <div class="metric-value">
+                                                <span class="value">{{ efficiency_metrics.operational_efficiency or 0 }}</span>
+                                                <span class="unit">%</span>
+                                                <div class="progress mt-2">
+                                                    <div class="progress-bar bg-info" style="width: {{ efficiency_metrics.operational_efficiency or 0 }}%"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="metric-card">
+                                            <div class="metric-header">
+                                                <i class="bi bi-graph-up text-success me-2"></i>
+                                                <span>Produttività</span>
+                                            </div>
+                                            <div class="metric-value">
+                                                <span class="value">{{ efficiency_metrics.productivity_index or 0 }}</span>
+                                                <span class="unit">indice</span>
+                                                <div class="progress mt-2">
+                                                    <div class="progress-bar bg-success" style="width: {{ efficiency_metrics.productivity_index or 0 }}%"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="efficiency-recommendations mt-4">
+                                <h6 class="mb-3">Raccomandazioni per l'Efficienza</h6>
+                                {% if efficiency_recommendations %}
+                                {% for rec in efficiency_recommendations %}
+                                <div class="recommendation-item">
+                                    <div class="d-flex align-items-start">
+                                        <i class="bi bi-lightbulb text-warning me-3 mt-1"></i>
+                                        <div class="flex-grow-1">
+                                            <div class="rec-title">{{ rec.title }}</div>
+                                            <div class="rec-description text-muted">{{ rec.description }}</div>
+                                            <div class="rec-impact mt-1">
+                                                <span class="badge bg-primary">{{ rec.expected_improvement }}% miglioramento</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                {% else %}
+                                <div class="text-center py-3">
+                                    <i class="bi bi-check-circle text-success display-4 mb-2"></i>
+                                    <p class="text-muted mb-0">Efficienza ottimale raggiunta</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Stability Analysis -->
+                    <div class="tab-pane fade" id="stability-analysis">
+                        <div class="analysis-section">
+                            <h6 class="mb-3">Analisi della Stabilità</h6>
+                            <div class="stability-indicators">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="stability-card">
+                                            <div class="stability-icon">
+                                                <i class="bi bi-arrow-repeat text-primary"></i>
+                                            </div>
+                                            <div class="stability-metric">
+                                                <div class="metric-value">{{ stability_metrics.turnover_rate or 0 }}%</div>
+                                                <div class="metric-label">Turnover</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="stability-card">
+                                            <div class="stability-icon">
+                                                <i class="bi bi-clock-history text-info"></i>
+                                            </div>
+                                            <div class="stability-metric">
+                                                <div class="metric-value">{{ stability_metrics.avg_tenure or 0 }}</div>
+                                                <div class="metric-label">Permanenza Media (mesi)</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="stability-card">
+                                            <div class="stability-icon">
+                                                <i class="bi bi-shuffle text-warning"></i>
+                                            </div>
+                                            <div class="stability-metric">
+                                                <div class="metric-value">{{ stability_metrics.change_frequency or 0 }}</div>
+                                                <div class="metric-label">Modifiche/Mese</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="stability-risks mt-4">
+                                <h6 class="mb-3">Rischi per la Stabilità</h6>
+                                {% if stability_risks %}
+                                {% for risk in stability_risks %}
+                                <div class="risk-item">
+                                    <div class="d-flex align-items-start">
+                                        <i class="bi bi-exclamation-triangle text-{{ risk.severity_color }} me-3 mt-1"></i>
+                                        <div class="flex-grow-1">
+                                            <div class="risk-title">{{ risk.title }}</div>
+                                            <div class="risk-description text-muted">{{ risk.description }}</div>
+                                            <div class="risk-probability mt-1">
+                                                <span class="badge bg-{{ risk.severity_color }}">{{ risk.probability }}% probabilità</span>
+                                                <small class="text-muted ms-2">Impatto: {{ risk.impact }}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                {% else %}
+                                <div class="text-center py-3">
+                                    <i class="bi bi-shield-check text-success display-4 mb-2"></i>
+                                    <p class="text-muted mb-0">Stabilità organizzativa elevata</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Health Summary -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-clipboard-data me-2"></i>Riepilogo Salute
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="health-summary">
+                    <div class="summary-item mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted">Stato Generale:</span>
+                            <span class="badge bg-{{ 'success' if health_score.overall_score >= 80 else 'warning' if health_score.overall_score >= 60 else 'danger' }} fs-6">
+                                {{ 'Eccellente' if health_score.overall_score >= 80 else 'Buono' if health_score.overall_score >= 60 else 'Critico' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="summary-item mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted">Aree Critiche:</span>
+                            <span class="fw-bold text-danger">{{ health_summary.critical_areas or 0 }}</span>
+                        </div>
+                    </div>
+                    <div class="summary-item mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted">Miglioramenti Necessari:</span>
+                            <span class="fw-bold text-warning">{{ health_summary.improvements_needed or 0 }}</span>
+                        </div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted">Prossima Revisione:</span>
+                            <span class="fw-bold">{{ health_summary.next_review or 'Non pianificata' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Action Items -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-list-check me-2"></i>Azioni Prioritarie
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if priority_actions %}
+                {% for action in priority_actions %}
+                <div class="action-item mb-3">
+                    <div class="d-flex align-items-start">
+                        <div class="action-priority me-3">
+                            <span class="badge bg-{{ action.priority_color }}">{{ action.priority }}</span>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="action-title">{{ action.title }}</div>
+                            <div class="action-description text-muted">{{ action.description }}</div>
+                            <div class="action-deadline mt-1">
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar me-1"></i>{{ action.deadline or 'Nessuna scadenza' }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="bi bi-check-circle text-success display-4 mb-2"></i>
+                    <p class="text-muted mb-0">Nessuna azione prioritaria</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Azioni Rapide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-success" onclick="createImprovementPlan()">
+                        <i class="bi bi-plus-circle me-2"></i>Piano Miglioramento
+                    </button>
+                    <a href="/orgchart/analysis/gaps" class="btn btn-outline-warning">
+                        <i class="bi bi-exclamation-diamond me-2"></i>Analizza Gap
+                    </a>
+                    <a href="/orgchart/simulation" class="btn btn-outline-info">
+                        <i class="bi bi-diagram-2 me-2"></i>Simula Soluzioni
+                    </a>
+                    <hr>
+                    <button type="button" class="btn btn-outline-primary" onclick="scheduleHealthCheck()">
+                        <i class="bi bi-calendar-event me-2"></i>Pianifica Check-up
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="shareHealthReport()">
+                        <i class="bi bi-share me-2"></i>Condividi Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.health-score-circle {
+    width: 120px;
+    height: 120px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.score-value {
+    font-size: 2rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.score-label {
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
+
+.health-dimension {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.health-dimension:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.dimension-score {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.score-number {
+    color: var(--bs-primary);
+}
+
+.score-max {
+    color: #6c757d;
+    font-size: 1rem;
+}
+
+.metric-card {
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.metric-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.metric-value {
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem;
+}
+
+.metric-value .value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--bs-primary);
+}
+
+.metric-value .unit {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.issue-item, .recommendation-item, .risk-item, .action-item {
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.375rem;
+    margin-bottom: 0.75rem;
+    border-left: 3px solid var(--bs-primary);
+}
+
+.issue-title, .rec-title, .risk-title, .action-title {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.workload-stat {
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.stability-card {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+}
+
+.stability-icon {
+    font-size: 1.5rem;
+    margin-right: 1rem;
+}
+
+.stability-metric .metric-value {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: var(--bs-primary);
+}
+
+.stability-metric .metric-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.chart-container {
+    position: relative;
+    height: 200px;
+}
+
+.summary-item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.summary-item:last-child {
+    border-bottom: none;
+}
+
+.action-priority {
+    min-width: 60px;
+}
+
+@media (max-width: 768px) {
+    .health-score-circle {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .score-value {
+        font-size: 1.5rem;
+    }
+    
+    .dimension-score {
+        font-size: 1.25rem;
+    }
+    
+    .metric-card {
+        padding: 0.75rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Health Trends Chart
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('healthTrendsChart').getContext('2d');
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu'],
+            datasets: [
+                {
+                    label: 'Struttura',
+                    data: [75, 78, 82, 80, 85, {{ health_dimensions.structure_score or 85 }}],
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    tension: 0.4
+                },
+                {
+                    label: 'Personale',
+                    data: [70, 72, 75, 78, 80, {{ health_dimensions.personnel_score or 80 }}],
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4
+                },
+                {
+                    label: 'Efficienza',
+                    data: [65, 68, 70, 73, 75, {{ health_dimensions.efficiency_score or 75 }}],
+                    borderColor: '#17a2b8',
+                    backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                    tension: 0.4
+                },
+                {
+                    label: 'Stabilità',
+                    data: [80, 78, 76, 78, 82, {{ health_dimensions.stability_score or 82 }}],
+                    borderColor: '#ffc107',
+                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
+});
+
+function refreshHealthReport() {
+    const refreshBtn = document.querySelector('[onclick="refreshHealthReport()"]');
+    const originalText = refreshBtn.innerHTML;
+    refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1 spin"></i>Aggiornamento...';
+    refreshBtn.disabled = true;
+    
+    setTimeout(() => {
+        window.location.reload();
+    }, 2000);
+}
+
+function exportHealthReport(format) {
+    const url = `/orgchart/export/health-report?format=${format}`;
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `organizational_health_report_${new Date().toISOString().split('T')[0]}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function createImprovementPlan() {
+    if (confirm('Vuoi creare un piano di miglioramento basato sui risultati dell\'analisi?')) {
+        window.open('/orgchart/reports/improvement-plan', '_blank');
+    }
+}
+
+function scheduleHealthCheck() {
+    const frequency = prompt('Frequenza check-up (settimane):', '4');
+    if (frequency) {
+        alert(`Check-up pianificato ogni ${frequency} settimane. Riceverai notifiche automatiche.`);
+    }
+}
+
+function shareHealthReport() {
+    if (navigator.share) {
+        navigator.share({
+            title: 'Report Salute Organizzativa',
+            text: 'Condivido il report sulla salute organizzativa',
+            url: window.location.href
+        });
+    } else {
+        navigator.clipboard.writeText(window.location.href);
+        alert('Link copiato negli appunti!');
+    }
+}
+
+// Add spin animation
+const style = document.createElement('style');
+style.textContent = `
+    .spin {
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+`;
+document.head.appendChild(style);
+
+// Auto-refresh health data every 10 minutes
+setInterval(function() {
+    console.log('Auto-refresh health data would happen here');
+}, 600000);
+</script>
+{% endblock %}

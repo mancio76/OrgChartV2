@@ -1,0 +1,965 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-primary" onclick="refreshComparison()">
+        <i class="bi bi-arrow-clockwise me-1"></i>Aggiorna
+    </button>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#" onclick="exportComparison('pdf')">
+            <i class="bi bi-file-pdf me-2"></i>Esporta PDF
+        </a></li>
+        <li><a class="dropdown-item" href="#" onclick="exportComparison('excel')">
+            <i class="bi bi-file-earmark-spreadsheet me-2"></i>Esporta Excel
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="#" onclick="saveComparison()">
+            <i class="bi bi-save me-2"></i>Salva Confronto
+        </a></li>
+        <li><a class="dropdown-item" href="#" onclick="loadComparison()">
+            <i class="bi bi-folder-open me-2"></i>Carica Confronto
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Comparison Setup -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-sliders me-2"></i>Configurazione Confronto
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="comparison-type" class="form-label">Tipo di Confronto:</label>
+                            <select class="form-select" id="comparison-type" onchange="updateComparisonType()">
+                                <option value="temporal">Temporale (Prima/Dopo)</option>
+                                <option value="scenarios">Scenari Alternativi</option>
+                                <option value="benchmarks">Benchmark Settoriali</option>
+                                <option value="units">Confronto tra Unità</option>
+                                <option value="versions">Versioni Struttura</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="comparison-period" class="form-label">Periodo di Riferimento:</label>
+                            <select class="form-select" id="comparison-period">
+                                <option value="current">Attuale vs Precedente</option>
+                                <option value="quarterly">Trimestrale</option>
+                                <option value="yearly">Annuale</option>
+                                <option value="custom">Personalizzato</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="comparison-metrics" class="form-label">Metriche da Confrontare:</label>
+                            <select class="form-select" id="comparison-metrics" multiple>
+                                <option value="structure" selected>Struttura</option>
+                                <option value="personnel" selected>Personale</option>
+                                <option value="efficiency" selected>Efficienza</option>
+                                <option value="costs">Costi</option>
+                                <option value="performance">Performance</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button type="button" class="btn btn-primary" onclick="runComparison()">
+                            <i class="bi bi-play me-1"></i>Esegui Confronto
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary ms-2" onclick="resetComparison()">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Comparison Results -->
+<div class="row" id="comparison-results" style="display: none;">
+    <!-- Summary Cards -->
+    <div class="col-12 mb-4">
+        <div class="row" id="summary-cards">
+            <!-- Cards will be populated dynamically -->
+        </div>
+    </div>
+    
+    <!-- Side-by-Side Comparison -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="comparison-tabs">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="structure-comparison-tab" data-bs-toggle="tab" data-bs-target="#structure-comparison">
+                            <i class="bi bi-diagram-3 me-1"></i>Struttura
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="metrics-comparison-tab" data-bs-toggle="tab" data-bs-target="#metrics-comparison">
+                            <i class="bi bi-bar-chart me-1"></i>Metriche
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="changes-comparison-tab" data-bs-toggle="tab" data-bs-target="#changes-comparison">
+                            <i class="bi bi-arrow-left-right me-1"></i>Modifiche
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="comparison-content">
+                    <!-- Structure Comparison -->
+                    <div class="tab-pane fade show active" id="structure-comparison">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="comparison-section">
+                                    <h6 class="text-muted mb-3">
+                                        <i class="bi bi-calendar me-2"></i>Struttura Precedente
+                                    </h6>
+                                    <div id="previous-structure" class="structure-view">
+                                        <!-- Previous structure will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="comparison-section">
+                                    <h6 class="text-muted mb-3">
+                                        <i class="bi bi-calendar-check me-2"></i>Struttura Attuale
+                                    </h6>
+                                    <div id="current-structure" class="structure-view">
+                                        <!-- Current structure will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Metrics Comparison -->
+                    <div class="tab-pane fade" id="metrics-comparison">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="chart-container">
+                                    <canvas id="metricsComparisonChart" width="400" height="200"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="metrics-summary">
+                                    <h6 class="mb-3">Variazioni Principali</h6>
+                                    <div id="metrics-changes">
+                                        <!-- Metrics changes will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Changes Comparison -->
+                    <div class="tab-pane fade" id="changes-comparison">
+                        <div class="changes-timeline">
+                            <div id="changes-list">
+                                <!-- Changes will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Detailed Analysis -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Analisi Dettagliata
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="detailed-analysis">
+                    <!-- Detailed analysis will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Insights and Recommendations -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightbulb me-2"></i>Insights Chiave
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="key-insights">
+                    <!-- Key insights will be populated here -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-arrow-right-circle me-2"></i>Raccomandazioni
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="recommendations">
+                    <!-- Recommendations will be populated here -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Azioni Rapide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-success" onclick="applyBestPractices()">
+                        <i class="bi bi-check-circle me-2"></i>Applica Best Practice
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" onclick="createActionPlan()">
+                        <i class="bi bi-list-check me-2"></i>Piano d'Azione
+                    </button>
+                    <a href="/orgchart/simulation" class="btn btn-outline-info">
+                        <i class="bi bi-diagram-2 me-2"></i>Simula Miglioramenti
+                    </a>
+                    <hr>
+                    <button type="button" class="btn btn-outline-warning" onclick="scheduleReview()">
+                        <i class="bi bi-calendar-event me-2"></i>Pianifica Revisione
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="shareComparison()">
+                        <i class="bi bi-share me-2"></i>Condividi
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- No Comparison State -->
+<div class="row" id="no-comparison-state">
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="bi bi-arrow-left-right display-1 text-muted mb-4"></i>
+            <h3 class="text-muted mb-3">Confronto Strutture Organizzative</h3>
+            <p class="text-muted mb-4">Configura i parametri sopra e clicca "Esegui Confronto" per analizzare le differenze tra strutture organizzative.</p>
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">Tipi di Confronto Disponibili:</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2">
+                                            <i class="bi bi-clock-history text-primary me-2"></i>
+                                            <strong>Temporale:</strong> Prima vs Dopo modifiche
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="bi bi-diagram-2 text-success me-2"></i>
+                                            <strong>Scenari:</strong> Confronta alternative
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="bi bi-graph-up text-info me-2"></i>
+                                            <strong>Benchmark:</strong> Vs standard settoriali
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2">
+                                            <i class="bi bi-building text-warning me-2"></i>
+                                            <strong>Unità:</strong> Confronta diverse unità
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="bi bi-layers text-secondary me-2"></i>
+                                            <strong>Versioni:</strong> Diverse versioni struttura
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.comparison-section {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    min-height: 300px;
+}
+
+.structure-view {
+    background: white;
+    border-radius: 0.25rem;
+    padding: 0.75rem;
+    min-height: 250px;
+}
+
+.structure-item {
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid #e9ecef;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.structure-item.added {
+    border-left: 4px solid #28a745;
+    background: rgba(40, 167, 69, 0.1);
+}
+
+.structure-item.removed {
+    border-left: 4px solid #dc3545;
+    background: rgba(220, 53, 69, 0.1);
+}
+
+.structure-item.modified {
+    border-left: 4px solid #ffc107;
+    background: rgba(255, 193, 7, 0.1);
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+}
+
+.metrics-summary {
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.375rem;
+    padding: 1rem;
+    height: 300px;
+    overflow-y: auto;
+}
+
+.metric-change {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    background: white;
+    border-radius: 0.25rem;
+    border-left: 3px solid var(--bs-primary);
+}
+
+.metric-change.positive {
+    border-left-color: #28a745;
+}
+
+.metric-change.negative {
+    border-left-color: #dc3545;
+}
+
+.metric-change.neutral {
+    border-left-color: #6c757d;
+}
+
+.change-value {
+    font-weight: bold;
+}
+
+.change-value.positive {
+    color: #28a745;
+}
+
+.change-value.negative {
+    color: #dc3545;
+}
+
+.changes-timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 1.5rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.375rem;
+    padding: 1rem;
+    border-left: 3px solid var(--bs-primary);
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -2.5rem;
+    top: 1rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--bs-primary);
+}
+
+.timeline-item.addition::before {
+    background: #28a745;
+}
+
+.timeline-item.removal::before {
+    background: #dc3545;
+}
+
+.timeline-item.modification::before {
+    background: #ffc107;
+}
+
+.insight-item, .recommendation-item {
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    border-left: 3px solid var(--bs-primary);
+}
+
+.insight-icon, .recommendation-icon {
+    width: 24px;
+    text-align: center;
+    margin-right: 0.75rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.summary-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.summary-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+    .comparison-section {
+        margin-bottom: 1rem;
+    }
+    
+    .structure-view {
+        min-height: 200px;
+    }
+    
+    .chart-container {
+        height: 250px;
+    }
+    
+    .metrics-summary {
+        height: 250px;
+        margin-top: 1rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let comparisonData = null;
+let comparisonChart = null;
+
+function updateComparisonType() {
+    const type = document.getElementById('comparison-type').value;
+    console.log(`Comparison type changed to: ${type}`);
+    
+    // Update available periods based on comparison type
+    const periodSelect = document.getElementById('comparison-period');
+    periodSelect.innerHTML = '';
+    
+    switch(type) {
+        case 'temporal':
+            periodSelect.innerHTML = `
+                <option value="current">Attuale vs Precedente</option>
+                <option value="quarterly">Trimestrale</option>
+                <option value="yearly">Annuale</option>
+                <option value="custom">Personalizzato</option>
+            `;
+            break;
+        case 'scenarios':
+            periodSelect.innerHTML = `
+                <option value="scenario1">Scenario Base</option>
+                <option value="scenario2">Scenario Ottimistico</option>
+                <option value="scenario3">Scenario Conservativo</option>
+            `;
+            break;
+        case 'benchmarks':
+            periodSelect.innerHTML = `
+                <option value="industry">Media Settore</option>
+                <option value="best_practice">Best Practice</option>
+                <option value="competitors">Competitor</option>
+            `;
+            break;
+        case 'units':
+            periodSelect.innerHTML = `
+                <option value="all_units">Tutte le Unità</option>
+                <option value="same_level">Stesso Livello</option>
+                <option value="parent_child">Genitore-Figlio</option>
+            `;
+            break;
+        case 'versions':
+            periodSelect.innerHTML = `
+                <option value="latest">Ultima vs Precedente</option>
+                <option value="major">Versioni Principali</option>
+                <option value="custom_versions">Versioni Personalizzate</option>
+            `;
+            break;
+    }
+}
+
+function runComparison() {
+    const type = document.getElementById('comparison-type').value;
+    const period = document.getElementById('comparison-period').value;
+    const metrics = Array.from(document.getElementById('comparison-metrics').selectedOptions).map(option => option.value);
+    
+    // Show loading state
+    document.getElementById('no-comparison-state').style.display = 'none';
+    document.getElementById('comparison-results').style.display = 'block';
+    
+    // Simulate comparison execution
+    setTimeout(() => {
+        generateComparisonResults(type, period, metrics);
+    }, 1500);
+}
+
+function generateComparisonResults(type, period, metrics) {
+    // Generate mock comparison data
+    comparisonData = {
+        type: type,
+        period: period,
+        metrics: metrics,
+        summary: {
+            totalChanges: 15,
+            improvements: 8,
+            deteriorations: 3,
+            neutral: 4
+        },
+        structureChanges: [
+            {
+                type: 'addition',
+                title: 'Nuova Unità: Digital Innovation',
+                description: 'Aggiunta unità per innovazione digitale',
+                impact: 'positive'
+            },
+            {
+                type: 'modification',
+                title: 'Ristrutturazione IT Department',
+                description: 'Riorganizzazione con nuovi team specializzati',
+                impact: 'positive'
+            },
+            {
+                type: 'removal',
+                title: 'Eliminazione Posizioni Ridondanti',
+                description: 'Rimozione 3 posizioni duplicate',
+                impact: 'neutral'
+            }
+        ],
+        metricsComparison: {
+            structure: { previous: 75, current: 85, change: +10 },
+            personnel: { previous: 70, current: 80, change: +10 },
+            efficiency: { previous: 65, current: 78, change: +13 },
+            costs: { previous: 100, current: 95, change: -5 },
+            performance: { previous: 72, current: 82, change: +10 }
+        }
+    };
+    
+    // Populate summary cards
+    populateSummaryCards();
+    
+    // Populate structure comparison
+    populateStructureComparison();
+    
+    // Create metrics comparison chart
+    createMetricsChart();
+    
+    // Populate changes timeline
+    populateChangesTimeline();
+    
+    // Generate insights and recommendations
+    generateInsights();
+}
+
+function populateSummaryCards() {
+    const summaryCards = document.getElementById('summary-cards');
+    summaryCards.innerHTML = `
+        <div class="col-md-3">
+            <div class="card summary-card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-arrow-up-down fs-1 me-3"></i>
+                        <div>
+                            <h4 class="mb-0">${comparisonData.summary.totalChanges}</h4>
+                            <small>Modifiche Totali</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-arrow-up fs-1 me-3"></i>
+                        <div>
+                            <h4 class="mb-0">${comparisonData.summary.improvements}</h4>
+                            <small>Miglioramenti</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-arrow-down fs-1 me-3"></i>
+                        <div>
+                            <h4 class="mb-0">${comparisonData.summary.deteriorations}</h4>
+                            <small>Peggioramenti</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card bg-secondary text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-dash fs-1 me-3"></i>
+                        <div>
+                            <h4 class="mb-0">${comparisonData.summary.neutral}</h4>
+                            <small>Neutrali</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function populateStructureComparison() {
+    const previousStructure = document.getElementById('previous-structure');
+    const currentStructure = document.getElementById('current-structure');
+    
+    previousStructure.innerHTML = `
+        <div class="structure-item">
+            <div>
+                <i class="bi bi-building me-2"></i>
+                <strong>CEO Office</strong>
+            </div>
+            <span class="badge bg-light text-dark">3 persone</span>
+        </div>
+        <div class="structure-item">
+            <div>
+                <i class="bi bi-diagram-2 me-2"></i>
+                <strong>IT Department</strong>
+            </div>
+            <span class="badge bg-light text-dark">12 persone</span>
+        </div>
+        <div class="structure-item">
+            <div>
+                <i class="bi bi-diagram-2 me-2"></i>
+                <strong>HR Department</strong>
+            </div>
+            <span class="badge bg-light text-dark">5 persone</span>
+        </div>
+    `;
+    
+    currentStructure.innerHTML = `
+        <div class="structure-item">
+            <div>
+                <i class="bi bi-building me-2"></i>
+                <strong>CEO Office</strong>
+            </div>
+            <span class="badge bg-light text-dark">3 persone</span>
+        </div>
+        <div class="structure-item added">
+            <div>
+                <i class="bi bi-diagram-2 me-2"></i>
+                <strong>Digital Innovation</strong>
+                <span class="badge bg-success ms-2">Nuovo</span>
+            </div>
+            <span class="badge bg-light text-dark">8 persone</span>
+        </div>
+        <div class="structure-item modified">
+            <div>
+                <i class="bi bi-diagram-2 me-2"></i>
+                <strong>IT Department</strong>
+                <span class="badge bg-warning ms-2">Modificato</span>
+            </div>
+            <span class="badge bg-light text-dark">15 persone</span>
+        </div>
+        <div class="structure-item">
+            <div>
+                <i class="bi bi-diagram-2 me-2"></i>
+                <strong>HR Department</strong>
+            </div>
+            <span class="badge bg-light text-dark">5 persone</span>
+        </div>
+    `;
+}
+
+function createMetricsChart() {
+    const ctx = document.getElementById('metricsComparisonChart').getContext('2d');
+    
+    if (comparisonChart) {
+        comparisonChart.destroy();
+    }
+    
+    const metrics = comparisonData.metricsComparison;
+    
+    comparisonChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(metrics).map(key => key.charAt(0).toUpperCase() + key.slice(1)),
+            datasets: [
+                {
+                    label: 'Precedente',
+                    data: Object.values(metrics).map(m => m.previous),
+                    backgroundColor: 'rgba(108, 117, 125, 0.8)',
+                    borderColor: 'rgba(108, 117, 125, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Attuale',
+                    data: Object.values(metrics).map(m => m.current),
+                    backgroundColor: 'rgba(13, 110, 253, 0.8)',
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+    
+    // Populate metrics changes
+    const metricsChanges = document.getElementById('metrics-changes');
+    metricsChanges.innerHTML = Object.entries(metrics).map(([key, value]) => `
+        <div class="metric-change ${value.change > 0 ? 'positive' : value.change < 0 ? 'negative' : 'neutral'}">
+            <div class="flex-grow-1">
+                <div class="fw-medium">${key.charAt(0).toUpperCase() + key.slice(1)}</div>
+                <small class="text-muted">${value.previous} → ${value.current}</small>
+            </div>
+            <div class="change-value ${value.change > 0 ? 'positive' : value.change < 0 ? 'negative' : ''}">
+                ${value.change > 0 ? '+' : ''}${value.change}
+            </div>
+        </div>
+    `).join('');
+}
+
+function populateChangesTimeline() {
+    const changesList = document.getElementById('changes-list');
+    changesList.innerHTML = comparisonData.structureChanges.map(change => `
+        <div class="timeline-item ${change.type}">
+            <div class="d-flex align-items-start">
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">${change.title}</h6>
+                    <p class="text-muted mb-2">${change.description}</p>
+                    <span class="badge bg-${change.impact === 'positive' ? 'success' : change.impact === 'negative' ? 'danger' : 'secondary'}">
+                        ${change.impact === 'positive' ? 'Impatto Positivo' : change.impact === 'negative' ? 'Impatto Negativo' : 'Impatto Neutro'}
+                    </span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function generateInsights() {
+    const keyInsights = document.getElementById('key-insights');
+    keyInsights.innerHTML = `
+        <div class="insight-item">
+            <div class="d-flex align-items-start">
+                <i class="bi bi-lightbulb insight-icon text-warning"></i>
+                <div>
+                    <div class="fw-medium">Efficienza Migliorata</div>
+                    <small class="text-muted">L'efficienza è aumentata del 13% grazie alla ristrutturazione</small>
+                </div>
+            </div>
+        </div>
+        <div class="insight-item">
+            <div class="d-flex align-items-start">
+                <i class="bi bi-graph-up insight-icon text-success"></i>
+                <div>
+                    <div class="fw-medium">Crescita Organico</div>
+                    <small class="text-muted">Aggiunta di 8 nuove posizioni nell'area digitale</small>
+                </div>
+            </div>
+        </div>
+        <div class="insight-item">
+            <div class="d-flex align-items-start">
+                <i class="bi bi-piggy-bank insight-icon text-info"></i>
+                <div>
+                    <div class="fw-medium">Riduzione Costi</div>
+                    <small class="text-muted">Costi operativi ridotti del 5% attraverso ottimizzazioni</small>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const recommendations = document.getElementById('recommendations');
+    recommendations.innerHTML = `
+        <div class="recommendation-item">
+            <div class="d-flex align-items-start">
+                <i class="bi bi-arrow-right-circle recommendation-icon text-primary"></i>
+                <div>
+                    <div class="fw-medium">Consolidare i Miglioramenti</div>
+                    <small class="text-muted">Stabilizzare le nuove strutture prima di ulteriori modifiche</small>
+                </div>
+            </div>
+        </div>
+        <div class="recommendation-item">
+            <div class="d-flex align-items-start">
+                <i class="bi bi-people recommendation-icon text-success"></i>
+                <div>
+                    <div class="fw-medium">Formazione del Personale</div>
+                    <small class="text-muted">Investire nella formazione per le nuove competenze digitali</small>
+                </div>
+            </div>
+        </div>
+        <div class="recommendation-item">
+            <div class="d-flex align-items-start">
+                <i class="bi bi-graph-up recommendation-icon text-info"></i>
+                <div>
+                    <div class="fw-medium">Monitoraggio Continuo</div>
+                    <small class="text-muted">Implementare KPI per monitorare l'efficacia dei cambiamenti</small>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function resetComparison() {
+    document.getElementById('comparison-results').style.display = 'none';
+    document.getElementById('no-comparison-state').style.display = 'block';
+    
+    if (comparisonChart) {
+        comparisonChart.destroy();
+        comparisonChart = null;
+    }
+    
+    comparisonData = null;
+}
+
+function refreshComparison() {
+    if (comparisonData) {
+        runComparison();
+    }
+}
+
+function exportComparison(format) {
+    if (!comparisonData) {
+        alert('Esegui prima un confronto per poter esportare i risultati.');
+        return;
+    }
+    
+    const url = `/orgchart/export/comparison?format=${format}&type=${comparisonData.type}`;
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `organizational_comparison_${new Date().toISOString().split('T')[0]}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function saveComparison() {
+    if (!comparisonData) {
+        alert('Nessun confronto da salvare.');
+        return;
+    }
+    
+    const name = prompt('Nome del confronto:');
+    if (name) {
+        alert(`Confronto "${name}" salvato con successo.`);
+    }
+}
+
+function loadComparison() {
+    alert('Funzionalità di caricamento confronto in sviluppo.');
+}
+
+function applyBestPractices() {
+    if (confirm('Vuoi applicare le best practice identificate dal confronto?')) {
+        alert('Applicazione best practice avviata. Riceverai notifiche sui progressi.');
+    }
+}
+
+function createActionPlan() {
+    if (!comparisonData) {
+        alert('Esegui prima un confronto per creare un piano d\'azione.');
+        return;
+    }
+    
+    window.open('/orgchart/reports/comparison-action-plan', '_blank');
+}
+
+function scheduleReview() {
+    alert('Apertura calendario per pianificazione revisione confronto...');
+}
+
+function shareComparison() {
+    if (!comparisonData) {
+        alert('Nessun confronto da condividere.');
+        return;
+    }
+    
+    if (navigator.share) {
+        navigator.share({
+            title: 'Confronto Strutture Organizzative',
+            text: 'Condivido i risultati del confronto organizzativo',
+            url: window.location.href
+        });
+    } else {
+        navigator.clipboard.writeText(window.location.href);
+        alert('Link copiato negli appunti!');
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    updateComparisonType();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,329 @@
+/* Component-specific styles */
+
+/* Avatar components */
+.avatar-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.avatar-circle.lg {
+    width: 60px;
+    height: 60px;
+    font-size: 1.2rem;
+}
+
+.avatar-circle.sm {
+    width: 40px;
+    height: 40px;
+    font-size: 0.9rem;
+}
+
+/* Status badges */
+.status-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+.status-badge.active {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.status-badge.inactive {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.status-badge.pending {
+    background-color: var(--warning-color);
+    color: var(--dark-color);
+}
+
+/* Progress indicators */
+.progress-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: conic-gradient(var(--primary-color) 0deg, var(--light-color) 0deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--dark-color);
+}
+
+/* Empty states */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--secondary-color);
+}
+
+.empty-state .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state h5 {
+    color: var(--secondary-color);
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    margin-bottom: 1.5rem;
+}
+
+/* Loading states */
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.skeleton-text {
+    height: 1rem;
+    border-radius: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.skeleton-text.short {
+    width: 60%;
+}
+
+.skeleton-text.medium {
+    width: 80%;
+}
+
+.skeleton-text.long {
+    width: 100%;
+}
+
+/* Data tables */
+.data-table {
+    background: white;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--box-shadow);
+}
+
+.data-table .table {
+    margin-bottom: 0;
+}
+
+.data-table .table thead th {
+    background: var(--light-color);
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    padding: 1rem 0.75rem;
+}
+
+.data-table .table tbody td {
+    padding: 0.875rem 0.75rem;
+    vertical-align: middle;
+}
+
+.data-table .table tbody tr:hover {
+    background: rgba(var(--primary-color), 0.05);
+}
+
+/* Action buttons */
+.action-buttons {
+    display: flex;
+    gap: 0.25rem;
+    justify-content: flex-end;
+}
+
+.action-buttons .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+/* Statistics cards */
+.stat-card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--box-shadow);
+    transition: var(--transition);
+    border-left: 4px solid var(--primary-color);
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--box-shadow-lg);
+}
+
+.stat-card .stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.stat-card .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.stat-card .stat-label {
+    font-size: 0.875rem;
+    color: var(--secondary-color);
+    margin-bottom: 0;
+}
+
+.stat-card.primary {
+    border-left-color: var(--primary-color);
+}
+
+.stat-card.primary .stat-icon {
+    background: rgba(13, 110, 253, 0.1);
+    color: var(--primary-color);
+}
+
+.stat-card.success {
+    border-left-color: var(--success-color);
+}
+
+.stat-card.success .stat-icon {
+    background: rgba(25, 135, 84, 0.1);
+    color: var(--success-color);
+}
+
+.stat-card.warning {
+    border-left-color: var(--warning-color);
+}
+
+.stat-card.warning .stat-icon {
+    background: rgba(255, 193, 7, 0.1);
+    color: #856404;
+}
+
+.stat-card.info {
+    border-left-color: var(--info-color);
+}
+
+.stat-card.info .stat-icon {
+    background: rgba(13, 202, 240, 0.1);
+    color: var(--info-color);
+}
+
+/* Timeline components */
+.timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 0.75rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--light-color);
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 2rem;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -2.25rem;
+    top: 0.5rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px var(--primary-color);
+}
+
+.timeline-item.success::before {
+    background: var(--success-color);
+    box-shadow: 0 0 0 2px var(--success-color);
+}
+
+.timeline-item.warning::before {
+    background: var(--warning-color);
+    box-shadow: 0 0 0 2px var(--warning-color);
+}
+
+.timeline-content {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    box-shadow: var(--box-shadow);
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-title {
+    font-weight: 600;
+    margin-bottom: 0;
+}
+
+.timeline-date {
+    font-size: 0.8rem;
+    color: var(--secondary-color);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .stat-card {
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    .stat-card .stat-icon {
+        margin: 0 auto 1rem;
+    }
+    
+    .timeline {
+        padding-left: 1.5rem;
+    }
+    
+    .timeline::before {
+        left: 0.5rem;
+    }
+    
+    .timeline-item::before {
+        left: -1.75rem;
+    }
+}

@@ -1,0 +1,437 @@
+{% extends "base/layout.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-person-plus me-2"></i>Nuovo Incarico
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    <div class="row">
+                        <!-- Assignment Details -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Dettagli Incarico</h6>
+                            
+                            <!-- Person Selection -->
+                            <div class="mb-3">
+                                <label for="person_id" class="form-label">Persona *</label>
+                                <select class="form-select" id="person_id" name="person_id" required onchange="checkExistingAssignments()">
+                                    <option value="">Seleziona persona...</option>
+                                    {% for person in all_persons %}
+                                    <option value="{{ person.id }}" 
+                                            {{ 'selected' if (selected_person and selected_person.id == person.id) or (form_data and form_data.person_id == person.id|string) else '' }}>
+                                        {{ person.name }}
+                                        {% if person.email %} - {{ person.email }}{% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="invalid-feedback">
+                                    Seleziona una persona per l'incarico.
+                                </div>
+                                <div id="person-info" class="form-text"></div>
+                            </div>
+                            
+                            <!-- Unit Selection -->
+                            <div class="mb-3">
+                                <label for="unit_id" class="form-label">Unità *</label>
+                                <select class="form-select" id="unit_id" name="unit_id" required onchange="checkExistingAssignments()">
+                                    <option value="">Seleziona unità...</option>
+                                    {% for unit in all_units %}
+                                    <option value="{{ unit.id }}" 
+                                            data-type="{{ unit.unit_type_id }}"
+                                            {{ 'selected' if (selected_unit and selected_unit.id == unit.id) or (form_data and form_data.unit_id == unit.id|string) else '' }}>
+                                        {{ unit.name }}
+                                        {% if unit.short_name %} ({{ unit.short_name }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="invalid-feedback">
+                                    Seleziona un'unità per l'incarico.
+                                </div>
+                                <div id="unit-info" class="form-text"></div>
+                            </div>
+                            
+                            <!-- Job Title Selection -->
+                            <div class="mb-3">
+                                <label for="job_title_id" class="form-label">Ruolo *</label>
+                                <select class="form-select" id="job_title_id" name="job_title_id" required onchange="checkExistingAssignments()">
+                                    <option value="">Seleziona ruolo...</option>
+                                    {% for job_title in all_job_titles %}
+                                    <option value="{{ job_title.id }}" 
+                                            {{ 'selected' if (selected_job_title and selected_job_title.id == job_title.id) or (form_data and form_data.job_title_id == job_title.id|string) else '' }}>
+                                        {{ job_title.name }}
+                                        {% if job_title.short_name %} ({{ job_title.short_name }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="invalid-feedback">
+                                    Seleziona un ruolo per l'incarico.
+                                </div>
+                                <div id="job-title-info" class="form-text"></div>
+                            </div>
+                            
+                            <!-- Percentage -->
+                            <div class="mb-3">
+                                <label for="percentage" class="form-label">Percentuale Incarico *</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="percentage" name="percentage" 
+                                           min="1" max="100" step="1" 
+                                           value="{{ form_data.percentage if form_data else '100' }}" 
+                                           required oninput="updatePercentageDisplay()">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <div class="invalid-feedback">
+                                    La percentuale deve essere tra 1% e 100%.
+                                </div>
+                                <div class="form-text">
+                                    <span id="percentage-display">100% - Full-time</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Assignment Properties -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Proprietà e Date</h6>
+                            
+                            <!-- Special Properties -->
+                            <div class="mb-3">
+                                <label class="form-label">Caratteristiche Speciali</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_ad_interim" name="is_ad_interim" 
+                                           {{ 'checked' if form_data and form_data.is_ad_interim else '' }}>
+                                    <label class="form-check-label" for="is_ad_interim">
+                                        <i class="bi bi-hourglass-split me-1"></i>
+                                        <strong>Ad Interim</strong>
+                                        <div class="small text-muted">Incarico temporaneo in attesa di nomina definitiva</div>
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_unit_boss" name="is_unit_boss" 
+                                           {{ 'checked' if form_data and form_data.is_unit_boss else '' }}>
+                                    <label class="form-check-label" for="is_unit_boss">
+                                        <i class="bi bi-star me-1"></i>
+                                        <strong>Responsabile Unità</strong>
+                                        <div class="small text-muted">Persona responsabile dell'unità organizzativa</div>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Valid From Date -->
+                            <div class="mb-3">
+                                <label for="valid_from" class="form-label">Data Inizio</label>
+                                <input type="date" class="form-control" id="valid_from" name="valid_from" 
+                                       value="{{ form_data.valid_from if form_data else date.today().isoformat() }}">
+                                <div class="form-text">Data di inizio dell'incarico (default: oggi)</div>
+                            </div>
+                            
+                            <!-- Notes -->
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">Note</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                          placeholder="Note aggiuntive sull'incarico...">{{ form_data.notes if form_data else '' }}</textarea>
+                                <div class="form-text">Informazioni aggiuntive sull'incarico (opzionale)</div>
+                            </div>
+                            
+                            <!-- Flags -->
+                            <div class="mb-3">
+                                <label for="flags" class="form-label">Flag</label>
+                                <input type="text" class="form-control" id="flags" name="flags" 
+                                       value="{{ form_data.flags if form_data else '' }}"
+                                       placeholder="es. URGENTE, TEMPORANEO, SPECIALE">
+                                <div class="form-text">Flag o etichette per categorizzare l'incarico (opzionale)</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Existing Assignment Warning -->
+                    <div id="existing-assignment-warning" class="alert alert-warning" style="display: none;">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Attenzione:</strong> <span id="warning-message"></span>
+                    </div>
+                    
+                    <!-- Validation Warnings -->
+                    <div id="validation-warnings" class="alert alert-info" style="display: none;">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Avvisi:</strong>
+                        <ul id="warnings-list" class="mb-0 mt-2"></ul>
+                    </div>
+                    
+                    <!-- Preview -->
+                    <div class="alert alert-light border">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-eye me-1"></i>Anteprima Incarico
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-4 text-center">
+                                <div class="avatar-circle mx-auto mb-2">
+                                    <span id="preview-person-initials">?</span>
+                                </div>
+                                <strong id="preview-person-name">Seleziona persona</strong>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <i id="preview-unit-icon" class="bi bi-building display-4 text-primary mb-2"></i>
+                                <div>
+                                    <strong id="preview-unit-name">Seleziona unità</strong>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <i class="bi bi-briefcase display-4 text-secondary mb-2"></i>
+                                <div>
+                                    <strong id="preview-job-title-name">Seleziona ruolo</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="text-center">
+                            <span id="preview-percentage" class="badge bg-success fs-6">100%</span>
+                            <span id="preview-properties" class="ms-2"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Form Actions -->
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <a href="/assignments" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Annulla
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle me-1"></i>Crea Incarico
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Help Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-question-circle me-2"></i>Guida alla Creazione
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Versioning Automatico:</h6>
+                        <ul class="list-unstyled small">
+                            <li class="mb-1">
+                                <i class="bi bi-check-circle text-success me-2"></i>
+                                Nuovo incarico: versione 1, stato corrente
+                            </li>
+                            <li class="mb-1">
+                                <i class="bi bi-arrow-up-circle text-info me-2"></i>
+                                Modifica esistente: nuova versione automatica
+                            </li>
+                            <li class="mb-1">
+                                <i class="bi bi-clock-history text-warning me-2"></i>
+                                Storico completo: tutte le versioni conservate
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Suggerimenti:</h6>
+                        <ul class="small text-muted">
+                            <li>Verifica che la persona non abbia già questo incarico</li>
+                            <li>Controlla il carico di lavoro totale della persona</li>
+                            <li>Usa "Ad Interim" per incarichi temporanei</li>
+                            <li>Il sistema avviserà per potenziali conflitti</li>
+                            <li>Le percentuali si sommano per persona</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.2rem;
+}
+
+.form-check-label {
+    cursor: pointer;
+}
+
+.form-check-input:checked + .form-check-label {
+    font-weight: 500;
+}
+
+.preview-changes {
+    background-color: #fff3cd;
+    transition: background-color 0.3s ease;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const personSelect = document.getElementById('person_id');
+    const unitSelect = document.getElementById('unit_id');
+    const jobTitleSelect = document.getElementById('job_title_id');
+    const percentageInput = document.getElementById('percentage');
+    
+    // Initialize preview
+    updatePreview();
+    updatePercentageDisplay();
+    
+    // Add event listeners
+    personSelect.addEventListener('change', updatePreview);
+    unitSelect.addEventListener('change', updatePreview);
+    jobTitleSelect.addEventListener('change', updatePreview);
+    percentageInput.addEventListener('input', updatePreview);
+    
+    document.getElementById('is_ad_interim').addEventListener('change', updatePreview);
+    document.getElementById('is_unit_boss').addEventListener('change', updatePreview);
+});
+
+function updatePreview() {
+    const personSelect = document.getElementById('person_id');
+    const unitSelect = document.getElementById('unit_id');
+    const jobTitleSelect = document.getElementById('job_title_id');
+    const percentageInput = document.getElementById('percentage');
+    
+    // Update person preview
+    const selectedPerson = personSelect.options[personSelect.selectedIndex];
+    if (selectedPerson.value) {
+        const personName = selectedPerson.text.split(' - ')[0];
+        document.getElementById('preview-person-name').textContent = personName;
+        document.getElementById('preview-person-initials').textContent = getInitials(personName);
+    } else {
+        document.getElementById('preview-person-name').textContent = 'Seleziona persona';
+        document.getElementById('preview-person-initials').textContent = '?';
+    }
+    
+    // Update unit preview
+    const selectedUnit = unitSelect.options[unitSelect.selectedIndex];
+    if (selectedUnit.value) {
+        const unitName = selectedUnit.text.split(' (')[0];
+        const unitType = selectedUnit.getAttribute('data-type');
+        document.getElementById('preview-unit-name').textContent = unitName;
+        
+        const unitIcon = document.getElementById('preview-unit-icon');
+        if (unitType === 'function') {
+            unitIcon.className = 'bi bi-building display-4 text-primary mb-2';
+        } else {
+            unitIcon.className = 'bi bi-diagram-2 display-4 text-primary mb-2';
+        }
+    } else {
+        document.getElementById('preview-unit-name').textContent = 'Seleziona unità';
+        document.getElementById('preview-unit-icon').className = 'bi bi-building display-4 text-primary mb-2';
+    }
+    
+    // Update job title preview
+    const selectedJobTitle = jobTitleSelect.options[jobTitleSelect.selectedIndex];
+    if (selectedJobTitle.value) {
+        const jobTitleName = selectedJobTitle.text.split(' (')[0];
+        document.getElementById('preview-job-title-name').textContent = jobTitleName;
+    } else {
+        document.getElementById('preview-job-title-name').textContent = 'Seleziona ruolo';
+    }
+    
+    // Update percentage preview
+    updatePercentageDisplay();
+    
+    // Update properties preview
+    updatePropertiesPreview();
+    
+    // Check for existing assignments
+    checkExistingAssignments();
+}
+
+function updatePercentageDisplay() {
+    const percentage = document.getElementById('percentage').value || 100;
+    const display = document.getElementById('percentage-display');
+    const preview = document.getElementById('preview-percentage');
+    
+    let badgeClass = 'bg-success';
+    let description = 'Full-time';
+    
+    if (percentage < 50) {
+        badgeClass = 'bg-info';
+        description = 'Part-time ridotto';
+    } else if (percentage < 100) {
+        badgeClass = 'bg-warning';
+        description = 'Part-time';
+    }
+    
+    display.textContent = `${percentage}% - ${description}`;
+    preview.className = `badge ${badgeClass} fs-6`;
+    preview.textContent = `${percentage}%`;
+}
+
+function updatePropertiesPreview() {
+    const isAdInterim = document.getElementById('is_ad_interim').checked;
+    const isUnitBoss = document.getElementById('is_unit_boss').checked;
+    const propertiesElement = document.getElementById('preview-properties');
+    
+    let properties = [];
+    if (isAdInterim) {
+        properties.push('<span class="badge bg-warning me-1"><i class="bi bi-hourglass-split me-1"></i>Ad Interim</span>');
+    }
+    if (isUnitBoss) {
+        properties.push('<span class="badge bg-info me-1"><i class="bi bi-star me-1"></i>Responsabile</span>');
+    }
+    
+    propertiesElement.innerHTML = properties.join('');
+}
+
+function checkExistingAssignments() {
+    const personId = document.getElementById('person_id').value;
+    const unitId = document.getElementById('unit_id').value;
+    const jobTitleId = document.getElementById('job_title_id').value;
+    
+    const warningDiv = document.getElementById('existing-assignment-warning');
+    const warningMessage = document.getElementById('warning-message');
+    
+    if (personId && unitId && jobTitleId) {
+        // Here you would typically make an AJAX call to check for existing assignments
+        // For now, we'll show a generic warning
+        warningMessage.textContent = 'Verrà verificata l\'esistenza di incarichi simili al momento della creazione.';
+        warningDiv.style.display = 'block';
+    } else {
+        warningDiv.style.display = 'none';
+    }
+}
+
+function getInitials(name) {
+    return name.split(' ')
+        .map(word => word.charAt(0).toUpperCase())
+        .join('')
+        .substring(0, 2);
+}
+
+// Form validation
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        const forms = document.getElementsByClassName('needs-validation');
+        Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+</script>
+{% endblock %}

@@ -9,6 +9,7 @@ from typing import Optional
 import logging
 from datetime import date
 from app.services.unit import UnitService
+from app.services.unit_type import UnitTypeService
 from app.models.unit import Unit
 from app.models.base import Alias, ModelValidationException
 
@@ -19,6 +20,10 @@ templates = Jinja2Templates(directory="templates")
 
 def get_unit_service():
     return UnitService()
+
+
+def get_unit_type_service():
+    return UnitTypeService()
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -52,11 +57,14 @@ async def list_units(
 async def unit_detail(
     request: Request,
     unit_id: int,
-    unit_service: UnitService = Depends(get_unit_service)
+    unit_service: UnitService = Depends(get_unit_service),
+    unit_type_service: UnitTypeService = Depends(get_unit_type_service)
 ):
     """Show unit details"""
     try:
         unit = unit_service.get_by_id(unit_id)
+        type = unit_type_service.get_by_id(unit.unit_type_id)
+
         if not unit:
             raise HTTPException(status_code=404, detail="Unit not found")
         
@@ -73,11 +81,14 @@ async def unit_detail(
             {
                 "request": request,
                 "unit": unit,
+                "type": type.name,
+                "unit_type": type.name,
                 "children": children,
                 "parent": parent,
                 "page_title": f"Unit: {unit.name}"
             }
         )
+        
     except HTTPException:
         raise
     except Exception as e:
@@ -88,19 +99,23 @@ async def unit_detail(
 @router.get("/new", response_class=HTMLResponse)
 async def create_unit_form(
     request: Request,
-    unit_service: UnitService = Depends(get_unit_service)
+    unit_service: UnitService = Depends(get_unit_service),
+    unit_type_service: UnitTypeService = Depends(get_unit_type_service)
 ):
     """Show create unit form"""
     try:
         # Get available parent units
         available_parents = unit_service.get_available_parents()
         
+        # Get unit types
+        unit_types = unit_type_service.get_all()
+        
         return templates.TemplateResponse(
             "units/create.html",
             {
                 "request": request,
                 "available_parents": available_parents,
-                "unit_types": ["function", "OrganizationalUnit"],
+                "unit_types": unit_types,
                 "page_title": "Create Unit"
             }
         )
@@ -115,11 +130,12 @@ async def create_unit(
     id: Optional[int] = Form(None),
     name: str = Form(...),
     short_name: Optional[str] = Form(None),
-    type: str = Form(...),
+    unit_type_id: int = Form(...),
     parent_unit_id: Optional[int] = Form(None),
     start_date: Optional[str] = Form(None),
     end_date: Optional[str] = Form(None),
-    unit_service: UnitService = Depends(get_unit_service)
+    unit_service: UnitService = Depends(get_unit_service),
+    unit_type_service: UnitTypeService = Depends(get_unit_type_service)
 ):
     """Create new unit"""
     try:
@@ -147,7 +163,7 @@ async def create_unit(
             id=id,
             name=name.strip(),
             short_name=short_name.strip() if short_name else None,
-            type=type,
+            unit_type_id=unit_type_id,
             parent_unit_id=parent_unit_id,
             start_date=start_date_parsed,
             end_date=end_date_parsed
@@ -164,12 +180,13 @@ async def create_unit(
     except ModelValidationException as e:
         # Show form again with errors
         available_parents = unit_service.get_available_parents()
+        unit_types = unit_type_service.get_all()
         return templates.TemplateResponse(
             "units/create.html",
             {
                 "request": request,
                 "available_parents": available_parents,
-                "unit_types": ["function", "OrganizationalUnit"],
+                "unit_types": unit_types,
                 "errors": [{"field": err.field, "message": err.message} for err in e.errors],
                 "form_data": await request.form(),
                 "page_title": "Create Unit"
@@ -185,7 +202,8 @@ async def create_unit(
 async def edit_unit_form(
     request: Request,
     unit_id: int,
-    unit_service: UnitService = Depends(get_unit_service)
+    unit_service: UnitService = Depends(get_unit_service),
+    unit_type_service: UnitTypeService = Depends(get_unit_type_service)
 ):
     """Show edit unit form"""
     try:
@@ -196,13 +214,16 @@ async def edit_unit_form(
         # Get available parent units (excluding self and descendants)
         available_parents = unit_service.get_available_parents(unit_id)
         
+        # Get unit types
+        unit_types = unit_type_service.get_all()
+        
         return templates.TemplateResponse(
             "units/edit.html",
             {
                 "request": request,
                 "unit": unit,
                 "available_parents": available_parents,
-                "unit_types": ["function", "OrganizationalUnit"],
+                "unit_types": unit_types,
                 "page_title": f"Edit Unit: {unit.name}"
             }
         )
@@ -219,11 +240,12 @@ async def update_unit(
     unit_id: int,
     name: str = Form(...),
     short_name: Optional[str] = Form(None),
-    type: str = Form(...),
+    unit_type_id: int = Form(...),
     parent_unit_id: Optional[int] = Form(None),
     start_date: Optional[str] = Form(None),
     end_date: Optional[str] = Form(None),
-    unit_service: UnitService = Depends(get_unit_service)
+    unit_service: UnitService = Depends(get_unit_service),
+    unit_type_service: UnitTypeService = Depends(get_unit_type_service)
 ):
     """Update existing unit"""
     try:
@@ -254,7 +276,7 @@ async def update_unit(
         # Update unit model
         existing_unit.name = name.strip()
         existing_unit.short_name = short_name.strip() if short_name else None
-        existing_unit.type = type
+        existing_unit.unit_type_id = unit_type_id
         existing_unit.parent_unit_id = parent_unit_id
         existing_unit.start_date = start_date_parsed
         existing_unit.end_date = end_date_parsed
@@ -271,13 +293,14 @@ async def update_unit(
         # Show form again with errors
         unit = unit_service.get_by_id(unit_id)
         available_parents = unit_service.get_available_parents(unit_id)
+        unit_types = unit_type_service.get_all()
         return templates.TemplateResponse(
             "units/edit.html",
             {
                 "request": request,
                 "unit": unit,
                 "available_parents": available_parents,
-                "unit_types": ["function", "OrganizationalUnit"],
+                "unit_types": unit_types,
                 "errors": [{"field": err.field, "message": err.message} for err in e.errors],
                 "form_data": await request.form(),
                 "page_title": f"Edit Unit: {unit.name}"
