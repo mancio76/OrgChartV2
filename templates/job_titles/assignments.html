@@ -1,0 +1,387 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="/assignments/new?job_title_id={{ job_title.id }}" class="btn btn-success">
+        <i class="bi bi-person-plus me-1"></i>Nuovo Incarico
+    </a>
+    <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="/job-titles/{{ job_title.id }}/assignments">
+            <i class="bi bi-person-badge me-2"></i>Incarichi Correnti
+        </a></li>
+        <li><a class="dropdown-item" href="/job-titles/{{ job_title.id }}/assignments?show_history=true">
+            <i class="bi bi-clock-history me-2"></i>Storico Completo
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/job-titles/{{ job_title.id }}">
+            <i class="bi bi-arrow-left me-2"></i>Torna al Ruolo
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-9">
+        <!-- Job Title Info -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-briefcase me-3 text-primary fs-3"></i>
+                    <div class="flex-grow-1">
+                        <h5 class="mb-0">{{ job_title.name }}</h5>
+                        {% if job_title.short_name %}
+                        <small class="text-muted">{{ job_title.short_name }}</small>
+                        {% endif %}
+                        <div class="mt-1">
+                            <span class="badge bg-{{ 'danger' if job_title.level_indicator == 'C-Level' else 'warning' if job_title.level_indicator == 'Head' else 'info' if job_title.level_indicator == 'Manager' else 'success' if job_title.level_indicator == 'Executive' else 'secondary' }}">
+                                {{ job_title.level_indicator }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn {{ 'btn-primary' if not show_history else 'btn-outline-primary' }}" 
+                                    onclick="window.location.href='/job-titles/{{ job_title.id }}/assignments'">
+                                <i class="bi bi-person-badge me-1"></i>Correnti
+                            </button>
+                            <button type="button" class="btn {{ 'btn-primary' if show_history else 'btn-outline-primary' }}" 
+                                    onclick="window.location.href='/job-titles/{{ job_title.id }}/assignments?show_history=true'">
+                                <i class="bi bi-clock-history me-1"></i>Storico
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Assignments List -->
+        {% if assignments %}
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-{{ 'person-badge' if not show_history else 'clock-history' }} me-2"></i>
+                    {{ 'Incarichi Correnti' if not show_history else 'Storico Incarichi' }}
+                    <span class="badge bg-{{ 'success' if not show_history else 'info' }} ms-2">{{ assignments|length }}</span>
+                </h5>
+                <div class="d-flex gap-2">
+                    {% if not show_history %}
+                    <small class="text-muted">Aggiornato in tempo reale</small>
+                    {% else %}
+                    <small class="text-muted">Include tutte le versioni</small>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Persona</th>
+                                <th>Unità</th>
+                                <th>Percentuale</th>
+                                <th>Periodo</th>
+                                {% if show_history %}
+                                <th>Versione</th>
+                                <th>Stato</th>
+                                {% endif %}
+                                <th width="120">Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assignment in assignments %}
+                            <tr class="{{ 'table-success' if assignment.is_current else 'table-light' if show_history else '' }}">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle me-2">
+                                            {{ assignment.person.initials if assignment.person else '?' }}
+                                        </div>
+                                        <div>
+                                            <strong>{{ assignment.person.name if assignment.person else 'N/A' }}</strong>
+                                            {% if assignment.person and assignment.person.email %}
+                                            <br><small class="text-muted">{{ assignment.person.email }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-{{ 'building' if assignment.unit and assignment.unit.type == 'function' else 'diagram-2' }} me-2 text-primary"></i>
+                                        <div>
+                                            {{ assignment.unit.name if assignment.unit else 'N/A' }}
+                                            {% if assignment.unit and assignment.unit.short_name %}
+                                            <br><small class="text-muted">{{ assignment.unit.short_name }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if assignment.percentage == 1.0 else 'warning' if assignment.percentage >= 0.5 else 'info' }}">
+                                        {{ (assignment.percentage * 100)|round|int }}%
+                                    </span>
+                                    {% if assignment.percentage < 1.0 %}
+                                    <br><small class="text-muted">Part-time</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="small">
+                                        <i class="bi bi-calendar-event me-1"></i>
+                                        {{ assignment.valid_from.strftime('%d/%m/%Y') if assignment.valid_from else 'N/A' }}
+                                        {% if assignment.valid_to %}
+                                        <br><i class="bi bi-calendar-x me-1"></i>
+                                        {{ assignment.valid_to.strftime('%d/%m/%Y') }}
+                                        {% elif assignment.is_current %}
+                                        <br><small class="text-success">In corso</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                {% if show_history %}
+                                <td>
+                                    <span class="badge bg-secondary">v{{ assignment.version }}</span>
+                                </td>
+                                <td>
+                                    {% if assignment.is_current %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle me-1"></i>Corrente
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-archive me-1"></i>Storico
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                {% endif %}
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="/assignments/{{ assignment.id }}" class="btn btn-outline-primary" 
+                                           data-bs-toggle="tooltip" title="Visualizza dettagli">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        {% if assignment.is_current %}
+                                        <a href="/assignments/{{ assignment.id }}/edit" class="btn btn-outline-secondary"
+                                           data-bs-toggle="tooltip" title="Modifica">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        {% endif %}
+                                        {% if show_history %}
+                                        <a href="/assignments/{{ assignment.id }}/history" class="btn btn-outline-info"
+                                           data-bs-toggle="tooltip" title="Storico versioni">
+                                            <i class="bi bi-clock-history"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        {% else %}
+        <!-- Empty State -->
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-{{ 'person-badge' if not show_history else 'clock-history' }} display-1 text-muted mb-3"></i>
+                <h4 class="text-muted">
+                    {% if show_history %}
+                    Nessun incarico storico
+                    {% else %}
+                    Nessun incarico corrente
+                    {% endif %}
+                </h4>
+                <p class="text-muted mb-4">
+                    {% if show_history %}
+                    Non ci sono incarichi storici per questo ruolo.
+                    {% else %}
+                    Non ci sono incarichi correnti per questo ruolo.
+                    {% endif %}
+                </p>
+                {% if not show_history %}
+                <a href="/assignments/new?job_title_id={{ job_title.id }}" class="btn btn-primary">
+                    <i class="bi bi-person-plus me-1"></i>Crea Primo Incarico
+                </a>
+                {% else %}
+                <a href="/job-titles/{{ job_title.id }}/assignments" class="btn btn-outline-primary">
+                    <i class="bi bi-person-badge me-1"></i>Visualizza Incarichi Correnti
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-3">
+        <!-- Statistics -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-bar-chart me-2"></i>Statistiche
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <h4 class="text-success mb-0">{{ job_title.current_assignments_count }}</h4>
+                    <small class="text-muted">Incarichi Correnti</small>
+                </div>
+                <div class="text-center mb-3">
+                    <h4 class="text-info mb-0">{{ job_title.total_assignments_count }}</h4>
+                    <small class="text-muted">Totale Storico</small>
+                </div>
+                
+                {% if assignments %}
+                <hr>
+                <div class="small">
+                    {% if not show_history %}
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Full-time:</span>
+                        <span class="badge bg-success">
+                            {{ assignments|selectattr('percentage', 'equalto', 1.0)|list|length }}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Part-time:</span>
+                        <span class="badge bg-warning">
+                            {{ assignments|rejectattr('percentage', 'equalto', 1.0)|list|length }}
+                        </span>
+                    </div>
+                    {% else %}
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Versioni totali:</span>
+                        <span class="badge bg-info">{{ assignments|length }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Persone coinvolte:</span>
+                        <span class="badge bg-secondary">
+                            {{ assignments|map(attribute='person.id')|unique|list|length if assignments else 0 }}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Azioni Rapide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/assignments/new?job_title_id={{ job_title.id }}" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-person-plus me-1"></i>Nuovo Incarico
+                    </a>
+                    {% if not show_history %}
+                    <a href="/job-titles/{{ job_title.id }}/assignments?show_history=true" class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-clock-history me-1"></i>Visualizza Storico
+                    </a>
+                    {% else %}
+                    <a href="/job-titles/{{ job_title.id }}/assignments" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-person-badge me-1"></i>Solo Correnti
+                    </a>
+                    {% endif %}
+                    <hr>
+                    <a href="/job-titles/{{ job_title.id }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Torna al Ruolo
+                    </a>
+                    <a href="/job-titles/{{ job_title.id }}/edit" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-pencil me-1"></i>Modifica Ruolo
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Multilingual Info -->
+        {% if job_title.aliases %}
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-translate me-2"></i>Traduzioni
+                </h6>
+            </div>
+            <div class="card-body">
+                {% for alias in job_title.aliases %}
+                <div class="d-flex align-items-center mb-2">
+                    <div class="flag-icon me-2">
+                        {% if alias.lang == 'it-IT' %}
+                        <i class="bi bi-flag text-success"></i>
+                        {% elif alias.lang == 'en-US' %}
+                        <i class="bi bi-flag text-primary"></i>
+                        {% elif alias.lang == 'fr-FR' %}
+                        <i class="bi bi-flag text-info"></i>
+                        {% elif alias.lang == 'de-DE' %}
+                        <i class="bi bi-flag text-warning"></i>
+                        {% elif alias.lang == 'es-ES' %}
+                        <i class="bi bi-flag text-danger"></i>
+                        {% else %}
+                        <i class="bi bi-flag text-secondary"></i>
+                        {% endif %}
+                    </div>
+                    <div class="small">
+                        <strong>{{ alias.value }}</strong>
+                        <br><span class="text-muted">{{ alias.lang }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.flag-icon {
+    width: 20px;
+    text-align: center;
+}
+
+.table-success {
+    background-color: rgba(25, 135, 84, 0.1);
+}
+
+.table-light {
+    background-color: rgba(248, 249, 250, 0.5);
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

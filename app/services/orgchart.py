@@ -108,7 +108,7 @@ class OrgchartService:
             # Interim assignments ratio
             interim_query = """
             SELECT 
-                COUNT(CASE WHEN ad_interim = 1 THEN 1 END) as interim_count,
+                COUNT(CASE WHEN is_ad_interim = 1 THEN 1 END) as interim_count,
                 COUNT(*) as total_count
             FROM person_job_assignments 
             WHERE is_current = 1
@@ -186,7 +186,7 @@ class OrgchartService:
                 if show_persons:
                     persons_query = """
                     SELECT p.id, p.name, p.short_name, jt.name as job_title_name,
-                           pja.ad_interim, pja.percentage
+                           pja.is_ad_interim, pja.is_unit_boss, pja.percentage
                     FROM person_job_assignments pja
                     JOIN persons p ON pja.person_id = p.id
                     JOIN job_titles jt ON pja.job_title_id = jt.id
@@ -264,7 +264,7 @@ class OrgchartService:
                 if show_persons:
                     persons_query = """
                     SELECT p.id, p.name, p.short_name, jt.name as job_title_name,
-                           pja.ad_interim, pja.percentage
+                           pja.is_ad_interim, pja.is_unit_boss, pja.percentage
                     FROM person_job_assignments pja
                     JOIN persons p ON pja.person_id = p.id
                     JOIN job_titles jt ON pja.job_title_id = jt.id
@@ -313,7 +313,7 @@ class OrgchartService:
             # Get current assignments
             assignments_query = """
             SELECT p.id as person_id, p.name as person_name, p.short_name as person_short_name,
-                   jt.name as job_title_name, pja.ad_interim, pja.percentage
+                   jt.name as job_title_name, pja.is_ad_interim, pja.is_unit_boss, pja.percentage
             FROM person_job_assignments pja
             JOIN persons p ON pja.person_id = p.id
             JOIN job_titles jt ON pja.job_title_id = jt.id
@@ -490,7 +490,7 @@ class OrgchartService:
             matrix_query = """
             SELECT p.name as person_name, p.short_name as person_short_name,
                    u.name as unit_name, jt.name as job_title_name,
-                   pja.percentage, pja.ad_interim
+                   pja.percentage, pja.is_ad_interim, pja.is_unit_boss
             FROM person_job_assignments pja
             JOIN persons p ON pja.person_id = p.id
             JOIN units u ON pja.unit_id = u.id

@@ -1,0 +1,280 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<a href="/units/new" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i>Nuova Unità
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Search and Filters -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <form method="get" class="d-flex">
+            <input type="search" name="search" class="form-control me-2" 
+                   placeholder="Cerca unità per nome..." 
+                   value="{{ search }}" 
+                   aria-label="Cerca unità">
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="bi bi-search"></i>
+            </button>
+            {% if search %}
+            <a href="/units" class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-x-circle"></i>
+            </a>
+            {% endif %}
+        </form>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="btn-group" role="group">
+            <a href="/orgchart/tree" class="btn btn-outline-info">
+                <i class="bi bi-diagram-3 me-1"></i>Vista Organigramma
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Units List -->
+{% if units %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-building me-2"></i>
+            Unità Organizzative
+            <span class="badge bg-secondary ms-2">{{ units|length }}</span>
+        </h5>
+        <div class="btn-group btn-group-sm">
+            <button type="button" class="btn btn-outline-secondary" onclick="toggleView('table')" id="btn-table-view">
+                <i class="bi bi-table"></i> Tabella
+            </button>
+            <button type="button" class="btn btn-outline-secondary" onclick="toggleView('hierarchy')" id="btn-hierarchy-view">
+                <i class="bi bi-diagram-3"></i> Gerarchia
+            </button>
+        </div>
+    </div>
+    
+    <!-- Table View -->
+    <div id="table-view" class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Tipo</th>
+                        <th>Unità Padre</th>
+                        <th>Persone</th>
+                        <th>Sotto-unità</th>
+                        <th>Stato</th>
+                        <th width="120">Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for unit in units %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-{{ 'building' if unit.type == 'function' else 'diagram-2' }} me-2 text-primary"></i>
+                                <div>
+                                    <strong>{{ unit.name }}</strong>
+                                    {% if unit.short_name %}
+                                    <br><small class="text-muted">{{ unit.short_name }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'primary' if unit.type == 'function' else 'info' }}">
+                                {{ 'Funzione' if unit.type == 'function' else 'Org. Unit' }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if unit.parent_name %}
+                            <span class="text-muted">{{ unit.parent_name }}</span>
+                            {% else %}
+                            <span class="badge bg-light text-dark">Radice</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if unit.person_count > 0 %}
+                            <span class="badge bg-success">{{ unit.person_count }}</span>
+                            {% else %}
+                            <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if unit.children_count > 0 %}
+                            <span class="badge bg-info">{{ unit.children_count }}</span>
+                            {% else %}
+                            <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if unit.is_active %}
+                            <span class="badge bg-success">Attiva</span>
+                            {% else %}
+                            <span class="badge bg-warning">Inattiva</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/units/{{ unit.id }}" class="btn btn-outline-primary" 
+                                   data-bs-toggle="tooltip" title="Visualizza dettagli">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="/units/{{ unit.id }}/edit" class="btn btn-outline-secondary"
+                                   data-bs-toggle="tooltip" title="Modifica">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form method="post" action="/units/{{ unit.id }}/delete" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-danger btn-delete"
+                                            data-item-name="{{ unit.name }}" 
+                                            data-item-type="unità"
+                                            data-bs-toggle="tooltip" title="Elimina">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Hierarchy View -->
+    <div id="hierarchy-view" class="card-body" style="display: none;">
+        <div class="hierarchy-container">
+            {% for unit in units %}
+            {% if unit.is_root %}
+            <div class="hierarchy-item root-unit" data-level="0">
+                <div class="unit-card">
+                    <div class="unit-header">
+                        <i class="bi bi-{{ 'building' if unit.type == 'function' else 'diagram-2' }} me-2"></i>
+                        <strong>{{ unit.name }}</strong>
+                        {% if unit.short_name %}
+                        <small class="text-muted ms-2">({{ unit.short_name }})</small>
+                        {% endif %}
+                        <div class="unit-actions ms-auto">
+                            <a href="/units/{{ unit.id }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="unit-stats">
+                        <span class="badge bg-light text-dark me-2">
+                            <i class="bi bi-people me-1"></i>{{ unit.person_count }}
+                        </span>
+                        <span class="badge bg-light text-dark">
+                            <i class="bi bi-diagram-2 me-1"></i>{{ unit.children_count }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-building display-1 text-muted mb-3"></i>
+        <h4 class="text-muted">
+            {% if search %}
+            Nessuna unità trovata per "{{ search }}"
+            {% else %}
+            Nessuna unità organizzativa
+            {% endif %}
+        </h4>
+        <p class="text-muted mb-4">
+            {% if search %}
+            Prova a modificare i termini di ricerca o 
+            <a href="/units">visualizza tutte le unità</a>.
+            {% else %}
+            Inizia creando la prima unità organizzativa del sistema.
+            {% endif %}
+        </p>
+        <a href="/units/new" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Crea Prima Unità
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.hierarchy-container {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.hierarchy-item {
+    margin-bottom: 1rem;
+}
+
+.unit-card {
+    border: 2px solid #e9ecef;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    background: white;
+    transition: all 0.3s ease;
+}
+
+.unit-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+}
+
+.unit-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.unit-actions {
+    margin-left: auto;
+}
+
+.unit-stats {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.root-unit .unit-card {
+    border-color: var(--primary-color);
+    border-width: 3px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleView(viewType) {
+    const tableView = document.getElementById('table-view');
+    const hierarchyView = document.getElementById('hierarchy-view');
+    const tableBtn = document.getElementById('btn-table-view');
+    const hierarchyBtn = document.getElementById('btn-hierarchy-view');
+    
+    if (viewType === 'table') {
+        tableView.style.display = 'block';
+        hierarchyView.style.display = 'none';
+        tableBtn.classList.add('active');
+        hierarchyBtn.classList.remove('active');
+    } else {
+        tableView.style.display = 'none';
+        hierarchyView.style.display = 'block';
+        tableBtn.classList.remove('active');
+        hierarchyBtn.classList.add('active');
+    }
+}
+
+// Initialize table view as default
+document.addEventListener('DOMContentLoaded', function() {
+    toggleView('table');
+});
+</script>
+{% endblock %}

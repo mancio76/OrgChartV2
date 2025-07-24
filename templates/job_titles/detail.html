@@ -1,0 +1,420 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="/job-titles/{{ job_title.id }}/edit" class="btn btn-primary">
+        <i class="bi bi-pencil me-1"></i>Modifica
+    </a>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="/job-titles/{{ job_title.id }}/assignments">
+            <i class="bi bi-person-badge me-2"></i>Incarichi Correnti
+        </a></li>
+        <li><a class="dropdown-item" href="/job-titles/{{ job_title.id }}/assignments?show_history=true">
+            <i class="bi bi-clock-history me-2"></i>Storico Incarichi
+        </a></li>
+        <li><a class="dropdown-item" href="/job-titles/{{ job_title.id }}/assignable-units">
+            <i class="bi bi-diagram-3 me-2"></i>Unità Assegnabili
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item text-danger" href="#" onclick="confirmDelete()">
+            <i class="bi bi-trash me-2"></i>Elimina Ruolo
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Main Information -->
+    <div class="col-lg-8">
+        <!-- Basic Information Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-briefcase me-2"></i>Informazioni Generali
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Nome Ruolo</label>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-briefcase me-2 text-primary fs-4"></i>
+                                <div>
+                                    <h5 class="mb-0">{{ job_title.name }}</h5>
+                                    {% if job_title.short_name %}
+                                    <small class="text-muted">{{ job_title.short_name }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Livello Organizzativo</label>
+                            <div>
+                                <span class="badge bg-{{ 'danger' if job_title.level_indicator == 'C-Level' else 'warning' if job_title.level_indicator == 'Head' else 'info' if job_title.level_indicator == 'Manager' else 'success' if job_title.level_indicator == 'Executive' else 'secondary' }} fs-6">
+                                    {{ job_title.level_indicator }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        {% if job_title.start_date or job_title.end_date %}
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Periodo di Validità</label>
+                            <div>
+                                {% if job_title.start_date %}
+                                <i class="bi bi-calendar-event me-1"></i>
+                                Dal {{ job_title.start_date.strftime('%d/%m/%Y') }}
+                                {% endif %}
+                                {% if job_title.end_date %}
+                                <br><i class="bi bi-calendar-x me-1"></i>
+                                Al {{ job_title.end_date.strftime('%d/%m/%Y') }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <!-- Status -->
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Stato</label>
+                            <div>
+                                {% if job_title.start_date and job_title.end_date %}
+                                    {% if job_title.start_date <= today <= job_title.end_date %}
+                                    <span class="badge bg-success fs-6">
+                                        <i class="bi bi-check-circle me-1"></i>Attivo
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-warning fs-6">
+                                        <i class="bi bi-pause-circle me-1"></i>Inattivo
+                                    </span>
+                                    {% endif %}
+                                {% elif job_title.end_date and job_title.end_date < today %}
+                                <span class="badge bg-danger fs-6">
+                                    <i class="bi bi-x-circle me-1"></i>Scaduto
+                                </span>
+                                {% else %}
+                                <span class="badge bg-success fs-6">
+                                    <i class="bi bi-check-circle me-1"></i>Attivo
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Creation Info -->
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Creato</label>
+                            <div class="small">
+                                <i class="bi bi-calendar-plus me-1"></i>
+                                {{ job_title.datetime_created.strftime('%d/%m/%Y alle %H:%M') if job_title.datetime_created else 'N/A' }}
+                            </div>
+                        </div>
+                        
+                        {% if job_title.datetime_updated %}
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Ultima Modifica</label>
+                            <div class="small">
+                                <i class="bi bi-calendar-check me-1"></i>
+                                {{ job_title.datetime_updated.strftime('%d/%m/%Y alle %H:%M') }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Multilingual Aliases Card -->
+        {% if job_title.aliases %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-translate me-2"></i>Alias Multilingua
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for alias in job_title.aliases %}
+                    <div class="col-md-6 mb-3">
+                        <div class="d-flex align-items-center">
+                            <div class="flag-icon me-2">
+                                {% if alias.lang == 'it-IT' %}
+                                <i class="bi bi-flag text-success"></i>
+                                {% elif alias.lang == 'en-US' %}
+                                <i class="bi bi-flag text-primary"></i>
+                                {% elif alias.lang == 'fr-FR' %}
+                                <i class="bi bi-flag text-info"></i>
+                                {% elif alias.lang == 'de-DE' %}
+                                <i class="bi bi-flag text-warning"></i>
+                                {% elif alias.lang == 'es-ES' %}
+                                <i class="bi bi-flag text-danger"></i>
+                                {% else %}
+                                <i class="bi bi-flag text-secondary"></i>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <strong>{{ alias.value }}</strong>
+                                <br><small class="text-muted">{{ alias.lang }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Current Assignments -->
+        {% if current_assignments %}
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-person-badge me-2"></i>Incarichi Correnti
+                    <span class="badge bg-success ms-2">{{ current_assignments|length }}</span>
+                </h5>
+                <a href="/job-titles/{{ job_title.id }}/assignments" class="btn btn-sm btn-outline-primary">
+                    Visualizza Tutti
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Persona</th>
+                                <th>Unità</th>
+                                <th>Percentuale</th>
+                                <th>Dal</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assignment in current_assignments[:5] %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle me-2">
+                                            {{ assignment.person.initials if assignment.person else '?' }}
+                                        </div>
+                                        <div>
+                                            <strong>{{ assignment.person.name if assignment.person else 'N/A' }}</strong>
+                                            {% if assignment.person and assignment.person.email %}
+                                            <br><small class="text-muted">{{ assignment.person.email }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <i class="bi bi-{{ 'building' if assignment.unit and assignment.unit.type == 'function' else 'diagram-2' }} me-1"></i>
+                                    {{ assignment.unit.name if assignment.unit else 'N/A' }}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if assignment.percentage == 1.0 else 'warning' }}">
+                                        {{ (assignment.percentage * 100)|round|int }}%
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>{{ assignment.valid_from.strftime('%d/%m/%Y') if assignment.valid_from else 'N/A' }}</small>
+                                </td>
+                                <td>
+                                    <a href="/assignments/{{ assignment.id }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Statistics Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-bar-chart me-2"></i>Statistiche
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="border-end">
+                            <h4 class="text-success mb-0">{{ job_title.current_assignments_count }}</h4>
+                            <small class="text-muted">Incarichi Correnti</small>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <h4 class="text-info mb-0">{{ job_title.total_assignments_count }}</h4>
+                        <small class="text-muted">Totale Storico</small>
+                    </div>
+                </div>
+                
+                {% if assignable_units %}
+                <hr>
+                <div class="mb-2">
+                    <small class="text-muted">Unità Assegnabili:</small>
+                    <div class="mt-1">
+                        <span class="badge bg-primary">{{ assignable_units|length }}</span>
+                        <small class="text-muted">unità disponibili</small>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Azioni Rapide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/assignments/new?job_title_id={{ job_title.id }}" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-person-plus me-1"></i>Nuovo Incarico
+                    </a>
+                    <a href="/job-titles/{{ job_title.id }}/assignments" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-person-badge me-1"></i>Gestisci Incarichi
+                    </a>
+                    <a href="/job-titles/{{ job_title.id }}/assignable-units" class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-diagram-3 me-1"></i>Unità Assegnabili
+                    </a>
+                    <hr>
+                    <a href="/job-titles/{{ job_title.id }}/edit" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-pencil me-1"></i>Modifica Ruolo
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Assignable Units Preview -->
+        {% if assignable_units %}
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-diagram-3 me-2"></i>Unità Assegnabili
+                </h6>
+            </div>
+            <div class="card-body">
+                {% for unit in assignable_units[:5] %}
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-{{ 'building' if unit.type == 'function' else 'diagram-2' }} me-2 text-primary"></i>
+                    <div class="flex-grow-1">
+                        <small>{{ unit.name }}</small>
+                        {% if unit.short_name %}
+                        <br><small class="text-muted">{{ unit.short_name }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                
+                {% if assignable_units|length > 5 %}
+                <div class="text-center mt-2">
+                    <small class="text-muted">e altre {{ assignable_units|length - 5 }} unità...</small>
+                </div>
+                {% endif %}
+                
+                <div class="text-center mt-3">
+                    <a href="/job-titles/{{ job_title.id }}/assignable-units" class="btn btn-sm btn-outline-primary">
+                        Gestisci Tutte
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                    Conferma Eliminazione
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Sei sicuro di voler eliminare il ruolo <strong>"{{ job_title.name }}"</strong>?</p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Attenzione:</strong> Questa azione non può essere annullata.
+                    {% if job_title.current_assignments_count > 0 %}
+                    <br>Il ruolo ha {{ job_title.current_assignments_count }} incarichi correnti che verranno rimossi.
+                    {% endif %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <form method="post" action="/job-titles/{{ job_title.id }}/delete" class="d-inline">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Elimina Definitivamente
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.flag-icon {
+    width: 24px;
+    text-align: center;
+}
+
+.card-hover {
+    transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete() {
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

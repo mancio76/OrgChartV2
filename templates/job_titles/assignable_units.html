@@ -1,0 +1,466 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-primary" onclick="saveChanges()">
+        <i class="bi bi-check-circle me-1"></i>Salva Modifiche
+    </button>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#" onclick="selectAllUnits()">
+            <i class="bi bi-check-all me-2"></i>Seleziona Tutte
+        </a></li>
+        <li><a class="dropdown-item" href="#" onclick="deselectAllUnits()">
+            <i class="bi bi-x-square me-2"></i>Deseleziona Tutte
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/job-titles/{{ job_title.id }}">
+            <i class="bi bi-arrow-left me-2"></i>Torna al Ruolo
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <!-- Job Title Info -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-briefcase me-3 text-primary fs-3"></i>
+                    <div class="flex-grow-1">
+                        <h5 class="mb-0">{{ job_title.name }}</h5>
+                        {% if job_title.short_name %}
+                        <small class="text-muted">{{ job_title.short_name }}</small>
+                        {% endif %}
+                        <div class="mt-1">
+                            <span class="badge bg-{{ 'danger' if job_title.level_indicator == 'C-Level' else 'warning' if job_title.level_indicator == 'Head' else 'info' if job_title.level_indicator == 'Manager' else 'success' if job_title.level_indicator == 'Executive' else 'secondary' }}">
+                                {{ job_title.level_indicator }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted">
+                            <span id="selected-count">{{ assignable_unit_ids|length }}</span> di {{ all_units|length }} unità selezionate
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Units Selection Form -->
+        <form method="post" id="assignable-units-form">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-diagram-3 me-2"></i>Unità Organizzative
+                    </h5>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-primary" onclick="toggleView('hierarchy')" id="btn-hierarchy">
+                            <i class="bi bi-diagram-2"></i> Gerarchia
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" onclick="toggleView('list')" id="btn-list">
+                            <i class="bi bi-list-ul"></i> Lista
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Search and Filter -->
+                <div class="card-body border-bottom">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" class="form-control" id="search-units" 
+                                       placeholder="Cerca unità per nome...">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="btn-group w-100">
+                                <button type="button" class="btn btn-outline-secondary" onclick="filterByType('all')" id="filter-all">
+                                    Tutte
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="filterByType('function')" id="filter-function">
+                                    <i class="bi bi-building me-1"></i>Funzioni
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="filterByType('OrganizationalUnit')" id="filter-org">
+                                    <i class="bi bi-diagram-2 me-1"></i>Organizzative
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Hierarchy View -->
+                <div id="hierarchy-view" class="card-body">
+                    <div class="units-hierarchy">
+                        {% for unit in all_units %}
+                        {% if not unit.parent_unit_id %}
+                        {{ render_unit_hierarchy(unit, all_units, assignable_unit_ids, 0) }}
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- List View -->
+                <div id="list-view" class="card-body" style="display: none;">
+                    <div class="units-list">
+                        {% for unit in all_units %}
+                        <div class="unit-item mb-2 p-2 border rounded" data-unit-type="{{ unit.type }}" data-unit-name="{{ unit.name.lower() }}">
+                            <div class="form-check">
+                                <input class="form-check-input unit-checkbox" type="checkbox" 
+                                       name="assignable_unit_ids[]" value="{{ unit.id }}" 
+                                       id="unit_list_{{ unit.id }}"
+                                       {{ 'checked' if unit.id in assignable_unit_ids else '' }}
+                                       onchange="updateSelectedCount()">
+                                <label class="form-check-label w-100" for="unit_list_{{ unit.id }}">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-{{ 'building' if unit.type == 'function' else 'diagram-2' }} me-2 text-primary"></i>
+                                        <div class="flex-grow-1">
+                                            <strong>{{ unit.name }}</strong>
+                                            {% if unit.short_name %}
+                                            <small class="text-muted ms-2">({{ unit.short_name }})</small>
+                                            {% endif %}
+                                            <div class="small text-muted">
+                                                <span class="badge bg-{{ 'warning' if unit.type == 'function' else 'info' }} me-1">
+                                                    {{ 'Funzione' if unit.type == 'function' else 'Organizzativa' }}
+                                                </span>
+                                                {% if unit.start_date %}
+                                                Dal {{ unit.start_date.strftime('%d/%m/%Y') }}
+                                                {% endif %}
+                                                {% if unit.end_date %}
+                                                al {{ unit.end_date.strftime('%d/%m/%Y') }}
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Selection Summary -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-check-square me-2"></i>Riepilogo Selezione
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <h4 class="text-primary mb-0" id="summary-count">{{ assignable_unit_ids|length }}</h4>
+                    <small class="text-muted">Unità selezionate</small>
+                </div>
+                
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h6 class="text-warning mb-0" id="function-count">
+                                {{ all_units|selectattr('type', 'equalto', 'function')|selectattr('id', 'in', assignable_unit_ids)|list|length }}
+                            </h6>
+                            <small class="text-muted">Funzioni</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="text-info mb-0" id="org-count">
+                            {{ all_units|selectattr('type', 'equalto', 'OrganizationalUnit')|selectattr('id', 'in', assignable_unit_ids)|list|length }}
+                        </h6>
+                        <small class="text-muted">Organizzative</small>
+                    </div>
+                </div>
+                
+                <hr>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-success btn-sm" onclick="saveChanges()">
+                        <i class="bi bi-check-circle me-1"></i>Salva Modifiche
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetSelection()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Ripristina
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Azioni Rapide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="selectAllUnits()">
+                        <i class="bi bi-check-all me-1"></i>Seleziona Tutte
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="deselectAllUnits()">
+                        <i class="bi bi-x-square me-1"></i>Deseleziona Tutte
+                    </button>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="selectByType('function')">
+                        <i class="bi bi-building me-1"></i>Solo Funzioni
+                    </button>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="selectByType('OrganizationalUnit')">
+                        <i class="bi bi-diagram-2 me-1"></i>Solo Organizzative
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Help -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-question-circle me-2"></i>Informazioni
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="small text-muted">
+                    <p><strong>Unità Assegnabili:</strong> Seleziona le unità organizzative dove questo ruolo può essere assegnato.</p>
+                    <p><strong>Funzioni:</strong> Unità operative specifiche con responsabilità definite.</p>
+                    <p><strong>Organizzative:</strong> Unità strutturali che raggruppano altre unità.</p>
+                    <p><strong>Suggerimento:</strong> Usa la ricerca per trovare rapidamente unità specifiche.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Macro for rendering hierarchy -->
+{% macro render_unit_hierarchy(unit, all_units, selected_ids, level) %}
+<div class="unit-hierarchy-item" data-unit-type="{{ unit.type }}" data-unit-name="{{ unit.name.lower() }}" style="margin-left: {{ level * 20 }}px;">
+    <div class="form-check mb-2">
+        <input class="form-check-input unit-checkbox" type="checkbox" 
+               name="assignable_unit_ids[]" value="{{ unit.id }}" 
+               id="unit_{{ unit.id }}"
+               {{ 'checked' if unit.id in selected_ids else '' }}
+               onchange="updateSelectedCount()">
+        <label class="form-check-label" for="unit_{{ unit.id }}">
+            <div class="d-flex align-items-center">
+                {% if level > 0 %}
+                <span class="text-muted me-2">{{ '└─' if level == 1 else '  ' * (level-1) + '└─' }}</span>
+                {% endif %}
+                <i class="bi bi-{{ 'building' if unit.type == 'function' else 'diagram-2' }} me-2 text-primary"></i>
+                <div>
+                    <strong>{{ unit.name }}</strong>
+                    {% if unit.short_name %}
+                    <small class="text-muted ms-2">({{ unit.short_name }})</small>
+                    {% endif %}
+                    <div class="small text-muted">
+                        <span class="badge bg-{{ 'warning' if unit.type == 'function' else 'info' }} me-1">
+                            {{ 'Funzione' if unit.type == 'function' else 'Organizzativa' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </label>
+    </div>
+    
+    <!-- Render children -->
+    {% for child_unit in all_units %}
+    {% if child_unit.parent_unit_id == unit.id %}
+    {{ render_unit_hierarchy(child_unit, all_units, selected_ids, level + 1) }}
+    {% endif %}
+    {% endfor %}
+</div>
+{% endmacro %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.unit-item {
+    transition: all 0.3s ease;
+}
+
+.unit-item:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+    border-color: var(--primary-color) !important;
+}
+
+.unit-hierarchy-item {
+    transition: all 0.3s ease;
+}
+
+.unit-hierarchy-item:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+    border-radius: 0.375rem;
+    padding: 0.25rem;
+    margin-left: {{ level * 20 - 4 }}px !important;
+}
+
+.form-check-input:checked + .form-check-label {
+    font-weight: 500;
+}
+
+.units-hierarchy {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.units-list {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.btn-group .btn.active {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+}
+
+.hidden {
+    display: none !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let originalSelection = {{ assignable_unit_ids|tojson }};
+
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('.unit-checkbox:checked');
+    const count = checkboxes.length;
+    
+    document.getElementById('selected-count').textContent = count;
+    document.getElementById('summary-count').textContent = count;
+    
+    // Update type counts
+    let functionCount = 0;
+    let orgCount = 0;
+    
+    checkboxes.forEach(checkbox => {
+        const unitItem = checkbox.closest('[data-unit-type]');
+        if (unitItem) {
+            const type = unitItem.getAttribute('data-unit-type');
+            if (type === 'function') functionCount++;
+            else if (type === 'OrganizationalUnit') orgCount++;
+        }
+    });
+    
+    document.getElementById('function-count').textContent = functionCount;
+    document.getElementById('org-count').textContent = orgCount;
+}
+
+function selectAllUnits() {
+    const checkboxes = document.querySelectorAll('.unit-checkbox');
+    checkboxes.forEach(checkbox => {
+        if (!checkbox.closest('.hidden')) {
+            checkbox.checked = true;
+        }
+    });
+    updateSelectedCount();
+}
+
+function deselectAllUnits() {
+    const checkboxes = document.querySelectorAll('.unit-checkbox');
+    checkboxes.forEach(checkbox => checkbox.checked = false);
+    updateSelectedCount();
+}
+
+function selectByType(type) {
+    const checkboxes = document.querySelectorAll('.unit-checkbox');
+    checkboxes.forEach(checkbox => {
+        const unitItem = checkbox.closest('[data-unit-type]');
+        if (unitItem && unitItem.getAttribute('data-unit-type') === type) {
+            checkbox.checked = true;
+        } else {
+            checkbox.checked = false;
+        }
+    });
+    updateSelectedCount();
+}
+
+function resetSelection() {
+    const checkboxes = document.querySelectorAll('.unit-checkbox');
+    checkboxes.forEach(checkbox => {
+        const unitId = parseInt(checkbox.value);
+        checkbox.checked = originalSelection.includes(unitId);
+    });
+    updateSelectedCount();
+}
+
+function toggleView(viewType) {
+    const hierarchyView = document.getElementById('hierarchy-view');
+    const listView = document.getElementById('list-view');
+    const hierarchyBtn = document.getElementById('btn-hierarchy');
+    const listBtn = document.getElementById('btn-list');
+    
+    if (viewType === 'hierarchy') {
+        hierarchyView.style.display = 'block';
+        listView.style.display = 'none';
+        hierarchyBtn.classList.add('active');
+        listBtn.classList.remove('active');
+    } else {
+        hierarchyView.style.display = 'none';
+        listView.style.display = 'block';
+        hierarchyBtn.classList.remove('active');
+        listBtn.classList.add('active');
+    }
+    
+    // Store preference
+    localStorage.setItem('assignableUnitsView', viewType);
+}
+
+function filterByType(type) {
+    const items = document.querySelectorAll('[data-unit-type]');
+    const buttons = document.querySelectorAll('[id^="filter-"]');
+    
+    // Reset button states
+    buttons.forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`filter-${type}`).classList.add('active');
+    
+    items.forEach(item => {
+        if (type === 'all' || item.getAttribute('data-unit-type') === type) {
+            item.classList.remove('hidden');
+        } else {
+            item.classList.add('hidden');
+        }
+    });
+}
+
+function saveChanges() {
+    document.getElementById('assignable-units-form').submit();
+}
+
+// Search functionality
+document.getElementById('search-units').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const items = document.querySelectorAll('[data-unit-name]');
+    
+    items.forEach(item => {
+        const unitName = item.getAttribute('data-unit-name');
+        if (unitName.includes(searchTerm)) {
+            item.classList.remove('hidden');
+        } else {
+            item.classList.add('hidden');
+        }
+    });
+});
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    // Set initial view
+    const savedView = localStorage.getItem('assignableUnitsView') || 'hierarchy';
+    toggleView(savedView);
+    
+    // Set initial filter
+    filterByType('all');
+    
+    // Update initial count
+    updateSelectedCount();
+});
+</script>
+{% endblock %}

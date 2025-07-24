@@ -1,0 +1,302 @@
+{% extends "base/layout.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pencil me-2"></i>Modifica Unità: {{ unit.name }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    <div class="row">
+                        <!-- Basic Information -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Informazioni Base</h6>
+                            
+                            <!-- Name -->
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Nome Unità *</label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       value="{{ form_data.name if form_data else unit.name }}" 
+                                       required maxlength="255">
+                                <div class="invalid-feedback">
+                                    Il nome dell'unità è obbligatorio.
+                                </div>
+                            </div>
+                            
+                            <!-- Short Name -->
+                            <div class="mb-3">
+                                <label for="short_name" class="form-label">Nome Breve</label>
+                                <input type="text" class="form-control" id="short_name" name="short_name" 
+                                       value="{{ form_data.short_name if form_data else (unit.short_name or '') }}" 
+                                       maxlength="50"
+                                       placeholder="Abbreviazione o acronimo">
+                                <div class="form-text">Opzionale. Utilizzato per visualizzazioni compatte.</div>
+                            </div>
+                            
+                            <!-- Type -->
+                            <div class="mb-3">
+                                <label for="type" class="form-label">Tipo Unità *</label>
+                                <select class="form-select" id="type" name="type" required>
+                                    <option value="">Seleziona tipo...</option>
+                                    {% for unit_type in unit_types %}
+                                    <option value="{{ unit_type }}" 
+                                            {% if (form_data and form_data.type == unit_type) or (not form_data and unit.type == unit_type) %}selected{% endif %}>
+                                        {{ 'Funzione' if unit_type == 'function' else 'Unità Organizzativa' }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="invalid-feedback">
+                                    Seleziona il tipo di unità.
+                                </div>
+                                <div class="form-text">
+                                    <strong>Funzione:</strong> Unità operativa con responsabilità specifiche<br>
+                                    <strong>Unità Organizzativa:</strong> Struttura organizzativa generale
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Hierarchy and Dates -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Gerarchia e Validità</h6>
+                            
+                            <!-- Parent Unit -->
+                            <div class="mb-3">
+                                <label for="parent_unit_id" class="form-label">Unità Padre</label>
+                                <select class="form-select" id="parent_unit_id" name="parent_unit_id">
+                                    <option value="">Nessuna (Unità Radice)</option>
+                                    {% for parent in available_parents %}
+                                    <option value="{{ parent.id }}" 
+                                            {% if (form_data and form_data.parent_unit_id == parent.id) or (not form_data and unit.parent_unit_id == parent.id) %}selected{% endif %}>
+                                        {{ parent.name }}
+                                        {% if parent.short_name %} ({{ parent.short_name }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">
+                                    Seleziona l'unità padre per definire la gerarchia organizzativa.
+                                </div>
+                            </div>
+                            
+                            <!-- Start Date -->
+                            <div class="mb-3">
+                                <label for="start_date" class="form-label">Data Inizio</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date" 
+                                       value="{{ form_data.start_date if form_data else (unit.start_date.isoformat() if unit.start_date else '') }}">
+                                <div class="form-text">Data di attivazione dell'unità.</div>
+                            </div>
+                            
+                            <!-- End Date -->
+                            <div class="mb-3">
+                                <label for="end_date" class="form-label">Data Fine</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date" 
+                                       value="{{ form_data.end_date if form_data else (unit.end_date.isoformat() if unit.end_date else '') }}">
+                                <div class="form-text">Data di disattivazione dell'unità (opzionale).</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Current Status Info -->
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-info-circle me-2"></i>Stato Attuale
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <strong>Persone Assegnate:</strong> 
+                                <span class="badge bg-success">{{ unit.person_count }}</span>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Sotto-unità:</strong> 
+                                <span class="badge bg-info">{{ unit.children_count }}</span>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Stato:</strong> 
+                                {% if unit.is_active %}
+                                <span class="badge bg-success">Attiva</span>
+                                {% else %}
+                                <span class="badge bg-warning">Inattiva</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if unit.person_count > 0 or unit.children_count > 0 %}
+                        <hr class="my-2">
+                        <small class="text-muted">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            Attenzione: Modifiche alla gerarchia potrebbero influenzare incarichi e sotto-unità esistenti.
+                        </small>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Form Actions -->
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <a href="/units/{{ unit.id }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>Annulla
+                            </a>
+                            <a href="/units" class="btn btn-outline-secondary ms-2">
+                                <i class="bi bi-list me-1"></i>Elenco Unità
+                            </a>
+                        </div>
+                        <div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-1"></i>Salva Modifiche
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Danger Zone -->
+        {% if unit.person_count == 0 and unit.children_count == 0 %}
+        <div class="card mt-4 border-danger">
+            <div class="card-header bg-danger text-white">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Zona Pericolosa
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    Questa unità non ha persone assegnate né sotto-unità. Puoi eliminarla se non è più necessaria.
+                </p>
+                <form method="post" action="/units/{{ unit.id }}/delete" class="d-inline">
+                    <button type="submit" class="btn btn-danger btn-delete"
+                            data-item-name="{{ unit.name }}" 
+                            data-item-type="unità">
+                        <i class="bi bi-trash me-1"></i>Elimina Unità
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="card mt-4 border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-shield-exclamation me-2"></i>Eliminazione Protetta
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-0">
+                    Questa unità non può essere eliminata perché ha:
+                    {% if unit.person_count > 0 %}{{ unit.person_count }} persone assegnate{% endif %}
+                    {% if unit.person_count > 0 and unit.children_count > 0 %} e {% endif %}
+                    {% if unit.children_count > 0 %}{{ unit.children_count }} sotto-unità{% endif %}.
+                    Rimuovi prima tutti gli incarichi e le sotto-unità.
+                </p>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Help Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightbulb me-2"></i>Suggerimenti per la Modifica
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Modifiche Sicure:</h6>
+                        <ul class="small text-muted">
+                            <li>Nome e nome breve</li>
+                            <li>Date di validità</li>
+                            <li>Tipo di unità (con attenzione)</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Modifiche che Richiedono Attenzione:</h6>
+                        <ul class="small text-muted">
+                            <li>Cambio di unità padre (riorganizzazione)</li>
+                            <li>Cambio di tipo con incarichi esistenti</li>
+                            <li>Date che influenzano lo stato attivo</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Date validation
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    
+    function validateDates() {
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(endDateInput.value);
+        
+        if (startDateInput.value && endDateInput.value && startDate >= endDate) {
+            endDateInput.setCustomValidity('La data fine deve essere successiva alla data inizio');
+        } else {
+            endDateInput.setCustomValidity('');
+        }
+    }
+    
+    startDateInput.addEventListener('change', validateDates);
+    endDateInput.addEventListener('change', validateDates);
+    
+    // Parent unit change warning
+    const parentSelect = document.getElementById('parent_unit_id');
+    const originalParent = parentSelect.value;
+    
+    parentSelect.addEventListener('change', function() {
+        if (this.value !== originalParent) {
+            if (!document.getElementById('hierarchy-warning')) {
+                const warning = document.createElement('div');
+                warning.id = 'hierarchy-warning';
+                warning.className = 'alert alert-warning mt-2';
+                warning.innerHTML = `
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Attenzione:</strong> Stai modificando la gerarchia dell'unità. 
+                    Questo potrebbe influenzare la visualizzazione dell'organigramma.
+                `;
+                this.parentNode.appendChild(warning);
+            }
+        } else {
+            const warning = document.getElementById('hierarchy-warning');
+            if (warning) {
+                warning.remove();
+            }
+        }
+    });
+    
+    // Type change warning for units with assignments
+    const typeSelect = document.getElementById('type');
+    const originalType = typeSelect.value;
+    const hasAssignments = {{ 'true' if unit.person_count > 0 else 'false' }};
+    
+    if (hasAssignments) {
+        typeSelect.addEventListener('change', function() {
+            if (this.value !== originalType) {
+                if (!document.getElementById('type-warning')) {
+                    const warning = document.createElement('div');
+                    warning.id = 'type-warning';
+                    warning.className = 'alert alert-warning mt-2';
+                    warning.innerHTML = `
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Attenzione:</strong> Stai modificando il tipo di un'unità con incarichi attivi. 
+                        Questo cambierà la visualizzazione nell'organigramma.
+                    `;
+                    this.parentNode.appendChild(warning);
+                }
+            } else {
+                const warning = document.getElementById('type-warning');
+                if (warning) {
+                    warning.remove();
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

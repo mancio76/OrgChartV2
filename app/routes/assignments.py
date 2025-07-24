@@ -68,7 +68,7 @@ async def list_assignments(
         
         # Apply additional filters
         if filter_type == "interim":
-            assignments = [a for a in assignments if a.ad_interim]
+            assignments = [a for a in assignments if a.is_ad_interim]
             page_title = "Incarichi Ad Interim"
         elif filter_type == "overloaded":
             # Get persons with > 100% workload
@@ -97,7 +97,8 @@ async def list_assignments(
         # Calculate summary statistics
         stats = {
             'total_assignments': len(assignments),
-            'interim_count': len([a for a in assignments if a.ad_interim]),
+            'interim_count': len([a for a in assignments if a.is_ad_interim]),
+            'boss_count': len([a for a in assignments if a.is_unit_boss]),
             'unique_persons': len(set(a.person_id for a in assignments)),
             'unique_units': len(set(a.unit_id for a in assignments))
         }
@@ -219,7 +220,8 @@ async def create_assignment(
     unit_id: int = Form(...),
     job_title_id: int = Form(...),
     percentage: float = Form(...),
-    ad_interim: bool = Form(False),
+    is_ad_interim: bool = Form(False),
+    is_unit_boss: bool = Form(False),
     notes: Optional[str] = Form(None),
     flags: Optional[str] = Form(None),
     valid_from: Optional[str] = Form(None),
@@ -244,7 +246,8 @@ async def create_assignment(
             unit_id=unit_id,
             job_title_id=job_title_id,
             percentage=percentage / 100.0,  # Convert percentage to decimal
-            ad_interim=ad_interim,
+            is_ad_interim=is_ad_interim,
+            is_unit_boss=is_unit_boss,
             notes=notes.strip() if notes else None,
             flags=flags.strip() if flags else None,
             valid_from=valid_from_parsed,
@@ -355,7 +358,8 @@ async def update_assignment(
     unit_id: int = Form(...),
     job_title_id: int = Form(...),
     percentage: float = Form(...),
-    ad_interim: bool = Form(False),
+    is_ad_interim: bool = Form(False),
+    is_unit_boss: bool = Form(False),
     notes: Optional[str] = Form(None),
     flags: Optional[str] = Form(None),
     valid_from: Optional[str] = Form(None),
@@ -385,7 +389,8 @@ async def update_assignment(
             unit_id=unit_id,
             job_title_id=job_title_id,
             percentage=percentage / 100.0,  # Convert percentage to decimal
-            ad_interim=ad_interim,
+            is_ad_interim=is_ad_interim,
+            is_unit_boss=is_unit_boss,
             notes=notes.strip() if notes else None,
             flags=flags.strip() if flags else None,
             valid_from=valid_from_parsed,
@@ -594,7 +599,7 @@ async def workload_report(
             
             person_workloads[person_id]['total_percentage'] += assignment.percentage
             person_workloads[person_id]['assignments'].append(assignment)
-            if assignment.ad_interim:
+            if assignment.is_ad_interim:
                 person_workloads[person_id]['interim_count'] += 1
         
         # Count unique units per person
@@ -791,7 +796,8 @@ async def bulk_update_percentage(
                     unit_id=existing.unit_id,
                     job_title_id=existing.job_title_id,
                     percentage=percentage_decimal,
-                    ad_interim=existing.ad_interim,
+                    is_ad_interim=existing.is_ad_interim,
+                    is_unit_boss=existing.is_unit_boss,
                     notes=existing.notes,
                     flags=existing.flags,
                     valid_from=date.today(),
@@ -852,7 +858,8 @@ async def bulk_transfer_assignments(
                     unit_id=target_unit_id,
                     job_title_id=existing.job_title_id,
                     percentage=existing.percentage,
-                    ad_interim=existing.ad_interim,
+                    is_ad_interim=existing.is_ad_interim,
+                    is_unit_boss=existing.is_unit_boss,
                     notes=f"Trasferito da {existing.unit_name}",
                     flags=existing.flags,
                     valid_from=transfer_date_parsed,
@@ -975,7 +982,7 @@ async def assignment_conflicts(
                 })
             
             # Multiple interim assignments
-            interim_count = sum(1 for a in assignments if a.ad_interim)
+            interim_count = sum(1 for a in assignments if a.is_ad_interim)
             if interim_count > 2:
                 conflicts.append({
                     'type': 'multiple_interim',
@@ -983,7 +990,7 @@ async def assignment_conflicts(
                     'person_id': person_id,
                     'person_name': person_name,
                     'description': f"Troppi incarichi ad interim: {interim_count}",
-                    'assignments': [a for a in assignments if a.ad_interim]
+                    'assignments': [a for a in assignments if a.is_ad_interim]
                 })
             
             # Same unit multiple roles
@@ -1074,7 +1081,7 @@ async def export_assignments_csv(
                 assignment.unit_name,
                 assignment.job_title_name,
                 f"{assignment.percentage * 100:.0f}%",
-                "Sì" if assignment.ad_interim else "No",
+                "Sì" if assignment.is_ad_interim else "No",
                 assignment.valid_from.isoformat() if assignment.valid_from else "",
                 assignment.valid_to.isoformat() if assignment.valid_to else "",
                 assignment.status,

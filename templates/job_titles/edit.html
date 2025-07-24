@@ -1,0 +1,505 @@
+{% extends "base/layout.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pencil me-2"></i>Modifica Ruolo Lavorativo
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    <div class="row">
+                        <!-- Basic Information -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Informazioni Base</h6>
+                            
+                            <!-- Name -->
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Nome Ruolo *</label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       value="{{ job_title.name }}" 
+                                       required maxlength="255"
+                                       placeholder="es. Responsabile Risorse Umane">
+                                <div class="invalid-feedback">
+                                    Il nome del ruolo è obbligatorio.
+                                </div>
+                            </div>
+                            
+                            <!-- Short Name -->
+                            <div class="mb-3">
+                                <label for="short_name" class="form-label">Nome Breve</label>
+                                <input type="text" class="form-control" id="short_name" name="short_name" 
+                                       value="{{ job_title.short_name or '' }}" 
+                                       maxlength="50"
+                                       placeholder="es. Resp. HR">
+                                <div class="form-text">Abbreviazione per visualizzazioni compatte (opzionale)</div>
+                            </div>
+                            
+                            <!-- Aliases Section -->
+                            <div class="mb-3">
+                                <label class="form-label">Alias Multilingua</label>
+                                <div id="aliases-container">
+                                    {% if job_title.aliases %}
+                                        {% for alias in job_title.aliases %}
+                                        <div class="alias-item mb-2">
+                                            <div class="row">
+                                                <div class="col-8">
+                                                    <input type="text" class="form-control" name="alias_values[]" 
+                                                           value="{{ alias.value }}"
+                                                           placeholder="Alias del ruolo">
+                                                </div>
+                                                <div class="col-3">
+                                                    <select class="form-select" name="alias_langs[]">
+                                                        <option value="it-IT" {{ 'selected' if alias.lang == 'it-IT' else '' }}>Italiano</option>
+                                                        <option value="en-US" {{ 'selected' if alias.lang == 'en-US' else '' }}>English</option>
+                                                        <option value="fr-FR" {{ 'selected' if alias.lang == 'fr-FR' else '' }}>Français</option>
+                                                        <option value="de-DE" {{ 'selected' if alias.lang == 'de-DE' else '' }}>Deutsch</option>
+                                                        <option value="es-ES" {{ 'selected' if alias.lang == 'es-ES' else '' }}>Español</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-1">
+                                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeAlias(this)">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="alias-item mb-2">
+                                            <div class="row">
+                                                <div class="col-8">
+                                                    <input type="text" class="form-control" name="alias_values[]" 
+                                                           placeholder="Alias del ruolo">
+                                                </div>
+                                                <div class="col-3">
+                                                    <select class="form-select" name="alias_langs[]">
+                                                        <option value="it-IT" selected>Italiano</option>
+                                                        <option value="en-US">English</option>
+                                                        <option value="fr-FR">Français</option>
+                                                        <option value="de-DE">Deutsch</option>
+                                                        <option value="es-ES">Español</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-1">
+                                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeAlias(this)">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addAlias()">
+                                    <i class="bi bi-plus-circle me-1"></i>Aggiungi Alias
+                                </button>
+                                <div class="form-text">Gli alias permettono traduzioni e varianti del nome del ruolo</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Validity and Assignment -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Validità e Assegnazione</h6>
+                            
+                            <!-- Start Date -->
+                            <div class="mb-3">
+                                <label for="start_date" class="form-label">Data Inizio</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date" 
+                                       value="{{ job_title.start_date.isoformat() if job_title.start_date else '' }}">
+                                <div class="form-text">Data di attivazione del ruolo (opzionale)</div>
+                            </div>
+                            
+                            <!-- End Date -->
+                            <div class="mb-3">
+                                <label for="end_date" class="form-label">Data Fine</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date" 
+                                       value="{{ job_title.end_date.isoformat() if job_title.end_date else '' }}">
+                                <div class="form-text">Data di disattivazione del ruolo (opzionale)</div>
+                            </div>
+                            
+                            <!-- Assignable Units -->
+                            <div class="mb-3">
+                                <label class="form-label">Unità Assegnabili</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="all_units" 
+                                           {{ 'checked' if not assignable_unit_ids else '' }}
+                                           onchange="toggleAllUnits()">
+                                    <label class="form-check-label" for="all_units">
+                                        <strong>Tutte le unità</strong>
+                                    </label>
+                                </div>
+                                <div id="units-selection" {{ 'style="display: none;"' if not assignable_unit_ids else '' }}>
+                                    <div class="mt-2 border rounded p-2 units-selection-container">
+                                        {% for unit in all_units %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   name="assignable_unit_ids[]" value="{{ unit.id }}" 
+                                                   id="unit_{{ unit.id }}"
+                                                   {{ 'checked' if unit.id in assignable_unit_ids else '' }}>
+                                            <label class="form-check-label" for="unit_{{ unit.id }}">
+                                                <i class="bi bi-{{ 'building' if unit.type == 'function' else 'diagram-2' }} me-1"></i>
+                                                {{ unit.name }}
+                                                {% if unit.short_name %} ({{ unit.short_name }}){% endif %}
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div class="form-text">Seleziona le unità dove questo ruolo può essere assegnato</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Preview -->
+                    <div class="alert alert-light border">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-eye me-1"></i>Anteprima
+                        </h6>
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-briefcase me-3 text-primary fs-3"></i>
+                            <div>
+                                <strong id="preview-name">{{ job_title.name }}</strong>
+                                <div id="preview-short-name" class="text-muted small" 
+                                     {{ 'style="display: block;"' if job_title.short_name else 'style="display: none;"' }}>
+                                    {{ job_title.short_name or '' }}
+                                </div>
+                                <div id="preview-aliases" class="mt-1" 
+                                     {{ 'style="display: block;"' if job_title.aliases else 'style="display: none;"' }}>
+                                    {% if job_title.aliases %}
+                                        {% for alias in job_title.aliases %}
+                                        <span class="badge bg-light text-dark me-1">{{ alias.value }} <small>({{ alias.lang }})</small></span>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                                <div id="preview-level" class="mt-1">
+                                    <span class="badge bg-{{ 'danger' if job_title.level_indicator == 'C-Level' else 'warning' if job_title.level_indicator == 'Head' else 'info' if job_title.level_indicator == 'Manager' else 'success' if job_title.level_indicator == 'Executive' else 'secondary' }}">
+                                        {{ job_title.level_indicator }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Change Warning -->
+                    {% if job_title.current_assignments_count > 0 %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Attenzione:</strong> Questo ruolo ha {{ job_title.current_assignments_count }} incarichi correnti.
+                        Le modifiche potrebbero influenzare gli incarichi esistenti.
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Form Actions -->
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <a href="/job-titles/{{ job_title.id }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Annulla
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-1"></i>Salva Modifiche
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Danger Zone -->
+        {% if job_title.current_assignments_count == 0 %}
+        <div class="card mt-4 border-danger">
+            <div class="card-header bg-danger text-white">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Zona Pericolosa
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">
+                    Elimina definitivamente questo ruolo lavorativo. Questa azione non può essere annullata.
+                </p>
+                <button type="button" class="btn btn-outline-danger" onclick="confirmDelete()">
+                    <i class="bi bi-trash me-1"></i>Elimina Ruolo
+                </button>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Help Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-question-circle me-2"></i>Guida alla Modifica
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Livelli Organizzativi:</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-1">
+                                <span class="badge bg-danger me-2">C-Level</span>
+                                CEO, CTO, CFO, CIO, COO
+                            </li>
+                            <li class="mb-1">
+                                <span class="badge bg-success me-2">Executive</span>
+                                Presidente, Direttore Generale
+                            </li>
+                            <li class="mb-1">
+                                <span class="badge bg-warning me-2">Head</span>
+                                Responsabile, Capo
+                            </li>
+                            <li class="mb-1">
+                                <span class="badge bg-info me-2">Manager</span>
+                                Manager, Responsabile
+                            </li>
+                            <li>
+                                <span class="badge bg-secondary me-2">Staff</span>
+                                Altri ruoli operativi
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Suggerimenti:</h6>
+                        <ul class="small text-muted">
+                            <li>Modifica con attenzione se ci sono incarichi correnti</li>
+                            <li>Gli alias multilingua migliorano l'usabilità</li>
+                            <li>Il sistema rileva automaticamente il livello</li>
+                            <li>Le date sono opzionali ma utili per ruoli temporanei</li>
+                            <li>Controlla sempre l'anteprima prima di salvare</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                    Conferma Eliminazione
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Sei sicuro di voler eliminare il ruolo <strong>"{{ job_title.name }}"</strong>?</p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Attenzione:</strong> Questa azione non può essere annullata.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <form method="post" action="/job-titles/{{ job_title.id }}/delete" class="d-inline">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Elimina Definitivamente
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.units-selection-container {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.alias-item {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.form-check-input:checked + .form-check-label {
+    font-weight: 500;
+}
+
+.preview-changes {
+    background-color: #fff3cd;
+    transition: background-color 0.3s ease;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const nameInput = document.getElementById('name');
+    const shortNameInput = document.getElementById('short_name');
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    
+    const previewName = document.getElementById('preview-name');
+    const previewShortName = document.getElementById('preview-short-name');
+    const previewAliases = document.getElementById('preview-aliases');
+    const previewLevel = document.getElementById('preview-level');
+    
+    function updatePreview() {
+        const name = nameInput.value.trim();
+        const shortName = shortNameInput.value.trim();
+        
+        // Update name
+        if (name) {
+            previewName.textContent = name;
+            
+            // Detect level
+            const level = detectLevel(name);
+            const levelColor = getLevelColor(level);
+            previewLevel.innerHTML = `<span class="badge bg-${levelColor}">${level}</span>`;
+        } else {
+            previewName.textContent = 'Nome Ruolo';
+            previewLevel.innerHTML = '';
+        }
+        
+        // Update short name
+        if (shortName) {
+            previewShortName.textContent = shortName;
+            previewShortName.style.display = 'block';
+        } else {
+            previewShortName.style.display = 'none';
+        }
+        
+        // Update aliases
+        updateAliasesPreview();
+    }
+    
+    function updateAliasesPreview() {
+        const aliasInputs = document.querySelectorAll('input[name="alias_values[]"]');
+        const langSelects = document.querySelectorAll('select[name="alias_langs[]"]');
+        const aliases = [];
+        
+        aliasInputs.forEach((input, index) => {
+            if (input.value.trim() && langSelects[index]) {
+                aliases.push({
+                    value: input.value.trim(),
+                    lang: langSelects[index].value
+                });
+            }
+        });
+        
+        if (aliases.length > 0) {
+            const aliasesHtml = aliases.map(alias => 
+                `<span class="badge bg-light text-dark me-1">${alias.value} <small>(${alias.lang})</small></span>`
+            ).join('');
+            previewAliases.innerHTML = aliasesHtml;
+            previewAliases.style.display = 'block';
+        } else {
+            previewAliases.style.display = 'none';
+        }
+    }
+    
+    function detectLevel(name) {
+        const nameLower = name.toLowerCase();
+        if (/\b(chief|ceo|cto|cio|cfo|coo)\b/.test(nameLower)) return 'C-Level';
+        if (/\b(presidente|president|direttore generale)\b/.test(nameLower)) return 'Executive';
+        if (/\bhead\b/.test(nameLower)) return 'Head';
+        if (/\b(manager|responsabile)\b/.test(nameLower)) return 'Manager';
+        return 'Staff';
+    }
+    
+    function getLevelColor(level) {
+        const colors = {
+            'C-Level': 'danger',
+            'Executive': 'success',
+            'Head': 'warning',
+            'Manager': 'info',
+            'Staff': 'secondary'
+        };
+        return colors[level] || 'secondary';
+    }
+    
+    // Update preview on input
+    nameInput.addEventListener('input', updatePreview);
+    shortNameInput.addEventListener('input', updatePreview);
+    
+    // Date validation
+    function validateDates() {
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(endDateInput.value);
+        
+        if (startDateInput.value && endDateInput.value && startDate >= endDate) {
+            endDateInput.setCustomValidity('La data fine deve essere successiva alla data inizio');
+        } else {
+            endDateInput.setCustomValidity('');
+        }
+    }
+    
+    startDateInput.addEventListener('change', validateDates);
+    endDateInput.addEventListener('change', validateDates);
+    
+    // Initialize preview
+    updatePreview();
+});
+
+function addAlias() {
+    const container = document.getElementById('aliases-container');
+    const aliasItem = document.createElement('div');
+    aliasItem.className = 'alias-item mb-2';
+    aliasItem.innerHTML = `
+        <div class="row">
+            <div class="col-8">
+                <input type="text" class="form-control" name="alias_values[]" 
+                       placeholder="Alias del ruolo" oninput="updateAliasesPreview()">
+            </div>
+            <div class="col-3">
+                <select class="form-select" name="alias_langs[]" onchange="updateAliasesPreview()">
+                    <option value="it-IT">Italiano</option>
+                    <option value="en-US">English</option>
+                    <option value="fr-FR">Français</option>
+                    <option value="de-DE">Deutsch</option>
+                    <option value="es-ES">Español</option>
+                </select>
+            </div>
+            <div class="col-1">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeAlias(this)">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    container.appendChild(aliasItem);
+}
+
+function removeAlias(button) {
+    const aliasItem = button.closest('.alias-item');
+    aliasItem.remove();
+    updateAliasesPreview();
+}
+
+function updateAliasesPreview() {
+    // This function is called from the dynamic elements
+    const event = new Event('input');
+    document.getElementById('name').dispatchEvent(event);
+}
+
+function toggleAllUnits() {
+    const allUnitsCheck = document.getElementById('all_units');
+    const unitsSelection = document.getElementById('units-selection');
+    const unitCheckboxes = document.querySelectorAll('input[name="assignable_unit_ids[]"]');
+    
+    if (allUnitsCheck.checked) {
+        unitsSelection.style.display = 'none';
+        unitCheckboxes.forEach(checkbox => checkbox.checked = false);
+    } else {
+        unitsSelection.style.display = 'block';
+    }
+}
+
+function confirmDelete() {
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,247 @@
+{% extends "base/layout.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-person-plus me-2"></i>Nuova Persona
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    <!-- Name -->
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nome Completo *</label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               value="{{ form_data.name if form_data else '' }}" 
+                               required maxlength="255"
+                               placeholder="es. Mario Rossi">
+                        <div class="invalid-feedback">
+                            Il nome completo è obbligatorio.
+                        </div>
+                        <div class="form-text">Inserisci nome e cognome della persona</div>
+                    </div>
+                    
+                    <!-- Short Name -->
+                    <div class="mb-3">
+                        <label for="short_name" class="form-label">Nome Breve</label>
+                        <input type="text" class="form-control" id="short_name" name="short_name" 
+                               value="{{ form_data.short_name if form_data else '' }}" 
+                               maxlength="50"
+                               placeholder="es. M. Rossi">
+                        <div class="form-text">Nome abbreviato per visualizzazioni compatte (opzionale)</div>
+                    </div>
+                    
+                    <!-- Email -->
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               value="{{ form_data.email if form_data else '' }}" 
+                               maxlength="255"
+                               placeholder="mario.rossi@azienda.it">
+                        <div class="invalid-feedback">
+                            Inserisci un indirizzo email valido.
+                        </div>
+                        <div class="form-text">Indirizzo email aziendale (opzionale)</div>
+                    </div>
+                    
+                    <!-- Preview -->
+                    <div class="alert alert-light border">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-eye me-1"></i>Anteprima
+                        </h6>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-circle me-3" id="preview-avatar">
+                                --
+                            </div>
+                            <div>
+                                <strong id="preview-name">Nome Completo</strong>
+                                <div id="preview-short-name" class="text-muted small" style="display: none;"></div>
+                                <div id="preview-email" class="text-muted small" style="display: none;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Form Actions -->
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <a href="/persons" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Annulla
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-1"></i>Crea Persona
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Next Steps -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightbulb me-2"></i>Prossimi Passi
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">Dopo aver creato la persona, potrai:</p>
+                <ul class="list-unstyled">
+                    <li class="mb-1">
+                        <i class="bi bi-person-badge text-primary me-2"></i>
+                        Assegnare incarichi e ruoli
+                    </li>
+                    <li class="mb-1">
+                        <i class="bi bi-speedometer2 text-info me-2"></i>
+                        Monitorare il carico di lavoro
+                    </li>
+                    <li class="mb-1">
+                        <i class="bi bi-clock-history text-secondary me-2"></i>
+                        Visualizzare la timeline degli incarichi
+                    </li>
+                    <li class="mb-1">
+                        <i class="bi bi-person-vcard text-success me-2"></i>
+                        Consultare il profilo professionale
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Tips -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Suggerimenti
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="small text-muted mb-0">
+                    <li>Usa il nome completo per identificazione univoca</li>
+                    <li>Il nome breve è utile per visualizzazioni compatte</li>
+                    <li>L'email è importante per notifiche e comunicazioni</li>
+                    <li>Tutti i campi possono essere modificati successivamente</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const nameInput = document.getElementById('name');
+    const shortNameInput = document.getElementById('short_name');
+    const emailInput = document.getElementById('email');
+    
+    const previewAvatar = document.getElementById('preview-avatar');
+    const previewName = document.getElementById('preview-name');
+    const previewShortName = document.getElementById('preview-short-name');
+    const previewEmail = document.getElementById('preview-email');
+    
+    function updatePreview() {
+        const name = nameInput.value.trim();
+        const shortName = shortNameInput.value.trim();
+        const email = emailInput.value.trim();
+        
+        // Update name
+        if (name) {
+            previewName.textContent = name;
+            
+            // Update avatar with initials
+            const initials = name.split(' ')
+                .map(word => word.charAt(0).toUpperCase())
+                .join('')
+                .substring(0, 2);
+            previewAvatar.textContent = initials || '--';
+        } else {
+            previewName.textContent = 'Nome Completo';
+            previewAvatar.textContent = '--';
+        }
+        
+        // Update short name
+        if (shortName) {
+            previewShortName.textContent = shortName;
+            previewShortName.style.display = 'block';
+        } else {
+            previewShortName.style.display = 'none';
+        }
+        
+        // Update email
+        if (email) {
+            previewEmail.textContent = email;
+            previewEmail.style.display = 'block';
+        } else {
+            previewEmail.style.display = 'none';
+        }
+    }
+    
+    // Update preview on input
+    nameInput.addEventListener('input', updatePreview);
+    shortNameInput.addEventListener('input', updatePreview);
+    emailInput.addEventListener('input', updatePreview);
+    
+    // Email validation
+    emailInput.addEventListener('blur', function() {
+        const email = this.value.trim();
+        if (email && !OrgApp.isValidEmail(email)) {
+            this.setCustomValidity('Inserisci un indirizzo email valido');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+    
+    // Auto-generate short name suggestion
+    nameInput.addEventListener('blur', function() {
+        const name = this.value.trim();
+        if (name && !shortNameInput.value.trim()) {
+            const parts = name.split(' ');
+            if (parts.length >= 2) {
+                const suggestion = parts[0].charAt(0).toUpperCase() + '. ' + parts[parts.length - 1];
+                shortNameInput.placeholder = `Suggerimento: ${suggestion}`;
+                
+                // Show suggestion with animation
+                shortNameInput.style.backgroundColor = '#fff3cd';
+                setTimeout(() => {
+                    shortNameInput.style.backgroundColor = '';
+                }, 2000);
+            }
+        }
+    });
+    
+    // Name validation
+    nameInput.addEventListener('input', function() {
+        const name = this.value.trim();
+        if (name.length < 2) {
+            this.setCustomValidity('Il nome deve contenere almeno 2 caratteri');
+        } else if (!/^[a-zA-ZÀ-ÿ\s'-]+$/.test(name)) {
+            this.setCustomValidity('Il nome può contenere solo lettere, spazi, apostrofi e trattini');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+    
+    // Initialize preview
+    updatePreview();
+});
+</script>
+{% endblock %}

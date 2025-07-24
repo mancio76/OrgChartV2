@@ -23,7 +23,6 @@
 
 - [x] 3. Create service layer with business logic
 
-
   - [x] 3.1 Implement BaseService abstract class
 
     - Define common CRUD operation interfaces
@@ -33,8 +32,6 @@
 
   - [x] 3.2 Build specialized service classes
 
-
-
     - Implement UnitService with hierarchical operations and tree building
     - Create PersonService with personnel management and contact validation
     - Build JobTitleService with role management and multilingual support
@@ -42,50 +39,123 @@
     - Create OrgchartService for tree visualization and statistics
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 4.4, 4.5, 6.1, 6.2_
 
-- [ ] 4. Implement automatic assignment versioning system
-  - [ ] 4.1 Create version management logic
+- [x] 4. Implement automatic assignment versioning system
+
+  - [x] 4.1 Create version management logic
+
     - Implement automatic version assignment for new assignments (version=1, is_current=true)
     - Build version increment logic for assignment modifications
     - Add assignment termination handling with valid_to dates and is_current=false
     - _Requirements: 4.1, 4.2, 4.3_
 
-  - [ ] 4.2 Build assignment history tracking
+  - [x] 4.2 Build assignment history tracking
+
     - Implement historical version queries and display
     - Create current assignment filtering (is_current=true only)
     - Add version consistency validation and integrity checks
     - _Requirements: 4.4, 4.5_
 
-- [ ] 5. Develop FastAPI route handlers and API endpoints
-  - [ ] 5.1 Create base routing infrastructure
+- [x] 5. Develop FastAPI route handlers and API endpoints
+
+  - [x] 5.1 Create base routing infrastructure
+
     - Set up FastAPI application with dependency injection
     - Implement route organization by functional area
     - Add input validation middleware and error handling
     - _Requirements: 7.3, 8.5_
 
-  - [ ] 5.2 Build feature-specific route handlers
-    - Implement home routes for dashboard and statistics
-    - Create units routes for hierarchical unit management
-    - Build persons routes for personnel management
-    - Develop job_titles routes for role management
-    - Create assignments routes for assignment management with versioning
-    - Implement orgchart routes for visualization endpoints
-    - Add API routes for REST endpoints
+  - [x] 5.2 Build feature-specific route handlers
+
+    - [x] Implement home routes for dashboard and statistics
+    - [x] Create units routes for hierarchical unit management
+    - [x] Build persons routes for personnel management
+    - [x] Develop job_titles routes for role management
+
+    - [x] Create assignments routes for assignment management with versioning
+
+    - [x] Implement orgchart routes for visualization endpoints
+
+    - [x] Add API routes for REST endpoints
+
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 6.1, 6.3_
 
-- [ ] 6. Create responsive web interface with Bootstrap 5
-  - [ ] 6.1 Build base template infrastructure
+- [-] 6. Create responsive web interface with Bootstrap 5
+
+
+  - [x] 6.1 Build base template infrastructure
+
     - Create base template with Bootstrap 5 integration
     - Implement consistent navigation and layout structure
     - Add WCAG accessibility directives compliance
     - _Requirements: 2.1, 2.2, 2.6_
 
-  - [ ] 6.2 Develop feature-specific templates
-    - Create unit management templates with hierarchical display
-    - Build person management templates with form validation
-    - Implement job title templates with multilingual support
-    - Develop assignment templates with versioning display
-    - Create dashboard templates with statistics and overview
-    - _Requirements: 2.1, 2.2, 2.3_
+  - [-] 6.2 Develop feature-specific templates
+
+
+    - [ ] 6.2.1 Create unit management templates with hierarchical display
+
+
+
+
+
+      - Create units/list.html template for unit listing
+      - Create units/detail.html template for unit details
+      - Create units/create.html template for unit creation form
+      - Create units/edit.html template for unit editing form
+      - _Requirements: 2.1, 2.2, 3.1_
+    - [x] 6.2.2 Build person management templates with form validation
+
+
+
+
+      - Create persons/list.html template for person listing
+      - Create persons/detail.html template for person details
+      - Create persons/create.html template for person creation form
+      - Create persons/edit.html template for person editing form
+      - Create persons/assignments.html template for person assignments
+      - Create persons/timeline.html template for assignment timeline
+      - Create persons/profile.html template for person profile
+      - Create persons/workload.html template for workload analysis
+      - Create persons/duplicates.html template for duplicate detection
+      - Create persons/statistics.html template for person statistics
+      - _Requirements: 2.1, 2.2, 3.2_
+    - [x] 6.2.3 Implement job title templates with multilingual support
+
+
+
+
+
+      - Create job_titles/list.html template for job title listing
+      - Create job_titles/detail.html template for job title details
+      - Create job_titles/create.html template for job title creation form
+      - Create job_titles/edit.html template for job title editing form
+      - Create job_titles/assignments.html template for job title assignments
+      - Create job_titles/assignable_units.html template for unit assignment management
+      - _Requirements: 2.1, 2.2, 3.3_
+    - [ ] 6.2.4 Develop assignment templates with versioning display
+      - Create assignments/list.html template for assignment listing
+      - Create assignments/detail.html template for assignment details
+      - Create assignments/create.html template for assignment creation form
+      - Create assignments/edit.html template for assignment editing form
+      - Create assignments/history.html template for version history
+      - Create assignments/workload_report.html template for workload analysis
+      - Create assignments/statistics.html template for assignment statistics
+      - Create assignments/bulk_operations.html template for bulk operations
+      - _Requirements: 2.1, 2.2, 3.4, 4.1, 4.2_
+    - [ ] 6.2.5 Create orgchart visualization templates
+      - Create orgchart/overview.html template for orgchart overview
+      - Create orgchart/tree.html template for interactive tree visualization
+      - Create orgchart/unit_detail.html template for unit organizational context
+      - Create orgchart/matrix.html template for matrix views
+      - Create orgchart/statistics.html template for organizational statistics
+      - Create orgchart/gap_analysis.html template for gap analysis
+      - Create orgchart/simulation.html template for organizational simulation
+      - Create orgchart/span_of_control.html template for span of control analysis
+      - Create orgchart/organizational_health.html template for health assessment
+      - Create orgchart/comparison.html template for structure comparison
+      - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8_
+    - [x] 6.2.6 Create dashboard templates with statistics and overview
+      - _Requirements: 2.1, 2.2, 2.3_
 
   - [ ] 6.3 Add form validation and user feedback
     - Implement client-side form validation with clear feedback
@@ -94,26 +164,29 @@
     - _Requirements: 2.3, 2.4_
 
 - [ ] 7. Implement organizational chart visualization
-  - [ ] 7.1 Create interactive tree visualization
-    - Build tree-like organizational structure display
-    - Implement click-to-expand/collapse functionality
-    - Add unit statistics and personnel counts display
+  - [x] 7.1 Create interactive tree visualization backend logic
+
+    - Build tree-like organizational structure display logic
+    - Implement hierarchical data processing
+    - Add unit statistics and personnel counts calculation
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-  - [ ] 7.2 Add unit type-specific rendering
-    - Implement bold-framed boxes for function units (type="function")
-    - Create normal-framed boxes for organizational units (type="OrganizationalUnit")
-    - Add emoji/image display within unit boxes
+  - [ ] 7.2 Add unit type-specific rendering in templates
+    - Implement bold-framed boxes for function units (type="function") in templates
+    - Create normal-framed boxes for organizational units (type="OrganizationalUnit") in templates
+    - Add emoji/image display within unit boxes in templates
     - _Requirements: 6.6, 6.7, 6.8_
 
-  - [ ] 7.3 Build responsive chart functionality
+
+  - [ ] 7.3 Build responsive chart functionality in frontend
     - Ensure chart adapts to different screen sizes
     - Implement progressive enhancement (basic functionality without JavaScript)
     - Add lazy loading for large organizational structures
     - _Requirements: 6.5_
 
 - [ ] 8. Implement comprehensive logging and error handling
-  - [ ] 8.1 Set up logging infrastructure
+  - [x] 8.1 Set up logging infrastructure
+
     - Configure logging to both console and file with appropriate levels
     - Implement structured logging for different application layers
     - Add lifecycle event logging (startup/shutdown)

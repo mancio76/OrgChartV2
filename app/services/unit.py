@@ -178,7 +178,7 @@ class UnitService(BaseService):
                    COUNT(pja.id) as person_count
             FROM units_hierarchy uh
             LEFT JOIN person_job_assignments pja ON uh.id = pja.unit_id AND pja.is_current = 1
-            GROUP BY uh.id, uh.name, uh.short_name, uh.type, uh.parent_unit_id, 
+            GROUP BY uh.id, uh.name, uh.short_name, uh.unit_type, uh.unit_type_short, uh.parent_unit_id, 
                      uh.level, uh.path, uh.full_path
             ORDER BY uh.path
             """

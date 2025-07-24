@@ -1,0 +1,366 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="/assignments/new?person_id={{ person.id }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>Nuovo Incarico
+    </a>
+    <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" 
+            data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="/persons/{{ person.id }}/timeline">
+            <i class="bi bi-clock-history me-2"></i>Timeline Completa
+        </a></li>
+        <li><a class="dropdown-item" href="/persons/{{ person.id }}/workload">
+            <i class="bi bi-speedometer2 me-2"></i>Analisi Carico
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/persons/{{ person.id }}">
+            <i class="bi bi-person me-2"></i>Torna al Profilo
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Person Header -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="d-flex align-items-center">
+            <div class="avatar-circle me-3">
+                {{ person.initials }}
+            </div>
+            <div>
+                <h4 class="mb-0">{{ person.name }}</h4>
+                {% if person.short_name %}
+                <p class="text-muted mb-0">{{ person.short_name }}</p>
+                {% endif %}
+                {% if person.email %}
+                <p class="text-muted mb-0">
+                    <i class="bi bi-envelope me-1"></i>{{ person.email }}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="btn-group" role="group">
+            <input type="radio" class="btn-check" name="view_type" id="view_current" 
+                   {{ 'checked' if not show_history else '' }}
+                   onchange="toggleView(false)">
+            <label class="btn btn-outline-primary" for="view_current">Correnti</label>
+            
+            <input type="radio" class="btn-check" name="view_type" id="view_history" 
+                   {{ 'checked' if show_history else '' }}
+                   onchange="toggleView(true)">
+            <label class="btn btn-outline-secondary" for="view_history">Storico</label>
+        </div>
+    </div>
+</div>
+
+<!-- Assignments List -->
+{% if assignments %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-person-badge me-2"></i>
+            {{ 'Incarichi Correnti' if not show_history else 'Storico Incarichi' }}
+            <span class="badge bg-secondary ms-2">{{ assignments|length }}</span>
+        </h5>
+        {% if show_history %}
+        <small class="text-muted">Ordinati per data più recente</small>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        {% if grouped_assignments %}
+        <!-- Grouped View -->
+        {% for group_key, group_assignments in grouped_assignments.items() %}
+        <div class="assignment-group">
+            <div class="group-header">
+                <h6 class="mb-0">{{ group_key }}</h6>
+                <span class="badge bg-light text-dark">{{ group_assignments|length }} versioni</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Versione</th>
+                            <th>Percentuale</th>
+                            <th>Tipo</th>
+                            <th>Periodo</th>
+                            <th>Stato</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for assignment in group_assignments %}
+                        <tr class="{{ 'table-success' if assignment.is_current else '' }}">
+                            <td>
+                                <span class="badge bg-{{ 'success' if assignment.is_current else 'secondary' }}">
+                                    v{{ assignment.version }}
+                                </span>
+                            </td>
+                            <td>{{ assignment.percentage_display }}</td>
+                            <td>
+                                {% if assignment.is_unit_boss %}
+                                <span class="badge bg-success text-dark">Boss</span>
+                                {% endif %}
+                                {% if assignment.is_ad_interim %}
+                                <span class="badge bg-warning text-dark">Interim</span>
+                                {% else %}
+                                <span class="text-muted">Standard</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>
+                                    {% if assignment.valid_from %}
+                                    {{ assignment.valid_from.strftime('%d/%m/%Y') }}
+                                    {% endif %}
+                                    {% if assignment.valid_to %}
+                                    - {{ assignment.valid_to.strftime('%d/%m/%Y') }}
+                                    {% elif assignment.is_current %}
+                                    - <em>in corso</em>
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ assignment.status_color }}">
+                                    {{ assignment.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/assignments/{{ assignment.id }}" class="btn btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if assignment.is_current %}
+                                    <a href="/assignments/{{ assignment.id }}/edit" class="btn btn-outline-secondary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <!-- Simple Table View -->
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Unità</th>
+                        <th>Ruolo</th>
+                        <th>Percentuale</th>
+                        <th>Tipo</th>
+                        <th>Periodo</th>
+                        <th>Stato</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                    <tr class="{{ 'table-success' if assignment.is_current else '' }}">
+                        <td>
+                            <i class="bi bi-building me-2 text-primary"></i>
+                            {{ assignment.unit_name }}
+                        </td>
+                        <td>
+                            {{ assignment.job_title_name }}
+                            {% if assignment.version > 1 %}
+                            <span class="badge bg-info ms-1">v{{ assignment.version }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">
+                                {{ assignment.percentage_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if assignment.is_unit_boss %}
+                            <span class="badge bg-success text-dark ms-1">Boss</span>
+                            {% endif %}
+                            {% if assignment.is_ad_interim %}
+                            <span class="badge bg-warning text-dark">Interim</span>
+                            {% else %}
+                            <span class="text-muted">Standard</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>
+                                {% if assignment.valid_from %}
+                                {{ assignment.valid_from.strftime('%d/%m/%Y') }}
+                                {% endif %}
+                                {% if assignment.valid_to %}
+                                - {{ assignment.valid_to.strftime('%d/%m/%Y') }}
+                                {% elif assignment.is_current %}
+                                - <em>in corso</em>
+                                {% endif %}
+                            </small>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ assignment.status_color }}">
+                                {{ assignment.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/assignments/{{ assignment.id }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if assignment.is_current %}
+                                <a href="/assignments/{{ assignment.id }}/edit" class="btn btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-person-x display-1 text-muted mb-3"></i>
+        <h4 class="text-muted">
+            {% if show_history %}
+            Nessun incarico storico
+            {% else %}
+            Nessun incarico corrente
+            {% endif %}
+        </h4>
+        <p class="text-muted mb-4">
+            {% if show_history %}
+            Questa persona non ha incarichi storici registrati.
+            {% else %}
+            Questa persona non ha incarichi attivi al momento.
+            {% endif %}
+        </p>
+        {% if not show_history %}
+        <a href="/assignments/new?person_id={{ person.id }}" class="btn btn-primary">
+            <i class="bi bi-person-badge me-1"></i>Assegna Primo Incarico
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Summary Statistics -->
+{% if assignments %}
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-primary">{{ assignments|length }}</h4>
+                <small class="text-muted">
+                    {{ 'Incarichi Correnti' if not show_history else 'Incarichi Totali' }}
+                </small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-info">
+                    {{ assignments|selectattr('is_ad_interim')|list|length }}
+                </h4>
+                <small class="text-muted">Incarichi Interim</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-success">
+                    {{ assignments|map(attribute='unit_id')|unique|list|length }}
+                </h4>
+                <small class="text-muted">Unità Diverse</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-warning">
+                    {{ assignments|map(attribute='job_title_id')|unique|list|length }}
+                </h4>
+                <small class="text-muted">Ruoli Diversi</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.assignment-group {
+    border-bottom: 1px solid #dee2e6;
+    padding: 1rem;
+}
+
+.assignment-group:last-child {
+    border-bottom: none;
+}
+
+.group-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.btn-check:checked + .btn {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+}
+
+.table-success {
+    background-color: rgba(25, 135, 84, 0.1);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleView(showHistory) {
+    const url = new URL(window.location);
+    if (showHistory) {
+        url.searchParams.set('show_history', 'true');
+    } else {
+        url.searchParams.delete('show_history');
+    }
+    window.location.href = url.toString();
+}
+</script>
+{% endblock %}

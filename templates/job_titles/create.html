@@ -1,0 +1,391 @@
+{% extends "base/layout.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-briefcase me-2"></i>Nuovo Ruolo Lavorativo
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    <div class="row">
+                        <!-- Basic Information -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Informazioni Base</h6>
+                            
+                            <!-- Name -->
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Nome Ruolo *</label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       value="{{ form_data.name if form_data else '' }}" 
+                                       required maxlength="255"
+                                       placeholder="es. Responsabile Risorse Umane">
+                                <div class="invalid-feedback">
+                                    Il nome del ruolo è obbligatorio.
+                                </div>
+                            </div>
+                            
+                            <!-- Short Name -->
+                            <div class="mb-3">
+                                <label for="short_name" class="form-label">Nome Breve</label>
+                                <input type="text" class="form-control" id="short_name" name="short_name" 
+                                       value="{{ form_data.short_name if form_data else '' }}" 
+                                       maxlength="50"
+                                       placeholder="es. Resp. HR">
+                                <div class="form-text">Abbreviazione per visualizzazioni compatte (opzionale)</div>
+                            </div>
+                            
+                            <!-- Aliases Section -->
+                            <div class="mb-3">
+                                <label class="form-label">Alias Multilingua</label>
+                                <div id="aliases-container">
+                                    <div class="alias-item mb-2">
+                                        <div class="row">
+                                            <div class="col-8">
+                                                <input type="text" class="form-control" name="alias_values[]" 
+                                                       placeholder="Alias del ruolo">
+                                            </div>
+                                            <div class="col-3">
+                                                <select class="form-select" name="alias_langs[]">
+                                                    <option value="it-IT" selected>Italiano</option>
+                                                    <option value="en-US">English</option>
+                                                    <option value="fr-FR">Français</option>
+                                                    <option value="de-DE">Deutsch</option>
+                                                    <option value="es-ES">Español</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-1">
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeAlias(this)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addAlias()">
+                                    <i class="bi bi-plus-circle me-1"></i>Aggiungi Alias
+                                </button>
+                                <div class="form-text">Gli alias permettono traduzioni e varianti del nome del ruolo</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Validity and Assignment -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Validità e Assegnazione</h6>
+                            
+                            <!-- Start Date -->
+                            <div class="mb-3">
+                                <label for="start_date" class="form-label">Data Inizio</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date" 
+                                       value="{{ form_data.start_date if form_data else '' }}">
+                                <div class="form-text">Data di attivazione del ruolo (opzionale)</div>
+                            </div>
+                            
+                            <!-- End Date -->
+                            <div class="mb-3">
+                                <label for="end_date" class="form-label">Data Fine</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date" 
+                                       value="{{ form_data.end_date if form_data else '' }}">
+                                <div class="form-text">Data di disattivazione del ruolo (opzionale)</div>
+                            </div>
+                            
+                            <!-- Assignable Units -->
+                            <div class="mb-3">
+                                <label class="form-label">Unità Assegnabili</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="all_units" checked onchange="toggleAllUnits()">
+                                    <label class="form-check-label" for="all_units">
+                                        <strong>Tutte le unità</strong>
+                                    </label>
+                                </div>
+                                <div id="units-selection" style="display: none;">
+                                    <div class="mt-2 border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                                        {% for unit in all_units %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   name="assignable_unit_ids[]" value="{{ unit.id }}" 
+                                                   id="unit_{{ unit.id }}">
+                                            <label class="form-check-label" for="unit_{{ unit.id }}">
+                                                <i class="bi bi-{{ 'building' if unit.type == 'function' else 'diagram-2' }} me-1"></i>
+                                                {{ unit.name }}
+                                                {% if unit.short_name %} ({{ unit.short_name }}){% endif %}
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div class="form-text">Seleziona le unità dove questo ruolo può essere assegnato</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Hidden ID field for potential pre-population -->
+                    {% if form_data and form_data.id %}
+                    <input type="hidden" name="id" value="{{ form_data.id }}">
+                    {% endif %}
+                    
+                    <!-- Preview -->
+                    <div class="alert alert-light border">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-eye me-1"></i>Anteprima
+                        </h6>
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-briefcase me-3 text-primary fs-3"></i>
+                            <div>
+                                <strong id="preview-name">Nome Ruolo</strong>
+                                <div id="preview-short-name" class="text-muted small" style="display: none;"></div>
+                                <div id="preview-aliases" class="mt-1" style="display: none;"></div>
+                                <div id="preview-level" class="mt-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Form Actions -->
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <a href="/job-titles" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Annulla
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-1"></i>Crea Ruolo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Help Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-question-circle me-2"></i>Guida alla Creazione
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Livelli Organizzativi:</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-1">
+                                <span class="badge bg-danger me-2">C-Level</span>
+                                CEO, CTO, CFO, CIO, COO
+                            </li>
+                            <li class="mb-1">
+                                <span class="badge bg-success me-2">Executive</span>
+                                Presidente, Direttore Generale
+                            </li>
+                            <li class="mb-1">
+                                <span class="badge bg-warning me-2">Head</span>
+                                Responsabile, Capo
+                            </li>
+                            <li class="mb-1">
+                                <span class="badge bg-info me-2">Manager</span>
+                                Manager, Responsabile
+                            </li>
+                            <li>
+                                <span class="badge bg-secondary me-2">Staff</span>
+                                Altri ruoli operativi
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Suggerimenti:</h6>
+                        <ul class="small text-muted">
+                            <li>Usa nomi chiari e descrittivi</li>
+                            <li>Gli alias sono utili per traduzioni</li>
+                            <li>Il sistema rileva automaticamente il livello</li>
+                            <li>Le date sono opzionali ma utili per ruoli temporanei</li>
+                            <li>Per default il ruolo è assegnabile a tutte le unità</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const nameInput = document.getElementById('name');
+    const shortNameInput = document.getElementById('short_name');
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    
+    const previewName = document.getElementById('preview-name');
+    const previewShortName = document.getElementById('preview-short-name');
+    const previewAliases = document.getElementById('preview-aliases');
+    const previewLevel = document.getElementById('preview-level');
+    
+    function updatePreview() {
+        const name = nameInput.value.trim();
+        const shortName = shortNameInput.value.trim();
+        
+        // Update name
+        if (name) {
+            previewName.textContent = name;
+            
+            // Detect level
+            const level = detectLevel(name);
+            previewLevel.innerHTML = `<span class="badge bg-${getLevelColor(level)}">${level}</span>`;
+        } else {
+            previewName.textContent = 'Nome Ruolo';
+            previewLevel.innerHTML = '';
+        }
+        
+        // Update short name
+        if (shortName) {
+            previewShortName.textContent = shortName;
+            previewShortName.style.display = 'block';
+        } else {
+            previewShortName.style.display = 'none';
+        }
+        
+        // Update aliases
+        updateAliasesPreview();
+    }
+    
+    function updateAliasesPreview() {
+        const aliasInputs = document.querySelectorAll('input[name="alias_values[]"]');
+        const langSelects = document.querySelectorAll('select[name="alias_langs[]"]');
+        const aliases = [];
+        
+        aliasInputs.forEach((input, index) => {
+            if (input.value.trim() && langSelects[index]) {
+                aliases.push({
+                    value: input.value.trim(),
+                    lang: langSelects[index].value
+                });
+            }
+        });
+        
+        if (aliases.length > 0) {
+            const aliasesHtml = aliases.map(alias => 
+                `<span class="badge bg-light text-dark me-1">${alias.value} <small>(${alias.lang})</small></span>`
+            ).join('');
+            previewAliases.innerHTML = aliasesHtml;
+            previewAliases.style.display = 'block';
+        } else {
+            previewAliases.style.display = 'none';
+        }
+    }
+    
+    function detectLevel(name) {
+        const nameLower = name.toLowerCase();
+        if (/\b(chief|ceo|cto|cio|cfo|coo)\b/.test(nameLower)) return 'C-Level';
+        if (/\b(presidente|president|direttore generale)\b/.test(nameLower)) return 'Executive';
+        if (/\bhead\b/.test(nameLower)) return 'Head';
+        if (/\b(manager|responsabile)\b/.test(nameLower)) return 'Manager';
+        return 'Staff';
+    }
+    
+    function getLevelColor(level) {
+        const colors = {
+            'C-Level': 'danger',
+            'Executive': 'success',
+            'Head': 'warning',
+            'Manager': 'info',
+            'Staff': 'secondary'
+        };
+        return colors[level] || 'secondary';
+    }
+    
+    // Update preview on input
+    nameInput.addEventListener('input', updatePreview);
+    shortNameInput.addEventListener('input', updatePreview);
+    
+    // Date validation
+    function validateDates() {
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(endDateInput.value);
+        
+        if (startDateInput.value && endDateInput.value && startDate >= endDate) {
+            endDateInput.setCustomValidity('La data fine deve essere successiva alla data inizio');
+        } else {
+            endDateInput.setCustomValidity('');
+        }
+    }
+    
+    startDateInput.addEventListener('change', validateDates);
+    endDateInput.addEventListener('change', validateDates);
+    
+    // Auto-generate short name suggestion
+    nameInput.addEventListener('blur', function() {
+        if (!shortNameInput.value && this.value) {
+            const words = this.value.split(' ');
+            if (words.length > 1) {
+                const acronym = words.map(word => word.charAt(0).toUpperCase()).join('');
+                if (acronym.length <= 10) {
+                    shortNameInput.placeholder = `Suggerimento: ${acronym}`;
+                    shortNameInput.style.backgroundColor = '#fff3cd';
+                    setTimeout(() => {
+                        shortNameInput.style.backgroundColor = '';
+                    }, 2000);
+                }
+            }
+        }
+    });
+    
+    // Initialize preview
+    updatePreview();
+});
+
+function addAlias() {
+    const container = document.getElementById('aliases-container');
+    const aliasItem = document.createElement('div');
+    aliasItem.className = 'alias-item mb-2';
+    aliasItem.innerHTML = `
+        <div class="row">
+            <div class="col-8">
+                <input type="text" class="form-control" name="alias_values[]" 
+                       placeholder="Alias del ruolo" oninput="updateAliasesPreview()">
+            </div>
+            <div class="col-3">
+                <select class="form-select" name="alias_langs[]" onchange="updateAliasesPreview()">
+                    <option value="it-IT">Italiano</option>
+                    <option value="en-US">English</option>
+                    <option value="fr-FR">Français</option>
+                    <option value="de-DE">Deutsch</option>
+                    <option value="es-ES">Español</option>
+                </select>
+            </div>
+            <div class="col-1">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeAlias(this)">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    container.appendChild(aliasItem);
+}
+
+function removeAlias(button) {
+    const aliasItem = button.closest('.alias-item');
+    aliasItem.remove();
+    updateAliasesPreview();
+}
+
+function updateAliasesPreview() {
+    // This function is called from the dynamic elements
+    const event = new Event('input');
+    document.getElementById('name').dispatchEvent(event);
+}
+
+function toggleAllUnits() {
+    const allUnitsCheck = document.getElementById('all_units');
+    const unitsSelection = document.getElementById('units-selection');
+    const unitCheckboxes = document.querySelectorAll('input[name="assignable_unit_ids[]"]');
+    
+    if (allUnitsCheck.checked) {
+        unitsSelection.style.display = 'none';
+        unitCheckboxes.forEach(checkbox => checkbox.checked = false);
+    } else {
+        unitsSelection.style.display = 'block';
+    }
+}
+</script>
+{% endblock %}

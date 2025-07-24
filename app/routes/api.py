@@ -59,7 +59,8 @@ class AssignmentCreateRequest(BaseModel):
     unit_id: int
     job_title_id: int
     percentage: float = Field(..., gt=0, le=100)
-    ad_interim: bool = False
+    is_ad_interim: bool = False
+    is_unit_boss: bool = False
     notes: Optional[str] = None
     flags: Optional[str] = None
     valid_from: Optional[str] = None
@@ -599,7 +600,7 @@ async def api_create_assignment(
             unit_id=assignment_data.unit_id,
             job_title_id=assignment_data.job_title_id,
             percentage=assignment_data.percentage / 100.0,  # Convert to decimal
-            ad_interim=assignment_data.ad_interim,
+            is_ad_interim=assignment_data.is_ad_interim,
             notes=assignment_data.notes,
             flags=assignment_data.flags,
             valid_from=parse_date_string(assignment_data.valid_from),

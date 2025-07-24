@@ -1,2 +1,5 @@
 app.log
 __pycache__
+orgchart.db
+*.db-shm
+*.db-wal

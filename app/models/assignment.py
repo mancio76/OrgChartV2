@@ -17,7 +17,8 @@ class Assignment(BaseModel):
     job_title_id: int = 0
     version: int = 1
     percentage: float = 1.0
-    ad_interim: bool = False
+    is_ad_interim: bool = False
+    is_unit_boss: bool = False
     notes: Optional[str] = None
     flags: Optional[str] = None
     valid_from: Optional[date] = None
@@ -122,8 +123,10 @@ class Assignment(BaseModel):
                     data[date_field] = None
         
         # Convert boolean fields
-        if 'ad_interim' in data:
-            data['ad_interim'] = bool(data['ad_interim'])
+        if 'is_ad_interim' in data:
+            data['is_ad_interim'] = bool(data['is_ad_interim'])
+        if 'is_unit_boss' in data:
+            data['is_unit_boss'] = bool(data['is_unit_boss'])
         if 'is_current' in data:
             data['is_current'] = bool(data['is_current'])
         

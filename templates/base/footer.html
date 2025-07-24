@@ -1,0 +1,141 @@
+<footer class="footer mt-auto">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-diagram-3 me-2 text-primary"></i>
+                    <span class="fw-bold">Organigramma</span>
+                    <span class="text-muted ms-2">v1.0.0</span>
+                </div>
+                <div class="small text-muted mt-1">
+                    Sistema di gestione organigramma aziendale
+                </div>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <div class="small text-muted">
+                    <div class="mb-1">
+                        <i class="bi bi-calendar me-1"></i>
+                        © {{ current_year or 2024 }} - Tutti i diritti riservati
+                    </div>
+                    <div>
+                        <a href="#" class="text-muted text-decoration-none me-3" data-bs-toggle="modal" data-bs-target="#aboutModal">
+                            <i class="bi bi-info-circle me-1"></i>Informazioni
+                        </a>
+                        <a href="#" class="text-muted text-decoration-none me-3" data-bs-toggle="modal" data-bs-target="#helpModal">
+                            <i class="bi bi-question-circle me-1"></i>Aiuto
+                        </a>
+                        <a href="#" class="text-muted text-decoration-none" onclick="scrollToTop()">
+                            <i class="bi bi-arrow-up-circle me-1"></i>Torna su
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- About Modal -->
+<div class="modal fade" id="aboutModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-info-circle text-primary me-2"></i>
+                    Informazioni su Organigramma
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <i class="bi bi-diagram-3 display-4 text-primary"></i>
+                    <h4 class="mt-2">Organigramma Web App</h4>
+                    <p class="text-muted">Versione 1.0.0</p>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Caratteristiche:</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Gestione unità organizzative</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Anagrafica persone</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Ruoli lavorativi multilingua</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Incarichi con versioning</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Visualizzazione organigramma</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Tecnologie:</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="bi bi-gear text-info me-2"></i>FastAPI + Python</li>
+                            <li><i class="bi bi-database text-info me-2"></i>SQLite</li>
+                            <li><i class="bi bi-bootstrap text-info me-2"></i>Bootstrap 5</li>
+                            <li><i class="bi bi-code-square text-info me-2"></i>Jinja2 Templates</li>
+                            <li><i class="bi bi-palette text-info me-2"></i>Responsive Design</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal fade" id="helpModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-question-circle text-primary me-2"></i>
+                    Guida Rapida
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-diagram-2 me-2"></i>Unità Organizzative</h6>
+                        <p class="small text-muted">Gestisci la struttura gerarchica dell'organizzazione creando e modificando unità organizzative e funzioni.</p>
+                        
+                        <h6><i class="bi bi-people me-2"></i>Persone</h6>
+                        <p class="small text-muted">Mantieni l'anagrafica del personale con informazioni di contatto e storico degli incarichi.</p>
+                        
+                        <h6><i class="bi bi-briefcase me-2"></i>Ruoli Lavorativi</h6>
+                        <p class="small text-muted">Definisci i ruoli con supporto multilingua e gestisci le unità dove possono essere assegnati.</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-person-badge me-2"></i>Incarichi</h6>
+                        <p class="small text-muted">Assegna persone ai ruoli con versioning automatico per tracciare tutti i cambiamenti nel tempo.</p>
+                        
+                        <h6><i class="bi bi-diagram-3 me-2"></i>Organigramma</h6>
+                        <p class="small text-muted">Visualizza la struttura organizzativa in formato ad albero con statistiche e dettagli.</p>
+                        
+                        <h6><i class="bi bi-search me-2"></i>Ricerca</h6>
+                        <p class="small text-muted">Usa la funzione di ricerca in ogni sezione per trovare rapidamente informazioni specifiche.</p>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="alert alert-info">
+                    <i class="bi bi-lightbulb me-2"></i>
+                    <strong>Suggerimento:</strong> Usa i filtri e le viste multiple per personalizzare la visualizzazione dei dati secondo le tue esigenze.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function scrollToTop() {
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+}
+</script>

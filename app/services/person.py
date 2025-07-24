@@ -160,7 +160,7 @@ class PersonService(BaseService):
             interim_query = """
             SELECT COUNT(*) as count 
             FROM person_job_assignments 
-            WHERE person_id = ? AND ad_interim = 1 AND is_current = 1
+            WHERE person_id = ? AND is_ad_interim = 1 AND is_current = 1
             """
             row = self.db_manager.fetch_one(interim_query, (person_id,))
             stats['interim_assignments'] = row['count'] if row else 0
@@ -214,7 +214,8 @@ class PersonService(BaseService):
                     'start_date': assignment.valid_from,
                     'end_date': assignment.valid_to,
                     'is_current': assignment.is_current,
-                    'ad_interim': assignment.ad_interim,
+                    'is_ad_interim': assignment.is_ad_interim,
+                    'is_unit_boss': assignment.is_unit_boss,
                     'percentage': assignment.percentage,
                     'version': assignment.version,
                     'notes': assignment.notes,
@@ -421,7 +422,7 @@ class PersonService(BaseService):
             for assignment in current_assignments:
                 workload['total_percentage'] += assignment.percentage
                 
-                if assignment.ad_interim:
+                if assignment.is_ad_interim:
                     workload['interim_count'] += 1
                 
                 units.add(assignment.unit_id)
@@ -434,7 +435,8 @@ class PersonService(BaseService):
                 workload['assignments_by_unit'][unit_name].append({
                     'job_title': assignment.job_title_name,
                     'percentage': assignment.percentage,
-                    'ad_interim': assignment.ad_interim
+                    'is_ad_interim': assignment.is_ad_interim,
+                    'is_unit_boss': assignment.is_unit_boss
                 })
             
             workload['units_count'] = len(units)
@@ -631,7 +633,7 @@ class PersonService(BaseService):
             interim_query = """
             SELECT COUNT(DISTINCT person_id) as count 
             FROM person_job_assignments 
-            WHERE ad_interim = 1 AND is_current = 1
+            WHERE is_ad_interim = 1 AND is_current = 1
             """
             row = self.db_manager.fetch_one(interim_query)
             stats['persons_with_interim'] = row['count'] if row else 0

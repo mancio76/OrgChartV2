@@ -1,0 +1,213 @@
+{% extends "base/layout.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-building me-2"></i>Nuova Unità Organizzativa
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    <div class="row">
+                        <!-- Basic Information -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Informazioni Base</h6>
+                            
+                            <!-- Name -->
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Nome Unità *</label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       value="{{ form_data.name if form_data else '' }}" 
+                                       required maxlength="255">
+                                <div class="invalid-feedback">
+                                    Il nome dell'unità è obbligatorio.
+                                </div>
+                            </div>
+                            
+                            <!-- Short Name -->
+                            <div class="mb-3">
+                                <label for="short_name" class="form-label">Nome Breve</label>
+                                <input type="text" class="form-control" id="short_name" name="short_name" 
+                                       value="{{ form_data.short_name if form_data else '' }}" 
+                                       maxlength="50"
+                                       placeholder="Abbreviazione o acronimo">
+                                <div class="form-text">Opzionale. Utilizzato per visualizzazioni compatte.</div>
+                            </div>
+                            
+                            <!-- Type -->
+                            <div class="mb-3">
+                                <label for="type" class="form-label">Tipo Unità *</label>
+                                <select class="form-select" id="type" name="type" required>
+                                    <option value="">Seleziona tipo...</option>
+                                    {% for unit_type in unit_types %}
+                                    <option value="{{ unit_type }}" 
+                                            {% if form_data and form_data.type == unit_type %}selected{% endif %}>
+                                        {{ 'Funzione' if unit_type == 'function' else 'Unità Organizzativa' }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="invalid-feedback">
+                                    Seleziona il tipo di unità.
+                                </div>
+                                <div class="form-text">
+                                    <strong>Funzione:</strong> Unità operativa con responsabilità specifiche<br>
+                                    <strong>Unità Organizzativa:</strong> Struttura organizzativa generale
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Hierarchy and Dates -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Gerarchia e Validità</h6>
+                            
+                            <!-- Parent Unit -->
+                            <div class="mb-3">
+                                <label for="parent_unit_id" class="form-label">Unità Padre</label>
+                                <select class="form-select" id="parent_unit_id" name="parent_unit_id">
+                                    <option value="">Nessuna (Unità Radice)</option>
+                                    {% for parent in available_parents %}
+                                    <option value="{{ parent.id }}" 
+                                            {% if form_data and form_data.parent_unit_id == parent.id %}selected{% endif %}>
+                                        {{ parent.name }}
+                                        {% if parent.short_name %} ({{ parent.short_name }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">
+                                    Seleziona l'unità padre per definire la gerarchia organizzativa.
+                                </div>
+                            </div>
+                            
+                            <!-- Start Date -->
+                            <div class="mb-3">
+                                <label for="start_date" class="form-label">Data Inizio</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date" 
+                                       value="{{ form_data.start_date if form_data else '' }}">
+                                <div class="form-text">Data di attivazione dell'unità.</div>
+                            </div>
+                            
+                            <!-- End Date -->
+                            <div class="mb-3">
+                                <label for="end_date" class="form-label">Data Fine</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date" 
+                                       value="{{ form_data.end_date if form_data else '' }}">
+                                <div class="form-text">Data di disattivazione dell'unità (opzionale).</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Hidden ID field for potential pre-population -->
+                    {% if form_data and form_data.id %}
+                    <input type="hidden" name="id" value="{{ form_data.id }}">
+                    {% endif %}
+                    
+                    <!-- Form Actions -->
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <a href="/units" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Annulla
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-1"></i>Crea Unità
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Help Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-question-circle me-2"></i>Guida alla Creazione
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Tipi di Unità:</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <span class="badge bg-primary me-2">Funzione</span>
+                                Unità operativa con responsabilità specifiche (es. IT, HR, Finance)
+                            </li>
+                            <li>
+                                <span class="badge bg-info me-2">Org. Unit</span>
+                                Struttura organizzativa generale (es. Divisioni, Dipartimenti)
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Suggerimenti:</h6>
+                        <ul class="small text-muted">
+                            <li>Usa nomi chiari e descrittivi</li>
+                            <li>Il nome breve è utile per organigrammi compatti</li>
+                            <li>Definisci la gerarchia selezionando l'unità padre</li>
+                            <li>Le date sono opzionali ma utili per la storicizzazione</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Date validation
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    
+    function validateDates() {
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(endDateInput.value);
+        
+        if (startDateInput.value && endDateInput.value && startDate >= endDate) {
+            endDateInput.setCustomValidity('La data fine deve essere successiva alla data inizio');
+        } else {
+            endDateInput.setCustomValidity('');
+        }
+    }
+    
+    startDateInput.addEventListener('change', validateDates);
+    endDateInput.addEventListener('change', validateDates);
+    
+    // Type selection help
+    const typeSelect = document.getElementById('type');
+    typeSelect.addEventListener('change', function() {
+        const helpText = this.nextElementSibling.nextElementSibling;
+        if (this.value === 'function') {
+            helpText.innerHTML = '<strong>Funzione selezionata:</strong> Unità operativa con responsabilità specifiche. Verrà visualizzata con bordo evidenziato nell\'organigramma.';
+        } else if (this.value === 'OrganizationalUnit') {
+            helpText.innerHTML = '<strong>Unità Organizzativa selezionata:</strong> Struttura organizzativa generale. Verrà visualizzata con bordo normale nell\'organigramma.';
+        }
+    });
+    
+    // Auto-generate short name suggestion
+    const nameInput = document.getElementById('name');
+    const shortNameInput = document.getElementById('short_name');
+    
+    nameInput.addEventListener('blur', function() {
+        if (!shortNameInput.value && this.value) {
+            // Simple acronym generation
+            const words = this.value.split(' ');
+            if (words.length > 1) {
+                const acronym = words.map(word => word.charAt(0).toUpperCase()).join('');
+                if (acronym.length <= 10) {
+                    shortNameInput.value = acronym;
+                    shortNameInput.style.backgroundColor = '#fff3cd';
+                    setTimeout(() => {
+                        shortNameInput.style.backgroundColor = '';
+                    }, 2000);
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

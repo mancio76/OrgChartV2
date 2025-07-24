@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS person_job_assignments (
     job_title_id INTEGER NOT NULL,
     version INTEGER NOT NULL DEFAULT 1,
     percentage REAL NOT NULL DEFAULT 1.0 CHECK (percentage > 0 AND percentage <= 1),
-    ad_interim BOOLEAN NOT NULL DEFAULT FALSE,
+    is_ad_interim BOOLEAN NOT NULL DEFAULT FALSE,
+    is_unit_boss BOOLEAN NOT NULL DEFAULT FALSE,
     notes TEXT,
     flags TEXT,
     valid_from DATE,
@@ -110,72 +111,80 @@ WHERE is_current = 1;
 
 -- View: assignment_history
 CREATE VIEW IF NOT EXISTS assignment_history AS
-SELECT 
-    p.id as person_id,
-    p.name as person_name,
-    u.name as unit_name,
-    jt.name as job_title_name,
-    pja.version,
-    pja.percentage,
-    pja.ad_interim,
-    pja.valid_from,
-    pja.valid_to,
-    pja.is_current,
-    pja.datetime_created,
-    pja.datetime_updated,
-    CASE 
-        WHEN pja.is_current THEN 'CURRENT'
-        WHEN pja.valid_to IS NOT NULL THEN 'TERMINATED'
-        ELSE 'HISTORICAL'
-    END as status
-FROM person_job_assignments pja
-JOIN persons p ON pja.person_id = p.id
-JOIN units u ON pja.unit_id = u.id
-JOIN job_titles jt ON pja.job_title_id = jt.id
-ORDER BY p.name, u.name, jt.name, pja.version DESC;
+SELECT p.id AS person_id,
+       p.name AS person_name,
+       u.name AS unit_name,
+       jt.name AS job_title_name,
+       pja.version,
+       pja.percentage,
+       pja.is_ad_interim,
+       pja.is_unit_boss,
+       pja.valid_from,
+       pja.valid_to,
+       pja.is_current,
+       pja.datetime_created,
+       pja.datetime_updated,
+       CASE WHEN pja.is_current THEN 'CURRENT' WHEN pja.valid_to IS NOT NULL THEN 'TERMINATED' ELSE 'HISTORICAL' END AS status
+  FROM person_job_assignments pja
+       JOIN
+       persons p ON pja.person_id = p.id
+       JOIN
+       units u ON pja.unit_id = u.id
+       JOIN
+       job_titles jt ON pja.job_title_id = jt.id
+ ORDER BY p.name,
+          u.name,
+          jt.name,
+          pja.version DESC;
 
 -- View: current_assignments
-CREATE VIEW IF NOT EXISTS current_assignments AS SELECT 
-    p.id as person_id,
-    p.name as person_name,
-    p.short_name as person_short_name,
-    u.id as unit_id,
-    u.name as unit_name,
-    u.short_name as unit_short_name,
-    jt.id as job_title_id,
-    jt.name as job_title_name,
-    jt.short_name as job_title_short_name,
-    pja.percentage,
-    pja.ad_interim,
-    pja.notes,
-    pja.flags,
-    pja.valid_from,
-    pja.valid_to,
-    pja.version,
-    pja.datetime_created,
-    pja.datetime_updated
-FROM person_job_assignments pja
-JOIN persons p ON pja.person_id = p.id
-JOIN units u ON pja.unit_id = u.id
-JOIN job_titles jt ON pja.job_title_id = jt.id
-WHERE pja.is_current = 1;
+CREATE VIEW IF NOT EXISTS current_assignments AS SELECT p.id AS person_id,
+       p.name AS person_name,
+       p.short_name AS person_short_name,
+       u.id AS unit_id,
+       u.unit_name AS unit_name,
+       u.unit_short_name AS unit_short_name,
+       jt.id AS job_title_id,
+       jt.name AS job_title_name,
+       jt.short_name AS job_title_short_name,
+       pja.percentage,
+       pja.is_ad_interim,
+       pja.is_unit_boss,
+       pja.notes,
+       pja.flags,
+       pja.valid_from,
+       pja.valid_to,
+       pja.version,
+       pja.datetime_created,
+       pja.datetime_updated
+  FROM person_job_assignments pja
+       JOIN
+       persons p ON pja.person_id = p.id
+       JOIN
+       units_types u ON pja.unit_id = u.id
+       JOIN
+       job_titles jt ON pja.job_title_id = jt.id
+ WHERE pja.is_current = 1;
 
--- View: unitd_hierarchy_stats
-CREATE VIEW IF NOT EXISTS unitd_hierarchy_stats AS SELECT uh.id
+-- View: units_hierarchy_stats
+CREATE VIEW IF NOT EXISTS units_hierarchy_stats AS SELECT uh.id
     , uh.name
     , uh.short_name
-    , uh.type
+    , uh.unit_type
+    , uh.unit_type_short
     , uh.parent_unit_id
     , uh.level
     , uh.path
     , uh.full_path
     , count(pja.id) person_count
+    , ifnull(max(pja.is_unit_boss), 0) has_boss
 FROM units_hierarchy uh
 LEFT OUTER JOIN person_job_assignments pja ON uh.id=pja.unit_id
 GROUP BY uh.id
     , uh.name
     , uh.short_name
-    , uh.type
+    , uh.unit_type
+    , uh.unit_type_short
     , uh.parent_unit_id
     , uh.level
     , uh.path

@@ -126,7 +126,10 @@
                                 </td>
                                 <td>
                                     {{ assignment.job_title_name }}
-                                    {% if assignment.ad_interim %}
+                                    {% if assignment.is_unit_boss %}
+                                    <span class="badge bg-success text-dark ms-1">Boss</span>
+                                    {% endif %}
+                                    {% if assignment.is_ad_interim %}
                                     <span class="badge bg-warning text-dark ms-1">Interim</span>
                                     {% endif %}
                                 </td>

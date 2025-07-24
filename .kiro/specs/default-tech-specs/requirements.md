@@ -41,7 +41,9 @@ This document outlines the technical requirements for the Organigramma Web App, 
 2. WHEN managing persons THEN the system SHALL provide complete personnel data management with email validation
 3. WHEN managing job titles THEN the system SHALL allow role definition with multilingual support
 4. WHEN managing assignments THEN the system SHALL create, modify, and terminate assignments with automatic versioning
-5. WHEN deleting entities THEN the system SHALL check referential integrity and prevent orphaned records
+5. WHEN managing assignments THEN the system SHALL verify if the assisment is the boss of the unit
+6. WHEN managing assignments THEN the system SHALL verify if the assisment is ad interim
+7. WHEN deleting entities THEN the system SHALL check referential integrity and prevent orphaned records
 
 ### Requirement 4
 

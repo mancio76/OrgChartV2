@@ -1,0 +1,310 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<a href="/job-titles/new" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i>Nuovo Ruolo
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Search and Filters -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <form method="get" class="d-flex">
+            <input type="search" name="search" class="form-control me-2" 
+                   placeholder="Cerca ruoli per nome..." 
+                   value="{{ search }}" 
+                   aria-label="Cerca ruoli">
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="bi bi-search"></i>
+            </button>
+            {% if search %}
+            <a href="/job-titles" class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-x-circle"></i>
+            </a>
+            {% endif %}
+        </form>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-secondary" onclick="toggleView('table')" id="btn-table-view">
+                <i class="bi bi-table"></i> Tabella
+            </button>
+            <button type="button" class="btn btn-outline-secondary" onclick="toggleView('cards')" id="btn-cards-view">
+                <i class="bi bi-grid-3x3"></i> Schede
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Job Titles List -->
+{% if job_titles %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-briefcase me-2"></i>
+            Ruoli Lavorativi
+            <span class="badge bg-secondary ms-2">{{ job_titles|length }}</span>
+        </h5>
+        {% if search %}
+        <small class="text-muted">Risultati per: "{{ search }}"</small>
+        {% endif %}
+    </div>
+    
+    <!-- Table View -->
+    <div id="table-view" class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Livello</th>
+                        <th>Alias</th>
+                        <th>Incarichi Correnti</th>
+                        <th>Totale Incarichi</th>
+                        <th>Stato</th>
+                        <th width="120">Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job_title in job_titles %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-briefcase me-2 text-primary"></i>
+                                <div>
+                                    <strong>{{ job_title.name }}</strong>
+                                    {% if job_title.short_name %}
+                                    <br><small class="text-muted">{{ job_title.short_name }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'danger' if job_title.level_indicator == 'C-Level' else 'warning' if job_title.level_indicator == 'Head' else 'info' if job_title.level_indicator == 'Manager' else 'success' if job_title.level_indicator == 'Executive' else 'secondary' }}">
+                                {{ job_title.level_indicator }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if job_title.aliases %}
+                            <div class="d-flex flex-wrap gap-1">
+                                {% for alias in job_title.aliases[:2] %}
+                                <span class="badge bg-light text-dark">{{ alias.value }}</span>
+                                {% endfor %}
+                                {% if job_title.aliases|length > 2 %}
+                                <span class="badge bg-light text-dark">+{{ job_title.aliases|length - 2 }}</span>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <span class="text-muted">Nessuno</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if job_title.current_assignments_count > 0 %}
+                            <span class="badge bg-success">{{ job_title.current_assignments_count }}</span>
+                            {% else %}
+                            <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if job_title.total_assignments_count > 0 %}
+                            <span class="badge bg-info">{{ job_title.total_assignments_count }}</span>
+                            {% else %}
+                            <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if job_title.start_date and job_title.end_date %}
+                                {% if job_title.start_date <= today <= job_title.end_date %}
+                                <span class="badge bg-success">Attivo</span>
+                                {% else %}
+                                <span class="badge bg-warning">Inattivo</span>
+                                {% endif %}
+                            {% elif job_title.end_date and job_title.end_date < today %}
+                            <span class="badge bg-danger">Scaduto</span>
+                            {% else %}
+                            <span class="badge bg-success">Attivo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/job-titles/{{ job_title.id }}" class="btn btn-outline-primary" 
+                                   data-bs-toggle="tooltip" title="Visualizza dettagli">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="/job-titles/{{ job_title.id }}/edit" class="btn btn-outline-secondary"
+                                   data-bs-toggle="tooltip" title="Modifica">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form method="post" action="/job-titles/{{ job_title.id }}/delete" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-danger btn-delete"
+                                            data-item-name="{{ job_title.name }}"
+                                            data-item-type="ruolo"
+                                            data-bs-toggle="tooltip" title="Elimina">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Cards View -->
+    <div id="cards-view" class="card-body" style="display: none;">
+        <div class="row">
+            {% for job_title in job_titles %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100 job-title-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title mb-0">
+                                <i class="bi bi-briefcase me-2 text-primary"></i>
+                                {{ job_title.name }}
+                            </h6>
+                            <span class="badge bg-{{ 'danger' if job_title.level_indicator == 'C-Level' else 'warning' if job_title.level_indicator == 'Head' else 'info' if job_title.level_indicator == 'Manager' else 'success' if job_title.level_indicator == 'Executive' else 'secondary' }}">
+                                {{ job_title.level_indicator }}
+                            </span>
+                        </div>
+                        
+                        {% if job_title.short_name %}
+                        <p class="text-muted small mb-2">{{ job_title.short_name }}</p>
+                        {% endif %}
+                        
+                        {% if job_title.aliases %}
+                        <div class="mb-3">
+                            <small class="text-muted">Alias:</small>
+                            <div class="d-flex flex-wrap gap-1 mt-1">
+                                {% for alias in job_title.aliases %}
+                                <span class="badge bg-light text-dark">{{ alias.value }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="row text-center mb-3">
+                            <div class="col-6">
+                                <div class="border-end">
+                                    <h6 class="text-success mb-0">{{ job_title.current_assignments_count }}</h6>
+                                    <small class="text-muted">Correnti</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <h6 class="text-info mb-0">{{ job_title.total_assignments_count }}</h6>
+                                <small class="text-muted">Totali</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="btn-group btn-group-sm">
+                                <a href="/job-titles/{{ job_title.id }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="/job-titles/{{ job_title.id }}/edit" class="btn btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                            {% if job_title.start_date and job_title.end_date %}
+                                {% if job_title.start_date <= today <= job_title.end_date %}
+                                <span class="badge bg-success">Attivo</span>
+                                {% else %}
+                                <span class="badge bg-warning">Inattivo</span>
+                                {% endif %}
+                            {% elif job_title.end_date and job_title.end_date < today %}
+                            <span class="badge bg-danger">Scaduto</span>
+                            {% else %}
+                            <span class="badge bg-success">Attivo</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-briefcase display-1 text-muted mb-3"></i>
+        <h4 class="text-muted">
+            {% if search %}
+            Nessun ruolo trovato per "{{ search }}"
+            {% else %}
+            Nessun ruolo lavorativo
+            {% endif %}
+        </h4>
+        <p class="text-muted mb-4">
+            {% if search %}
+            Prova a modificare i termini di ricerca o 
+            <a href="/job-titles">visualizza tutti i ruoli</a>.
+            {% else %}
+            Inizia creando il primo ruolo lavorativo per definire le posizioni organizzative.
+            {% endif %}
+        </p>
+        <a href="/job-titles/new" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Crea Primo Ruolo
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.job-title-card {
+    transition: all 0.3s ease;
+    border: 1px solid #dee2e6;
+}
+
+.job-title-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border-color: var(--primary-color);
+}
+
+.btn-check:checked + .btn {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleView(viewType) {
+    const tableView = document.getElementById('table-view');
+    const cardsView = document.getElementById('cards-view');
+    const tableBtn = document.getElementById('btn-table-view');
+    const cardsBtn = document.getElementById('btn-cards-view');
+    
+    if (viewType === 'table') {
+        tableView.style.display = 'block';
+        cardsView.style.display = 'none';
+        tableBtn.classList.add('active');
+        cardsBtn.classList.remove('active');
+    } else {
+        tableView.style.display = 'none';
+        cardsView.style.display = 'block';
+        tableBtn.classList.remove('active');
+        cardsBtn.classList.add('active');
+    }
+    
+    // Store preference
+    localStorage.setItem('jobTitlesView', viewType);
+}
+
+// Initialize view based on stored preference
+document.addEventListener('DOMContentLoaded', function() {
+    const savedView = localStorage.getItem('jobTitlesView') || 'table';
+    toggleView(savedView);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,246 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<a href="/persons/new" class="btn btn-primary">
+    <i class="bi bi-person-plus me-1"></i>Nuova Persona
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Search and Filters -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <form method="get" class="d-flex">
+            <input type="search" name="search" class="form-control me-2" 
+                   placeholder="Cerca persone per nome o email..." 
+                   value="{{ search }}" 
+                   aria-label="Cerca persone">
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="bi bi-search"></i>
+            </button>
+            {% if search %}
+            <a href="/persons" class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-x-circle"></i>
+            </a>
+            {% endif %}
+        </form>
+    </div>
+    <div class="col-md-6">
+        <div class="btn-group w-100" role="group">
+            <input type="radio" class="btn-check" name="filter_type" id="filter_all" 
+                   {{ 'checked' if not filter_type else '' }}
+                   onchange="filterPersons('')">
+            <label class="btn btn-outline-secondary" for="filter_all">Tutte</label>
+            
+            <input type="radio" class="btn-check" name="filter_type" id="filter_with_assignments" 
+                   {{ 'checked' if filter_type == 'with_assignments' else '' }}
+                   onchange="filterPersons('with_assignments')">
+            <label class="btn btn-outline-success" for="filter_with_assignments">Con Incarichi</label>
+            
+            <input type="radio" class="btn-check" name="filter_type" id="filter_without_assignments" 
+                   {{ 'checked' if filter_type == 'without_assignments' else '' }}
+                   onchange="filterPersons('without_assignments')">
+            <label class="btn btn-outline-warning" for="filter_without_assignments">Senza Incarichi</label>
+            
+            <input type="radio" class="btn-check" name="filter_type" id="filter_multiple_assignments" 
+                   {{ 'checked' if filter_type == 'multiple_assignments' else '' }}
+                   onchange="filterPersons('multiple_assignments')">
+            <label class="btn btn-outline-info" for="filter_multiple_assignments">Incarichi Multipli</label>
+        </div>
+    </div>
+</div>
+
+<!-- Persons List -->
+{% if persons %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-people me-2"></i>
+            Persone
+            <span class="badge bg-secondary ms-2">{{ persons|length }}</span>
+        </h5>
+        <div class="d-flex gap-2">
+            {% if search %}
+            <small class="text-muted">Risultati per: "{{ search }}"</small>
+            {% endif %}
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-three-dots"></i>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="/persons/search/duplicates">
+                        <i class="bi bi-people-fill me-2"></i>Trova Duplicati
+                    </a></li>
+                    <li><a class="dropdown-item" href="/persons/reports/statistics">
+                        <i class="bi bi-bar-chart me-2"></i>Statistiche
+                    </a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Incarichi Correnti</th>
+                        <th>Totale Incarichi</th>
+                        <th>Carico Lavoro</th>
+                        <th width="120">Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for person in persons %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle me-2">
+                                    {{ person.initials }}
+                                </div>
+                                <div>
+                                    <strong>{{ person.name }}</strong>
+                                    {% if person.short_name %}
+                                    <br><small class="text-muted">{{ person.short_name }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if person.email %}
+                            <a href="mailto:{{ person.email }}" class="text-decoration-none">
+                                {{ person.email }}
+                            </a>
+                            {% else %}
+                            <span class="text-muted">Non specificata</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if person.current_assignments_count > 0 %}
+                            <span class="badge bg-success">{{ person.current_assignments_count }}</span>
+                            {% else %}
+                            <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if person.total_assignments_count > 0 %}
+                            <span class="badge bg-info">{{ person.total_assignments_count }}</span>
+                            {% else %}
+                            <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if person.current_assignments_count > 0 %}
+                            <a href="/persons/{{ person.id }}/workload" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-speedometer2 me-1"></i>Visualizza
+                            </a>
+                            {% else %}
+                            <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/persons/{{ person.id }}" class="btn btn-outline-primary" 
+                                   data-bs-toggle="tooltip" title="Visualizza dettagli">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="/persons/{{ person.id }}/edit" class="btn btn-outline-secondary"
+                                   data-bs-toggle="tooltip" title="Modifica">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form method="post" action="/persons/{{ person.id }}/delete" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-danger btn-delete"
+                                            data-item-name="{{ person.name }}"
+                                            data-item-type="persona"
+                                            data-bs-toggle="tooltip" title="Elimina">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<!-- Empty State -->
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-people display-1 text-muted mb-3"></i>
+        <h4 class="text-muted">
+            {% if search %}
+            Nessuna persona trovata per "{{ search }}"
+            {% elif filter_type %}
+            Nessuna persona con questo filtro
+            {% else %}
+            Nessuna persona registrata
+            {% endif %}
+        </h4>
+        <p class="text-muted mb-4">
+            {% if search %}
+            Prova a modificare i termini di ricerca o 
+            <a href="/persons">visualizza tutte le persone</a>.
+            {% elif filter_type == 'with_assignments' %}
+            Non ci sono persone con incarichi correnti.
+            {% elif filter_type == 'without_assignments' %}
+            Tutte le persone hanno almeno un incarico.
+            {% elif filter_type == 'multiple_assignments' %}
+            Non ci sono persone con incarichi multipli.
+            {% else %}
+            Inizia registrando la prima persona per gestire gli incarichi.
+            {% endif %}
+        </p>
+        {% if search or filter_type %}
+        <a href="/persons" class="btn btn-outline-primary me-2">
+            <i class="bi bi-arrow-left me-1"></i>Torna all'elenco
+        </a>
+        {% endif %}
+        <a href="/persons/new" class="btn btn-primary">
+            <i class="bi bi-person-plus me-1"></i>Registra Prima Persona
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.btn-check:checked + .btn {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterPersons(filterType) {
+    const url = new URL(window.location);
+    if (filterType) {
+        url.searchParams.set('filter_type', filterType);
+    } else {
+        url.searchParams.delete('filter_type');
+    }
+    window.location.href = url.toString();
+}
+</script>
+{% endblock %}
