@@ -12,6 +12,7 @@ from app.services.unit import UnitService
 from app.services.unit_type import UnitTypeService
 from app.models.unit import Unit
 from app.models.base import Alias, ModelValidationException
+from app.security import InputValidator, SecurityValidationError, get_client_ip, log_security_event
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -137,22 +138,53 @@ async def create_unit(
     unit_service: UnitService = Depends(get_unit_service),
     unit_type_service: UnitTypeService = Depends(get_unit_type_service)
 ):
-    """Create new unit"""
+    """Create new unit with security validation"""
     try:
+        # Security validation
+        form_data = {
+            'name': name,
+            'short_name': short_name,
+            'start_date': start_date,
+            'end_date': end_date
+        }
+        
+        try:
+            sanitized_data = InputValidator.validate_and_sanitize_input(form_data)
+        except SecurityValidationError as e:
+            log_security_event('FORM_SECURITY_VIOLATION', {
+                'form': 'create_unit',
+                'errors': e.errors,
+                'client_ip': get_client_ip(request)
+            }, request)
+            raise HTTPException(status_code=400, detail="Input non sicuro rilevato")
+        
+        # Additional validation
+        if not InputValidator.validate_name(sanitized_data['name']):
+            raise HTTPException(status_code=400, detail="Nome unità non valido")
+        
+        if sanitized_data['short_name'] and not InputValidator.validate_name(sanitized_data['short_name']):
+            raise HTTPException(status_code=400, detail="Nome breve non valido")
+        
+        if not InputValidator.validate_id(unit_type_id):
+            raise HTTPException(status_code=400, detail="Tipo unità non valido")
+        
+        if parent_unit_id is not None and not InputValidator.validate_id(parent_unit_id):
+            raise HTTPException(status_code=400, detail="Unità padre non valida")
+        
         # Parse dates
         start_date_parsed = None
-        if start_date:
+        if sanitized_data['start_date']:
             try:
-                start_date_parsed = date.fromisoformat(start_date)
+                start_date_parsed = date.fromisoformat(sanitized_data['start_date'])
             except ValueError:
-                pass
+                raise HTTPException(status_code=400, detail="Data inizio non valida")
         
         end_date_parsed = None
-        if end_date:
+        if sanitized_data['end_date']:
             try:
-                end_date_parsed = date.fromisoformat(end_date)
+                end_date_parsed = date.fromisoformat(sanitized_data['end_date'])
             except ValueError:
-                pass
+                raise HTTPException(status_code=400, detail="Data fine non valida")
         
         # Handle parent_unit_id
         if parent_unit_id == 0:
@@ -161,8 +193,8 @@ async def create_unit(
         # Create unit model
         unit = Unit(
             id=id,
-            name=name.strip(),
-            short_name=short_name.strip() if short_name else None,
+            name=sanitized_data['name'].strip(),
+            short_name=sanitized_data['short_name'].strip() if sanitized_data['short_name'] else None,
             unit_type_id=unit_type_id,
             parent_unit_id=parent_unit_id,
             start_date=start_date_parsed,
@@ -171,6 +203,13 @@ async def create_unit(
         
         # Create unit
         created_unit = unit_service.create(unit)
+        
+        # Log successful creation
+        log_security_event('UNIT_CREATED', {
+            'unit_id': created_unit.id,
+            'unit_name': created_unit.name,
+            'client_ip': get_client_ip(request)
+        }, request)
         
         return RedirectResponse(
             url=f"/units/{created_unit.id}",

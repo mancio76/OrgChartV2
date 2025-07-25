@@ -1,5 +1,6 @@
 """
 Database connection and initialization with singleton pattern and connection pooling
+Enhanced with environment-based configuration
 """
 
 import sqlite3
@@ -13,14 +14,43 @@ import time
 
 logger = logging.getLogger(__name__)
 
-# Database configuration
-DATABASE_PATH = Path("database/orgchart.db")
+# Configuration will be loaded dynamically
+DATABASE_PATH = None
 SCHEMA_PATH = Path("database/schema/orgchart_sqlite_schema.sql")
 MIGRATION_PATH = Path("")
 
 # Connection pool configuration
 MAX_CONNECTIONS = 10
 CONNECTION_TIMEOUT = 30
+
+def _get_database_config():
+    """Get database configuration from settings"""
+    try:
+        from app.config import get_settings
+        settings = get_settings()
+        
+        # Extract database path from URL
+        db_url = settings.database.url
+        if db_url.startswith("sqlite:///"):
+            db_path = Path(db_url.replace("sqlite:///", ""))
+        else:
+            db_path = Path("database/orgchart.db")  # fallback
+        
+        return {
+            'path': db_path,
+            'enable_foreign_keys': settings.database.enable_foreign_keys,
+            'backup_enabled': settings.database.backup_enabled,
+            'backup_directory': Path(settings.database.backup_directory)
+        }
+    except ImportError:
+        # Fallback for when config is not available
+        logger.warning("Configuration not available, using default database settings")
+        return {
+            'path': Path("database/orgchart.db"),
+            'enable_foreign_keys': True,
+            'backup_enabled': True,
+            'backup_directory': Path("backups")
+        }
 
 class DatabaseManager:
     """Singleton database manager with connection pooling and foreign key enforcement"""
@@ -39,7 +69,9 @@ class DatabaseManager:
         if hasattr(self, '_initialized'):
             return
         
-        self.db_path = DATABASE_PATH
+        # Load configuration
+        self.config = _get_database_config()
+        self.db_path = self.config['path']
         self._connection_pool = Queue(maxsize=MAX_CONNECTIONS)
         self._pool_lock = threading.Lock()
         self._initialized = False
@@ -49,6 +81,9 @@ class DatabaseManager:
         self._initialized = True
         
         logger.info(f"DatabaseManager initialized with connection pool (max: {MAX_CONNECTIONS})")
+        logger.info(f"Database path: {self.db_path}")
+        logger.info(f"Foreign keys enabled: {self.config['enable_foreign_keys']}")
+        logger.info(f"Backup enabled: {self.config['backup_enabled']}")
     
     def ensure_database_directory(self):
         """Ensure database directory exists"""
@@ -81,8 +116,9 @@ class DatabaseManager:
             # Enable dict-like access to query results
             conn.row_factory = sqlite3.Row
             
-            # Enable foreign key constraints
-            conn.execute("PRAGMA foreign_keys = ON")
+            # Enable foreign key constraints based on configuration
+            if self.config['enable_foreign_keys']:
+                conn.execute("PRAGMA foreign_keys = ON")
             
             # Additional SQLite optimizations
             conn.execute("PRAGMA journal_mode = WAL")  # Write-Ahead Logging for better concurrency
@@ -152,8 +188,20 @@ class DatabaseManager:
                         pass
     
     def execute_query(self, query: str, params: tuple = None) -> sqlite3.Cursor:
-        """Execute a single query with proper error handling and logging"""
+        """Execute a single query with proper error handling, logging, and security validation"""
         try:
+            # Security validation
+            from app.security import SecureDatabaseOperations
+            
+            # Validate query safety
+            if not SecureDatabaseOperations.validate_query_safety(query):
+                logger.error(f"Potentially unsafe query detected: {query[:100]}...")
+                raise ValueError("Unsafe query pattern detected")
+            
+            # Sanitize parameters
+            if params:
+                params = SecureDatabaseOperations.sanitize_sql_params(params)
+            
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 if params:
@@ -172,8 +220,20 @@ class DatabaseManager:
             raise
     
     def fetch_one(self, query: str, params: tuple = None) -> Optional[sqlite3.Row]:
-        """Fetch single row with error handling"""
+        """Fetch single row with error handling and security validation"""
         try:
+            # Security validation
+            from app.security import SecureDatabaseOperations
+            
+            # Validate query safety
+            if not SecureDatabaseOperations.validate_query_safety(query):
+                logger.error(f"Potentially unsafe query detected: {query[:100]}...")
+                raise ValueError("Unsafe query pattern detected")
+            
+            # Sanitize parameters
+            if params:
+                params = SecureDatabaseOperations.sanitize_sql_params(params)
+            
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 if params:
@@ -193,8 +253,20 @@ class DatabaseManager:
             raise
     
     def fetch_all(self, query: str, params: tuple = None) -> List[sqlite3.Row]:
-        """Fetch all rows with error handling"""
+        """Fetch all rows with error handling and security validation"""
         try:
+            # Security validation
+            from app.security import SecureDatabaseOperations
+            
+            # Validate query safety
+            if not SecureDatabaseOperations.validate_query_safety(query):
+                logger.error(f"Potentially unsafe query detected: {query[:100]}...")
+                raise ValueError("Unsafe query pattern detected")
+            
+            # Sanitize parameters
+            if params:
+                params = SecureDatabaseOperations.sanitize_sql_params(params)
+            
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 if params:
