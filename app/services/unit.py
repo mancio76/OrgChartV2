@@ -124,20 +124,18 @@ class UnitService(BaseService):
         try:
             query = """
             SELECT u.*,
-                   ut.name as unit_type,
                    p.name as parent_name,
                    COUNT(DISTINCT c.id) as children_count,
                    COUNT(DISTINCT pja.id) as person_count
             FROM units u
-            JOIN unit_types ut ON u.unit_type_id = ut.id
             LEFT JOIN units p ON u.parent_unit_id = p.id
             LEFT JOIN units c ON c.parent_unit_id = u.id
             LEFT JOIN person_job_assignments pja ON pja.unit_id = u.id AND pja.is_current = 1
             WHERE u.parent_unit_id = ?
-            GROUP BY u.id, u.name, u.short_name, ut.name, u.parent_unit_id, 
+            GROUP BY u.id, u.name, u.short_name, u.unit_type_id, u.parent_unit_id, 
                      u.start_date, u.end_date, u.aliases, 
                      u.datetime_created, u.datetime_updated, p.name
-            ORDER BY ut.name, u.name
+            ORDER BY u.unit_type_id, u.name
             """
             rows = self.db_manager.fetch_all(query, (parent_id,))
             return [Unit.from_sqlite_row(row) for row in rows]
@@ -168,6 +166,7 @@ class UnitService(BaseService):
             )
             SELECT * FROM unit_tree ORDER BY path
             """
+            tree_query = "select * from get_complete_tree order by path"
             rows = self.db_manager.fetch_all(query)
             return [dict(row) for row in rows]
         except Exception as e:

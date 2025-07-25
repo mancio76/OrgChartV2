@@ -4,9 +4,9 @@ Unit model
 
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Optional, List
+from typing import Optional, List, Any
 from app.models.base import BaseModel, Alias, parse_aliases, serialize_aliases, ValidationError
-
+from app.models.assignment import Assignment
 
 @dataclass
 class Unit(BaseModel):
@@ -25,8 +25,12 @@ class Unit(BaseModel):
     children_count: int = field(default=0, init=False)
     person_count: int = field(default=0, init=False)
     level: int = field(default=0, init=False)
-    path: str = field(default="", init=False)
+    path: str = field(default="", init=True)
     full_path: str = field(default="", init=False)
+    short_path: str = field(default="", init=False)
+    unit_type: Optional[str] = field(default=None, init=True)
+    assignments: Optional[List[Assignment]] = field(default_factory=list, init=True)
+    children: Optional[List[Any]] = field(default_factory=list, init=True)
     
     def __post_init__(self):
         """Post-initialization validation"""
@@ -105,7 +109,11 @@ class Unit(BaseModel):
             'person_count': data.pop('person_count', 0),
             'level': data.pop('level', 0),
             'path': data.pop('path', ''),
-            'full_path': data.pop('full_path', '')
+            'full_path': data.pop('path', ''),
+            'short_path': data.pop('short_path', ''),
+            'unit_type': data.pop('unit_type', ''),
+            'assignments': data.pop('assignments', []),
+            'children': data.pop('children', [])
         }
         
         # Create instance with regular fields
