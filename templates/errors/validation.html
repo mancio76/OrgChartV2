@@ -1,27 +1,43 @@
 {% extends "base/layout.html" %}
 
-{% block title %}Errore del Server - Organigramma Manager{% endblock %}
+{% block title %}Errore di Validazione - Organigramma{% endblock %}
 
 {% block content %}
 <div class="error-container">
     <div class="error-content">
-        <div class="error-icon">⚠️</div>
-        <h1>500 - Errore del Server</h1>
-        <p>Si è verificato un errore interno del server. Ci scusiamo per l'inconveniente.</p>
+        <div class="error-icon">📝</div>
+        <h1>422 - Errore di Validazione</h1>
+        <p>I dati forniti non sono validi. Controlla i campi evidenziati e riprova.</p>
+        
+        {% if validation_errors %}
+        <div class="validation-errors">
+            <h3>Errori di validazione:</h3>
+            <ul class="error-list">
+                {% for error in validation_errors %}
+                <li>
+                    <strong>{{ error.field }}:</strong> {{ error.message }}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
         
         <div class="error-actions">
-            <a href="/" class="btn btn-primary">🏠 Torna alla Dashboard</a>
-            <button onclick="window.location.reload()" class="btn btn-secondary">🔄 Riprova</button>
-            <a href="javascript:history.back()" class="btn btn-secondary">← Indietro</a>
+            <button onclick="window.history.back()" class="btn btn-primary">
+                <i class="bi bi-arrow-left me-1"></i>Correggi i Dati
+            </button>
+            <a href="/" class="btn btn-secondary">
+                <i class="bi bi-house me-1"></i>Dashboard
+            </a>
         </div>
         
         <div class="error-help">
-            <h3>Cosa puoi fare:</h3>
+            <h3>Come risolvere:</h3>
             <ul>
-                <li>Riprova tra qualche minuto</li>
-                <li>Verifica la connessione internet</li>
-                <li>Contatta l'amministratore se il problema persiste</li>
-                <li>Torna alla dashboard per altre operazioni</li>
+                <li>Controlla che tutti i campi obbligatori siano compilati</li>
+                <li>Verifica il formato dei dati inseriti (email, date, numeri)</li>
+                <li>Assicurati che i valori rispettino i limiti indicati</li>
+                <li>Controlla che non ci siano caratteri speciali non consentiti</li>
             </ul>
         </div>
         
@@ -29,10 +45,9 @@
             <details>
                 <summary>Informazioni tecniche</summary>
                 <div class="tech-info">
-                    <p><strong>Errore:</strong> Internal Server Error (500)</p>
-                    <p><strong>ID Errore:</strong> {{ error_id if error_id else 'N/A' }}</p>
-                    <p><strong>Timestamp:</strong> {{ timestamp if timestamp else 'N/A' }}</p>
-                    <p><strong>Supporto:</strong> {{ support_message if support_message else 'Contatta l\'amministratore' }}</p>
+                    <p><strong>Errore:</strong> Validation Error (422)</p>
+                    <p><strong>ID Errore:</strong> {{ error_id }}</p>
+                    <p><strong>Timestamp:</strong> {{ timestamp }}</p>
                 </div>
             </details>
         </div>
@@ -49,7 +64,7 @@
 }
 
 .error-content {
-    max-width: 600px;
+    max-width: 700px;
     padding: 3rem;
     background: white;
     border-radius: 12px;
@@ -62,7 +77,7 @@
 }
 
 .error-content h1 {
-    color: #dc2626;
+    color: #f59e0b;
     font-size: 2.5rem;
     margin-bottom: 1rem;
 }
@@ -71,6 +86,36 @@
     color: #6b7280;
     font-size: 1.125rem;
     margin-bottom: 2rem;
+}
+
+.validation-errors {
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    text-align: left;
+}
+
+.validation-errors h3 {
+    color: #92400e;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.error-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.error-list li {
+    background: white;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+    border-left: 4px solid #f59e0b;
+    color: #92400e;
 }
 
 .error-actions {
@@ -82,20 +127,20 @@
 }
 
 .error-help {
-    background: #fef2f2;
+    background: #f0f9ff;
     padding: 1.5rem;
     border-radius: 8px;
     margin-top: 2rem;
-    border-left: 4px solid #f87171;
+    border-left: 4px solid #3b82f6;
 }
 
 .error-help h3 {
-    color: #991b1b;
+    color: #1e40af;
     margin-bottom: 1rem;
 }
 
 .error-help ul {
-    color: #7f1d1d;
+    color: #1e3a8a;
     text-align: left;
     list-style-position: inside;
 }

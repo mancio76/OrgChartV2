@@ -1,6 +1,6 @@
 {% extends "base/layout.html" %}
 
-{% block title %}Pagina non trovata - Organigramma Manager{% endblock %}
+{% block title %}Pagina non trovata - Organigramma{% endblock %}
 
 {% block content %}
 <div class="error-container">
@@ -9,19 +9,47 @@
         <h1>404 - Pagina non trovata</h1>
         <p>La pagina che stai cercando non esiste o è stata spostata.</p>
         
+        {% if requested_url %}
+        <div class="error-details">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>URL richiesto:</strong> {{ requested_url }}
+            </div>
+        </div>
+        {% endif %}
+        
         <div class="error-actions">
-            <a href="/" class="btn btn-primary">🏠 Torna alla Dashboard</a>
-            <a href="/employees" class="btn btn-secondary">👥 Vedi Dipendenti</a>
-            <a href="javascript:history.back()" class="btn btn-secondary">← Indietro</a>
+            <a href="/" class="btn btn-primary">
+                <i class="bi bi-house me-1"></i>Dashboard
+            </a>
+            <a href="/persons" class="btn btn-secondary">
+                <i class="bi bi-people me-1"></i>Persone
+            </a>
+            <a href="javascript:history.back()" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Indietro
+            </a>
         </div>
         
         <div class="error-help">
             <h3>Suggerimenti:</h3>
             <ul>
                 <li>Verifica l'URL nella barra degli indirizzi</li>
-                <li>Usa la ricerca per trovare dipendenti o funzioni</li>
+                <li>Usa la ricerca per trovare persone o unità</li>
                 <li>Controlla i link nella navigazione</li>
+                <li>Torna alla dashboard per accedere alle funzionalità principali</li>
             </ul>
+        </div>
+        
+        <div class="error-technical">
+            <details>
+                <summary>Informazioni tecniche</summary>
+                <div class="tech-info">
+                    <p><strong>Errore:</strong> Not Found (404)</p>
+                    <p><strong>ID Errore:</strong> {{ error_id if error_id else 'N/A' }}</p>
+                    <p><strong>Timestamp:</strong> {{ timestamp if timestamp else 'N/A' }}</p>
+                    <p><strong>URL:</strong> {{ requested_url if requested_url else 'N/A' }}</p>
+                </div>
+            </details>
         </div>
     </div>
 </div>
