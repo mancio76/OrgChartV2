@@ -93,6 +93,53 @@ class TestUnitType:
         assert len(errors) == 1
         assert errors[0].field == "name"
         assert errors[0].message == "Name is required"
+    
+    def test_unit_type_alias_management(self):
+        """Test UnitType alias management methods"""
+        unit_type = UnitType(name="Function")
+        
+        # Add alias
+        unit_type.add_alias("Funzione", "it-IT")
+        assert len(unit_type.aliases) == 1
+        assert unit_type.get_alias_by_language("it-IT") == "Funzione"
+        
+        # Add another alias for different language
+        unit_type.add_alias("Fonction", "fr-FR")
+        assert len(unit_type.aliases) == 2
+        
+        # Replace existing alias
+        unit_type.add_alias("Funzione Aziendale", "it-IT")
+        assert len(unit_type.aliases) == 2
+        assert unit_type.get_alias_by_language("it-IT") == "Funzione Aziendale"
+    
+    def test_unit_type_localized_name(self):
+        """Test UnitType localized name functionality"""
+        unit_type = UnitType(name="Function")
+        unit_type.add_alias("Funzione", "it-IT")
+        
+        # Should return alias for existing language
+        assert unit_type.get_localized_name("it-IT") == "Funzione"
+        
+        # Should return default name for non-existing language
+        assert unit_type.get_localized_name("fr-FR") == "Function"
+    
+    def test_unit_type_display_name(self):
+        """Test UnitType display_name property"""
+        unit_type = UnitType(name="Organizational Unit")
+        assert unit_type.display_name == "Organizational Unit"
+    
+    def test_unit_type_aliases_json_property(self):
+        """Test UnitType aliases_json property"""
+        unit_type = UnitType(
+            name="Function",
+            aliases=[Alias("Funzione", "it-IT"), Alias("Fonction", "fr-FR")]
+        )
+        
+        json_string = unit_type.aliases_json
+        assert "Funzione" in json_string
+        assert "it-IT" in json_string
+        assert "Fonction" in json_string
+        assert "fr-FR" in json_string
 
 
 class TestUnit:
@@ -169,6 +216,51 @@ class TestJobTitle:
         assert len(errors) == 1
         assert errors[0].field == "name"
         assert errors[0].message == "Name is required"
+    
+    def test_job_title_level_indicator(self):
+        """Test JobTitle level indicator property"""
+        test_cases = [
+            ("Chief Executive Officer", "C-Level"),
+            ("CTO", "C-Level"),
+            ("Head of Engineering", "Head"),
+            ("Engineering Manager", "Manager"),
+            ("Responsabile IT", "Manager"),
+            ("President", "Executive"),
+            ("Software Engineer", "Staff"),
+        ]
+        
+        for name, expected_level in test_cases:
+            job_title = JobTitle(name=name)
+            assert job_title.level_indicator == expected_level
+    
+    def test_job_title_alias_management(self):
+        """Test JobTitle alias management methods"""
+        job_title = JobTitle(name="Software Engineer")
+        
+        # Add alias
+        job_title.add_alias("Ingegnere Software", "it-IT")
+        assert len(job_title.aliases) == 1
+        assert job_title.get_alias_by_language("it-IT") == "Ingegnere Software"
+        
+        # Add another alias for different language
+        job_title.add_alias("Software-Ingenieur", "de-DE")
+        assert len(job_title.aliases) == 2
+        
+        # Replace existing alias
+        job_title.add_alias("Sviluppatore Software", "it-IT")
+        assert len(job_title.aliases) == 2
+        assert job_title.get_alias_by_language("it-IT") == "Sviluppatore Software"
+    
+    def test_job_title_localized_name(self):
+        """Test JobTitle localized name functionality"""
+        job_title = JobTitle(name="Software Engineer")
+        job_title.add_alias("Ingegnere Software", "it-IT")
+        
+        # Should return alias for existing language
+        assert job_title.get_localized_name("it-IT") == "Ingegnere Software"
+        
+        # Should return default name for non-existing language
+        assert job_title.get_localized_name("fr-FR") == "Software Engineer"
 
 
 class TestAssignment:
