@@ -1,0 +1,176 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "organigramma.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "organigramma.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.deployment.replicaCount }}
+  strategy:
+    type: {{ .Values.deployment.strategy.type }}
+    {{- if eq .Values.deployment.strategy.type "RollingUpdate" }}
+    rollingUpdate:
+      maxSurge: {{ .Values.deployment.strategy.rollingUpdate.maxSurge }}
+      maxUnavailable: {{ .Values.deployment.strategy.rollingUpdate.maxUnavailable }}
+    {{- end }}
+  selector:
+    matchLabels:
+      {{- include "organigramma.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "organigramma.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.deployment.securityContext | nindent 8 }}
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.server.port }}
+          protocol: TCP
+        env:
+        # Application configuration
+        - name: APP_TITLE
+          value: {{ .Values.app.title | quote }}
+        - name: APP_DESCRIPTION
+          value: {{ .Values.app.description | quote }}
+        - name: APP_VERSION
+          value: {{ .Values.app.version | quote }}
+        - name: ENVIRONMENT
+          value: {{ .Values.app.environment | quote }}
+        - name: TIMEZONE
+          value: {{ .Values.app.timezone | quote }}
+        
+        # Server configuration
+        - name: SERVER_HOST
+          value: {{ .Values.server.host | quote }}
+        - name: SERVER_PORT
+          value: {{ .Values.server.port | quote }}
+        - name: DEBUG
+          value: {{ .Values.server.debug | quote }}
+        - name: RELOAD
+          value: {{ .Values.server.reload | quote }}
+        - name: WORKERS
+          value: {{ .Values.server.workers | quote }}
+        - name: ACCESS_LOG
+          value: {{ .Values.server.accessLog | quote }}
+        
+        # Database configuration
+        - name: DATABASE_URL
+          value: {{ .Values.database.url | quote }}
+        - name: DATABASE_ENABLE_FOREIGN_KEYS
+          value: {{ .Values.database.enableForeignKeys | quote }}
+        - name: DATABASE_BACKUP_ENABLED
+          value: {{ .Values.database.backup.enabled | quote }}
+        - name: DATABASE_BACKUP_SCHEDULE
+          value: {{ .Values.database.backup.schedule | quote }}
+        - name: DATABASE_BACKUP_DIRECTORY
+          value: {{ .Values.database.backup.directory | quote }}
+        
+        # Logging configuration
+        - name: LOG_LEVEL
+          value: {{ .Values.logging.level | quote }}
+        - name: LOG_TO_CONSOLE
+          value: {{ .Values.logging.toConsole | quote }}
+        - name: LOG_TO_FILE
+          value: {{ .Values.logging.toFile | quote }}
+        - name: LOG_FILE_PATH
+          value: {{ .Values.logging.filePath | quote }}
+        - name: LOG_MAX_FILE_SIZE
+          value: {{ .Values.logging.maxFileSize | quote }}
+        - name: LOG_BACKUP_COUNT
+          value: {{ .Values.logging.backupCount | quote }}
+        - name: LOG_FORMAT
+          value: {{ .Values.logging.format | quote }}
+        
+        # Security configuration (non-sensitive)
+        - name: ALLOWED_HOSTS
+          value: {{ .Values.security.allowedHosts | quote }}
+        - name: CORS_ORIGINS
+          value: {{ .Values.security.corsOrigins | quote }}
+        - name: CSRF_PROTECTION
+          value: {{ .Values.security.csrfProtection | quote }}
+        - name: SECURE_COOKIES
+          value: {{ .Values.security.secureCookies | quote }}
+        - name: HTTPS_ONLY
+          value: {{ .Values.security.httpsOnly | quote }}
+        
+        # Sensitive configuration from secret
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "organigramma.fullname" . }}-secret
+              key: SECRET_KEY
+        
+        volumeMounts:
+        {{- if .Values.persistence.data.enabled }}
+        - name: data-volume
+          mountPath: {{ .Values.persistence.data.mountPath }}
+        {{- end }}
+        {{- if .Values.persistence.logs.enabled }}
+        - name: logs-volume
+          mountPath: {{ .Values.persistence.logs.mountPath }}
+        {{- end }}
+        {{- if .Values.persistence.backups.enabled }}
+        - name: backups-volume
+          mountPath: {{ .Values.persistence.backups.mountPath }}
+        {{- end }}
+        
+        resources:
+          {{- toYaml .Values.deployment.resources | nindent 12 }}
+        
+        {{- with .Values.deployment.livenessProbe }}
+        livenessProbe:
+          {{- toYaml . | nindent 12 }}
+        {{- end }}
+        
+        {{- with .Values.deployment.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 12 }}
+        {{- end }}
+        
+        {{- with .Values.deployment.startupProbe }}
+        startupProbe:
+          {{- toYaml . | nindent 12 }}
+        {{- end }}
+      
+      volumes:
+      {{- if .Values.persistence.data.enabled }}
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: {{ include "organigramma.fullname" . }}-data-pvc
+      {{- end }}
+      {{- if .Values.persistence.logs.enabled }}
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: {{ include "organigramma.fullname" . }}-logs-pvc
+      {{- end }}
+      {{- if .Values.persistence.backups.enabled }}
+      - name: backups-volume
+        persistentVolumeClaim:
+          claimName: {{ include "organigramma.fullname" . }}-backups-pvc
+      {{- end }}
+      
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

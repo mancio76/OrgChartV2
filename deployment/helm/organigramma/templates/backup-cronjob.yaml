@@ -1,0 +1,72 @@
+{{- if .Values.backup.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "organigramma.fullname" . }}-backup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "organigramma.labels" . | nindent 4 }}
+    component: backup
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  {{- if .Values.backup.timeZone }}
+  timeZone: {{ .Values.backup.timeZone | quote }}
+  {{- end }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "organigramma.selectorLabels" . | nindent 12 }}
+            component: backup
+        spec:
+          securityContext:
+            {{- toYaml .Values.deployment.securityContext | nindent 12 }}
+          containers:
+          - name: backup
+            image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+            imagePullPolicy: {{ .Values.image.pullPolicy }}
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting database backup..."
+              python scripts/backup_db.py create --compress
+              echo "Cleaning up old backups..."
+              python scripts/backup_db.py cleanup --retention-days {{ .Values.backup.retentionDays }} --max-backups {{ .Values.backup.maxBackups }}
+              echo "Backup completed successfully"
+            env:
+            - name: DATABASE_URL
+              value: {{ .Values.database.url | quote }}
+            - name: DATABASE_BACKUP_DIRECTORY
+              value: {{ .Values.database.backup.directory | quote }}
+            - name: ENVIRONMENT
+              value: {{ .Values.app.environment | quote }}
+            volumeMounts:
+            {{- if .Values.persistence.data.enabled }}
+            - name: data-volume
+              mountPath: {{ .Values.persistence.data.mountPath }}
+              readOnly: true
+            {{- end }}
+            {{- if .Values.persistence.backups.enabled }}
+            - name: backups-volume
+              mountPath: {{ .Values.persistence.backups.mountPath }}
+            {{- end }}
+            resources:
+              {{- toYaml .Values.backup.resources | nindent 14 }}
+          volumes:
+          {{- if .Values.persistence.data.enabled }}
+          - name: data-volume
+            persistentVolumeClaim:
+              claimName: {{ include "organigramma.fullname" . }}-data-pvc
+          {{- end }}
+          {{- if .Values.persistence.backups.enabled }}
+          - name: backups-volume
+            persistentVolumeClaim:
+              claimName: {{ include "organigramma.fullname" . }}-backups-pvc
+          {{- end }}
+          restartPolicy: OnFailure
+{{- end }}

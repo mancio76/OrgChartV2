@@ -1,0 +1,178 @@
+# Docker Compose configuration for Organigramma Web App
+# Supports development, testing, and production environments
+
+version: '3.8'
+
+services:
+  # =============================================================================
+  # Main application service
+  # =============================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: organigramma-app
+    restart: unless-stopped
+    ports:
+      - "${SERVER_PORT:-8000}:8000"
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8000
+      - DATABASE_URL=sqlite:///data/orgchart.db
+      - LOG_FILE_PATH=/app/logs/app.log
+      - DATABASE_BACKUP_DIRECTORY=/app/backups
+    volumes:
+      # Persistent data
+      - app_data:/app/data
+      - app_logs:/app/logs
+      - app_backups:/app/backups
+      # Static files (optional, for serving via nginx)
+      - app_static:/app/static
+    networks:
+      - organigramma_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - backup_scheduler
+
+  # =============================================================================
+  # Nginx reverse proxy (production)
+  # =============================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: organigramma-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/ssl:/etc/nginx/ssl:ro
+      - app_static:/var/www/static:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - organigramma_network
+    depends_on:
+      - app
+    profiles:
+      - production
+
+  # =============================================================================
+  # Database backup scheduler
+  # =============================================================================
+  backup_scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: organigramma-backup
+    restart: unless-stopped
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - DATABASE_URL=sqlite:///data/orgchart.db
+      - DATABASE_BACKUP_DIRECTORY=/app/backups
+    volumes:
+      - app_data:/app/data:ro
+      - app_backups:/app/backups
+    networks:
+      - organigramma_network
+    command: >
+      sh -c "
+        while true; do
+          echo 'Running scheduled backup...'
+          python scripts/backup_db.py create --compress
+          python scripts/backup_db.py cleanup --retention-days 30 --max-backups 10
+          echo 'Backup completed. Sleeping for 24 hours...'
+          sleep 86400
+        done
+      "
+    profiles:
+      - production
+
+  # =============================================================================
+  # Development service
+  # =============================================================================
+  app_dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: organigramma-dev
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - RELOAD=true
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8000
+    volumes:
+      # Mount source code for hot reload
+      - .:/app
+      - dev_data:/app/data
+      - dev_logs:/app/logs
+    networks:
+      - organigramma_network
+    profiles:
+      - development
+
+  # =============================================================================
+  # Testing service
+  # =============================================================================
+  app_test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: organigramma-test
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=sqlite:///data/test_orgchart.db
+    volumes:
+      - .:/app
+      - test_data:/app/data
+    networks:
+      - organigramma_network
+    command: ["python", "-m", "pytest", "tests/", "-v"]
+    profiles:
+      - testing
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  organigramma_network:
+    driver: bridge
+    name: organigramma_network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  # Production volumes
+  app_data:
+    name: organigramma_data
+  app_logs:
+    name: organigramma_logs
+  app_backups:
+    name: organigramma_backups
+  app_static:
+    name: organigramma_static
+  nginx_logs:
+    name: organigramma_nginx_logs
+  
+  # Development volumes
+  dev_data:
+    name: organigramma_dev_data
+  dev_logs:
+    name: organigramma_dev_logs
+  
+  # Testing volumes
+  test_data:
+    name: organigramma_test_data

@@ -1,0 +1,48 @@
+# Persistent Volume for database and logs
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: organigramma-data-pv
+  labels:
+    app: organigramma-web-app
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  hostPath:
+    path: /var/lib/organigramma/data
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: organigramma-logs-pv
+  labels:
+    app: organigramma-web-app
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  hostPath:
+    path: /var/lib/organigramma/logs
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: organigramma-backups-pv
+  labels:
+    app: organigramma-web-app
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  hostPath:
+    path: /var/lib/organigramma/backups

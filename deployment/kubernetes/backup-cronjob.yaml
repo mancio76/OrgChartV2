@@ -1,0 +1,78 @@
+# CronJob for automated database backups
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: organigramma-backup
+  namespace: organigramma
+  labels:
+    app: organigramma-web-app
+    component: backup
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  timeZone: "Europe/Rome"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: organigramma-web-app
+            component: backup
+        spec:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+          containers:
+          - name: backup
+            image: organigramma-web-app:latest
+            imagePullPolicy: Always
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting database backup..."
+              python scripts/backup_db.py create --compress
+              echo "Cleaning up old backups..."
+              python scripts/backup_db.py cleanup --retention-days 30 --max-backups 10
+              echo "Backup completed successfully"
+            env:
+            - name: DATABASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: organigramma-config
+                  key: DATABASE_URL
+            - name: DATABASE_BACKUP_DIRECTORY
+              valueFrom:
+                configMapKeyRef:
+                  name: organigramma-config
+                  key: DATABASE_BACKUP_DIRECTORY
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: organigramma-config
+                  key: ENVIRONMENT
+            volumeMounts:
+            - name: data-volume
+              mountPath: /app/data
+              readOnly: true
+            - name: backups-volume
+              mountPath: /var/backups/orgchart
+            resources:
+              requests:
+                memory: "128Mi"
+                cpu: "100m"
+              limits:
+                memory: "256Mi"
+                cpu: "200m"
+          volumes:
+          - name: data-volume
+            persistentVolumeClaim:
+              claimName: organigramma-data-pvc
+          - name: backups-volume
+            persistentVolumeClaim:
+              claimName: organigramma-backups-pvc
+          restartPolicy: OnFailure

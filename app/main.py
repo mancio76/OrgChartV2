@@ -19,7 +19,7 @@ from app.security import SecurityConfig, get_security_config
 from app.middleware.security import SecurityMiddleware, InputValidationMiddleware, SQLInjectionProtectionMiddleware
 from app.routes import (
     home, units, job_titles, persons, 
-    assignments, orgchart, api
+    assignments, orgchart, api, health
 )
 
 # Get configuration
@@ -124,6 +124,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # Include routes
+app.include_router(health.router, tags=["Health"])
 app.include_router(home.router, tags=["Home"])
 app.include_router(units.router, prefix="/units", tags=["Units"])
 app.include_router(job_titles.router, prefix="/job-titles", tags=["Job Titles"])

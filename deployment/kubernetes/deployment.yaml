@@ -1,0 +1,237 @@
+# Deployment for Organigramma Web App
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: organigramma-app
+  namespace: organigramma
+  labels:
+    app: organigramma-web-app
+    component: backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: organigramma-web-app
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: organigramma-web-app
+        component: backend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: organigramma-app
+        image: organigramma-web-app:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        # Load configuration from ConfigMap
+        - name: APP_TITLE
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: APP_TITLE
+        - name: APP_DESCRIPTION
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: APP_DESCRIPTION
+        - name: APP_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: APP_VERSION
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: ENVIRONMENT
+        - name: TIMEZONE
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: TIMEZONE
+        - name: SERVER_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: SERVER_HOST
+        - name: SERVER_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: SERVER_PORT
+        - name: DEBUG
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: DEBUG
+        - name: RELOAD
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: RELOAD
+        - name: WORKERS
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: WORKERS
+        - name: ACCESS_LOG
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: ACCESS_LOG
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: DATABASE_URL
+        - name: DATABASE_ENABLE_FOREIGN_KEYS
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: DATABASE_ENABLE_FOREIGN_KEYS
+        - name: DATABASE_BACKUP_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: DATABASE_BACKUP_ENABLED
+        - name: DATABASE_BACKUP_SCHEDULE
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: DATABASE_BACKUP_SCHEDULE
+        - name: DATABASE_BACKUP_DIRECTORY
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: DATABASE_BACKUP_DIRECTORY
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: LOG_LEVEL
+        - name: LOG_TO_CONSOLE
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: LOG_TO_CONSOLE
+        - name: LOG_TO_FILE
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: LOG_TO_FILE
+        - name: LOG_FILE_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: LOG_FILE_PATH
+        - name: LOG_MAX_FILE_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: LOG_MAX_FILE_SIZE
+        - name: LOG_BACKUP_COUNT
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: LOG_BACKUP_COUNT
+        - name: LOG_FORMAT
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: LOG_FORMAT
+        - name: ALLOWED_HOSTS
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: ALLOWED_HOSTS
+        - name: CORS_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: CORS_ORIGINS
+        - name: CSRF_PROTECTION
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: CSRF_PROTECTION
+        - name: SECURE_COOKIES
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: SECURE_COOKIES
+        - name: HTTPS_ONLY
+          valueFrom:
+            configMapKeyRef:
+              name: organigramma-config
+              key: HTTPS_ONLY
+        # Load sensitive configuration from Secret
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: organigramma-secret
+              key: SECRET_KEY
+        volumeMounts:
+        - name: data-volume
+          mountPath: /app/data
+        - name: logs-volume
+          mountPath: /var/log/orgchart
+        - name: backups-volume
+          mountPath: /var/backups/orgchart
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /api/health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: organigramma-data-pvc
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: organigramma-logs-pvc
+      - name: backups-volume
+        persistentVolumeClaim:
+          claimName: organigramma-backups-pvc
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

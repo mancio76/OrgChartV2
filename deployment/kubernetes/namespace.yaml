@@ -1,0 +1,8 @@
+# Kubernetes namespace for Organigramma Web App
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: organigramma
+  labels:
+    app: organigramma-web-app
+    environment: production

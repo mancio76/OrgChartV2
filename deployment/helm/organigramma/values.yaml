@@ -1,0 +1,193 @@
+# Default values for organigramma
+# This is a YAML-formatted file.
+
+# Application configuration
+app:
+  name: organigramma-web-app
+  title: "Organigramma Web App"
+  description: "Sistema di gestione organigramma aziendale con storicizzazione"
+  version: "1.0.0"
+  environment: production
+  timezone: "Europe/Rome"
+
+# Image configuration
+image:
+  repository: organigramma-web-app
+  tag: latest
+  pullPolicy: Always
+  pullSecrets: []
+
+# Deployment configuration
+deployment:
+  replicaCount: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  
+  # Resource limits
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  # Health checks
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /api/health
+      port: 8000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  
+  startupProbe:
+    httpGet:
+      path: /api/health
+      port: 8000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: organigramma.yourdomain.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: organigramma-tls
+      hosts:
+        - organigramma.yourdomain.com
+
+# Persistent storage configuration
+persistence:
+  data:
+    enabled: true
+    storageClass: "local-storage"
+    accessMode: ReadWriteOnce
+    size: 10Gi
+    mountPath: /app/data
+  
+  logs:
+    enabled: true
+    storageClass: "local-storage"
+    accessMode: ReadWriteOnce
+    size: 5Gi
+    mountPath: /var/log/orgchart
+  
+  backups:
+    enabled: true
+    storageClass: "local-storage"
+    accessMode: ReadWriteOnce
+    size: 20Gi
+    mountPath: /var/backups/orgchart
+
+# Server configuration
+server:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  reload: false
+  workers: 4
+  accessLog: true
+
+# Database configuration
+database:
+  url: "sqlite:///data/orgchart.db"
+  enableForeignKeys: true
+  backup:
+    enabled: true
+    schedule: "daily"
+    directory: "/var/backups/orgchart"
+
+# Logging configuration
+logging:
+  level: "WARNING"
+  toConsole: true
+  toFile: true
+  filePath: "/var/log/orgchart/app.log"
+  maxFileSize: 52428800
+  backupCount: 10
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# Security configuration
+security:
+  # Secret key - MUST be overridden in production
+  secretKey: "CHANGE_THIS_IN_PRODUCTION_TO_A_SECURE_64_CHARACTER_KEY"
+  allowedHosts: "organigramma.yourdomain.com"
+  corsOrigins: "https://organigramma.yourdomain.com"
+  csrfProtection: true
+  secureCookies: true
+  httpsOnly: true
+
+# Backup CronJob configuration
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  timeZone: "Europe/Rome"
+  retentionDays: 30
+  maxBackups: 10
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# Node selector and tolerations
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: false
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80

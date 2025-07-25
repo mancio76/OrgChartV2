@@ -1,0 +1,160 @@
+{
+  "family": "organigramma-web-app",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/organigramma-task-role",
+  "containerDefinitions": [
+    {
+      "name": "organigramma-app",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/organigramma-web-app:latest",
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "ENVIRONMENT",
+          "value": "production"
+        },
+        {
+          "name": "SERVER_HOST",
+          "value": "0.0.0.0"
+        },
+        {
+          "name": "SERVER_PORT",
+          "value": "8000"
+        },
+        {
+          "name": "DEBUG",
+          "value": "false"
+        },
+        {
+          "name": "WORKERS",
+          "value": "4"
+        },
+        {
+          "name": "DATABASE_URL",
+          "value": "sqlite:///data/orgchart.db"
+        },
+        {
+          "name": "DATABASE_ENABLE_FOREIGN_KEYS",
+          "value": "true"
+        },
+        {
+          "name": "DATABASE_BACKUP_ENABLED",
+          "value": "true"
+        },
+        {
+          "name": "LOG_LEVEL",
+          "value": "WARNING"
+        },
+        {
+          "name": "LOG_TO_CONSOLE",
+          "value": "true"
+        },
+        {
+          "name": "LOG_TO_FILE",
+          "value": "true"
+        },
+        {
+          "name": "CSRF_PROTECTION",
+          "value": "true"
+        },
+        {
+          "name": "SECURE_COOKIES",
+          "value": "true"
+        },
+        {
+          "name": "HTTPS_ONLY",
+          "value": "true"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:organigramma/secret-key"
+        },
+        {
+          "name": "ALLOWED_HOSTS",
+          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:organigramma/allowed-hosts"
+        }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "organigramma-data",
+          "containerPath": "/app/data",
+          "readOnly": false
+        },
+        {
+          "sourceVolume": "organigramma-logs",
+          "containerPath": "/var/log/orgchart",
+          "readOnly": false
+        },
+        {
+          "sourceVolume": "organigramma-backups",
+          "containerPath": "/var/backups/orgchart",
+          "readOnly": false
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/organigramma-web-app",
+          "awslogs-region": "REGION",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:8000/api/health || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ],
+  "volumes": [
+    {
+      "name": "organigramma-data",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "fs-XXXXXXXXX",
+        "rootDirectory": "/data",
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+          "accessPointId": "fsap-XXXXXXXXX"
+        }
+      }
+    },
+    {
+      "name": "organigramma-logs",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "fs-XXXXXXXXX",
+        "rootDirectory": "/logs",
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+          "accessPointId": "fsap-YYYYYYYYY"
+        }
+      }
+    },
+    {
+      "name": "organigramma-backups",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "fs-XXXXXXXXX",
+        "rootDirectory": "/backups",
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+          "accessPointId": "fsap-ZZZZZZZZZ"
+        }
+      }
+    }
+  ]
+}
