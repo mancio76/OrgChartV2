@@ -59,8 +59,8 @@
                             
                             <dt class="col-sm-4">Tipo:</dt>
                             <dd class="col-sm-8">
-                                <span class="badge bg-{{ 'primary' if unit.unit_type == 'Function' else 'info' }}">
-                                    {{ 'Funzione' if unit.unit_type == 'Function' else 'Unità Organizzativa' }}
+                                <span class="badge bg-{{ 'primary' if unit.unit_type.lower() == 'function' else 'info' }}">
+                                    {{ unit.unit_type }}
                                 </span>
                             </dd>
                             
@@ -143,12 +143,22 @@
                             </tr>
                         </thead>
                         <tbody>
+                            {% if unit.assignments %}
+                            {% for assignment in unit.assignments %}
+                            <tr>
+                                <td colspan="1" class="text-center text-muted">
+                                    test1
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
                             <!-- This would be populated by assignments data from the route -->
                             <tr>
                                 <td colspan="6" class="text-center text-muted">
                                     <i>Dati incarichi da implementare nel route</i>
                                 </td>
                             </tr>
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>

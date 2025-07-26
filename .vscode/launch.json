@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Current File",
+            "name": "Python Run",
             "type": "debugpy",
             "request": "launch",
-            "program": "${file}",
+            "program": "run.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
@@ -17,6 +17,13 @@
                 "RUN_DEBUG": "true",
                 "RUN_LOG_LEVEL": "debug"
             }
+        },
+        {
+            "type": "firefox",
+            "request": "launch",
+            "name": "Firefox Run",
+            "url": "http://localhost:8000",
+            "webRoot": "${workspaceFolder}/app"
         }
     ]
 }

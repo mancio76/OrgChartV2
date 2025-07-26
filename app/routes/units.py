@@ -31,7 +31,8 @@ def get_unit_type_service():
 async def list_units(
     request: Request,
     search: Optional[str] = None,
-    unit_service: UnitService = Depends(get_unit_service)
+    unit_service: UnitService = Depends(get_unit_service),
+    unit_type_service: UnitTypeService = Depends(get_unit_type_service)
 ):
     """List all units"""
     try:
@@ -40,6 +41,9 @@ async def list_units(
         else:
             units = unit_service.get_all()
         
+        for unit in units:
+            unit.unit_type = unit_type_service.get_by_id(unit.unit_type_id).name
+
         return templates.TemplateResponse(
             "units/list.html",
             {
@@ -64,11 +68,13 @@ async def unit_detail(
     """Show unit details"""
     try:
         unit = unit_service.get_by_id(unit_id)
-        type = unit_type_service.get_by_id(unit.unit_type_id)
 
         if not unit:
             raise HTTPException(status_code=404, detail="Unit not found")
         
+        type = unit_type_service.get_by_id(unit.unit_type_id)
+        unit.unit_type = type.name;
+
         # Get children units
         children = unit_service.get_children(unit_id)
         
@@ -82,8 +88,8 @@ async def unit_detail(
             {
                 "request": request,
                 "unit": unit,
-                "type": type.name,
-                "unit_type": type.name,
+                #"type": type.name,
+                #"unit_type": type.name,
                 "children": children,
                 "parent": parent,
                 "page_title": f"Unit: {unit.name}"

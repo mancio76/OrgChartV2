@@ -19,19 +19,22 @@ class UnitService(BaseService):
     def get_list_query(self) -> str:
         """Get query for listing all units with computed fields"""
         return """
-        SELECT u.*,
-               p.name as parent_name,
-               COUNT(DISTINCT c.id) as children_count,
-               COUNT(DISTINCT pja.id) as person_count
-        FROM units u
-        LEFT JOIN units p ON u.parent_unit_id = p.id
-        LEFT JOIN units c ON c.parent_unit_id = u.id
-        LEFT JOIN person_job_assignments pja ON pja.unit_id = u.id AND pja.is_current = 1
-        GROUP BY u.id, u.name, u.short_name, u.unit_type_id, u.parent_unit_id, 
-                 u.start_date, u.end_date, u.aliases, 
-                 u.datetime_created, u.datetime_updated, p.name
-        ORDER BY u.unit_type_id, u.name
-        """
+        SELECT * FROM unit_get_list_query
+        """ 
+        # """
+        # SELECT u.*,
+        #        p.name as parent_name,
+        #        COUNT(DISTINCT c.id) as children_count,
+        #        COUNT(DISTINCT pja.id) as person_count
+        # FROM units u
+        # LEFT JOIN units p ON u.parent_unit_id = p.id
+        # LEFT JOIN units c ON c.parent_unit_id = u.id
+        # LEFT JOIN person_job_assignments pja ON pja.unit_id = u.id AND pja.is_current = 1
+        # GROUP BY u.id, u.name, u.short_name, u.unit_type_id, u.parent_unit_id, 
+        #          u.start_date, u.end_date, u.aliases, 
+        #          u.datetime_created, u.datetime_updated, p.name
+        # ORDER BY u.unit_type_id, u.name
+        # """
     
     def get_by_id_query(self) -> str:
         """Get query for fetching single unit by ID"""
