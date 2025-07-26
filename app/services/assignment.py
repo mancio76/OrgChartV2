@@ -10,7 +10,6 @@ from app.models.assignment import Assignment
 
 logger = logging.getLogger(__name__)
 
-
 class AssignmentService(BaseService):
     """Assignment service class with versioning support"""
     

@@ -8,8 +8,13 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from typing import Optional
 import logging
 from datetime import date
+
 from app.services.unit import UnitService
 from app.services.unit_type import UnitTypeService
+from app.services.assignment import AssignmentService
+from app.services.person import PersonService
+from app.services.job_title import JobTitleService
+
 from app.models.unit import Unit
 from app.models.base import Alias, ModelValidationException
 from app.security import InputValidator, SecurityValidationError, get_client_ip, log_security_event
@@ -26,6 +31,17 @@ def get_unit_service():
 def get_unit_type_service():
     return UnitTypeService()
 
+
+def get_assignment_service():
+    return AssignmentService()
+
+
+def get_job_title_service():
+    return JobTitleService()
+
+
+def get_person_service():
+    return PersonService()
 
 @router.get("/", response_class=HTMLResponse)
 async def list_units(
@@ -63,7 +79,10 @@ async def unit_detail(
     request: Request,
     unit_id: int,
     unit_service: UnitService = Depends(get_unit_service),
-    unit_type_service: UnitTypeService = Depends(get_unit_type_service)
+    unit_type_service: UnitTypeService = Depends(get_unit_type_service),
+    assignment_service: AssignmentService = Depends(get_assignment_service),
+    jobtitle_service: JobTitleService = Depends(get_job_title_service),
+    person_service: PersonService = Depends(get_person_service)
 ):
     """Show unit details"""
     try:
@@ -77,6 +96,20 @@ async def unit_detail(
 
         # Get children units
         children = unit_service.get_children(unit_id)
+        assignments = assignment_service.get_current_assignments_by_unit(unit_id)
+        if assignments:
+            for assignment in assignments:
+                assignment.unit_name = unit.name
+                assignment.unit_short_name = unit.short_name
+                person = person_service.get_by_id(assignment.person_id)
+                if person:
+                    assignment.person_name = person.name
+                    assignment.person_short_name = person.short_name
+
+                job_title = jobtitle_service.get_by_id(assignment.job_title_id)
+                if job_title:
+                    assignment.job_title_name = job_title.name
+                    assignment.job_title_short_name = job_title.short_name
         
         # Get parent unit if exists
         parent = None
@@ -89,7 +122,7 @@ async def unit_detail(
                 "request": request,
                 "unit": unit,
                 #"type": type.name,
-                #"unit_type": type.name,
+                "assignments": assignments,
                 "children": children,
                 "parent": parent,
                 "page_title": f"Unit: {unit.name}"
