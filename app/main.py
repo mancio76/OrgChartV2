@@ -164,6 +164,10 @@ async def server_error_handler(request: Request, exc):
         status_code=500
     )
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return StaticFiles(directory="static").file_response("/img/favicon.ico")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(

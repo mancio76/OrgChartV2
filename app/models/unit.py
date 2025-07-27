@@ -29,8 +29,8 @@ class Unit(BaseModel):
     # These come from units_types view and other joins
     unit_name: Optional[str] = field(default=None, init=False)  # From units_types view
     unit_short_name: Optional[str] = field(default=None, init=False)  # From units_types view
-    unit_type: Optional[str] = field(default=None, init=False)  # unit_types.name
-    unit_type_short: Optional[str] = field(default=None, init=False)  # unit_types.short_name
+    unit_type: Optional[str] = field(default=None, init=True)  # unit_types.name
+    unit_type_short: Optional[str] = field(default=None, init=True)  # unit_types.short_name
     unit_aliases: Optional[str] = field(default=None, init=False)  # From units_types view
     parent_name: Optional[str] = field(default=None, init=False)
     children_count: int = field(default=0, init=False)
@@ -40,8 +40,8 @@ class Unit(BaseModel):
     full_path: str = field(default="", init=False)
     full_short_path: str = field(default="", init=False)
     short_path: str = field(default="", init=False)
-    assignments: Optional[List[Assignment]] = field(default_factory=list, init=False)
-    children: Optional[List[Any]] = field(default_factory=list, init=False)
+    assignments: Optional[List[Assignment]] = field(default_factory=list, init=True)
+    children: Optional[List[Any]] = field(default_factory=list, init=True)
     
     def __post_init__(self):
         """Post-initialization validation"""

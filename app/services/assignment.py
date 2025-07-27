@@ -15,7 +15,69 @@ class AssignmentService(BaseService):
     
     def __init__(self):
         super().__init__(Assignment, "person_job_assignments")
+
+    def _get_next_version(self, person_id: int, unit_id: int, job_title_id: int) -> int:
+        """Get next version number for assignment combination"""
+        
+        query = """
+        SELECT COALESCE(MAX(version), 0) + 1 as next_version
+        FROM person_job_assignments
+        WHERE person_id = ? AND unit_id = ? AND job_title_id = ?
+        """
+        
+        result = self.db_manager.fetch_one(query, (person_id, unit_id, job_title_id))
+        return result['next_version'] if result else 1
+
+    def _deactivate_previous_assignments(self, person_id: int, unit_id: int, job_title_id: int, valid_from: date):
+        """Deactivate previous current assignments"""
+        
+        update_query = """
+        UPDATE person_job_assignments
+        SET is_current = 0, 
+            valid_to = ?
+        WHERE person_id = ? AND unit_id = ? AND job_title_id = ? 
+          AND is_current = 1
+        """
+        
+        self.db_manager.execute_query(update_query, (
+            valid_from.isoformat(),
+            person_id,
+            unit_id, 
+            job_title_id
+        ))
     
+    def _create_new_version(self, assignment: Assignment) -> Assignment:
+        """Create new version of existing assignment"""
+        # Set current assignment as historical
+        assignment.is_current = True  # New version will be current
+        assignment.id = None  # Will get new ID
+        assignment.version = None  # Will be set by create_assignment
+        
+        return self.create_assignment(assignment)
+    
+    def _update_historical(self, assignment: Assignment) -> Assignment:
+        """Update historical (non-current) assignment"""
+        
+        update_query = """
+        UPDATE person_job_assignments
+        SET percentage = ?, is_ad_interim = ?, is_unit_boss = ?,
+            notes = ?, flags = ?, valid_from = ?, valid_to = ?
+        WHERE id = ? AND is_current = 0
+        """
+        
+        self.db_manager.execute_query(update_query, (
+            assignment.percentage,
+            assignment.is_ad_interim,
+            assignment.is_unit_boss,
+            assignment.notes,
+            assignment.flags,
+            assignment.valid_from.isoformat() if assignment.valid_from else None,
+            assignment.valid_to.isoformat() if assignment.valid_to else None,
+            assignment.id
+        ))
+        
+        return assignment
+
     def get_list_query(self) -> str:
         """Get query for listing all assignments with joined data"""
         return """
@@ -234,7 +296,7 @@ class AssignmentService(BaseService):
             logger.error(f"Error fetching historical assignments: {e}")
             return []
     
-    def create_assignment(self, assignment: Assignment) -> Assignment:
+    def create_assignment_old(self, assignment: Assignment) -> Assignment:
         """Create new assignment with automatic version assignment (version=1, is_current=true)"""
         try:
             # Validate assignment
@@ -281,8 +343,74 @@ class AssignmentService(BaseService):
             logger.error(f"Error creating assignment: {e}")
             raise
     
-    def modify_assignment(self, person_id: int, unit_id: int, job_title_id: int, 
-                         new_assignment_data: Assignment) -> Assignment:
+    def create_assignment(self, assignment: Assignment) -> Assignment:
+        """Create new assignment with proper versioning"""
+        #db_manager = get_db_manager()
+        
+        try:
+            with self.db_manager.get_connection() as conn:
+                # Start transaction
+                conn.execute("BEGIN TRANSACTION")
+                
+                # 1. Get next version number
+                next_version = self._get_next_version(
+                    assignment.person_id, 
+                    assignment.unit_id, 
+                    assignment.job_title_id
+                )
+                assignment.version = next_version
+                
+                # 2. If this is a current assignment, deactivate previous ones
+                if assignment.is_current:
+                    self._deactivate_previous_assignments(
+                        assignment.person_id,
+                        assignment.unit_id, 
+                        assignment.job_title_id,
+                        assignment.valid_from or date.today()
+                    )
+                
+                # 3. Insert new assignment
+                insert_query = """
+                INSERT INTO person_job_assignments 
+                (person_id, unit_id, job_title_id, version, percentage, 
+                 is_ad_interim, is_unit_boss, notes, flags, valid_from, 
+                 valid_to, is_current)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """
+                
+                cursor = conn.execute(insert_query, (
+                    assignment.person_id,
+                    assignment.unit_id,
+                    assignment.job_title_id,
+                    assignment.version,
+                    assignment.percentage,
+                    assignment.is_ad_interim,
+                    assignment.is_unit_boss,
+                    assignment.notes,
+                    assignment.flags,
+                    assignment.valid_from.isoformat() if assignment.valid_from else None,
+                    assignment.valid_to.isoformat() if assignment.valid_to else None,
+                    assignment.is_current
+                ))
+                
+                assignment.id = cursor.lastrowid
+                
+                # Commit transaction
+                conn.execute("COMMIT")
+                
+                logger.info(f"Created assignment {assignment.id} version {assignment.version}")
+                return assignment
+                
+        except Exception as e:
+            # Rollback on error
+            try:
+                conn.execute("ROLLBACK")
+            except:
+                pass
+            logger.error(f"Failed to create assignment: {e}")
+            raise
+
+    def modify_assignment_old(self, person_id: int, unit_id: int, job_title_id: int, new_assignment_data: Assignment) -> Assignment:
         """Create new version of existing assignment with version increment logic"""
         try:
             # Find current assignment
@@ -329,7 +457,37 @@ class AssignmentService(BaseService):
             logger.error(f"Error modifying assignment: {e}")
             raise
     
-    def terminate_assignment(self, assignment_id: int, termination_date: date = None) -> bool:
+    def _modify_assignment(self, assignment: Assignment) -> Assignment:
+        """Update assignment - creates new version if current"""
+        if assignment.is_current:
+            # For current assignments, create new version instead of updating
+            return self._create_new_version(assignment)
+        else:
+            # For historical assignments, allow direct update
+            return self._update_historical(assignment)
+
+    def modify_assignment(self, person_id: int, unit_id: int, job_title_id: int, new_assignment_data: Assignment) -> Assignment:
+        # Validate new assignment data
+        errors = new_assignment_data.validate()
+        if errors:
+            from app.models.base import ModelValidationException
+            raise ModelValidationException(errors)
+
+        # Validate foreign key references
+        self._validate_for_create(new_assignment_data)
+
+        old_assignment = self._get_current_assignment(
+            person_id, 
+            unit_id, 
+            job_title_id
+        )
+
+        if not old_assignment:
+            raise ValueError(f"No current assignment found for person {person_id}, unit {unit_id}, job_title {job_title_id}")
+
+        return self._modify_assignment(new_assignment_data);
+
+    def terminate_assignment_old(self, assignment_id: int, termination_date: date = None) -> bool:
         """Terminate a current assignment with valid_to dates and is_current=false"""
         try:
             if termination_date is None:
@@ -365,7 +523,28 @@ class AssignmentService(BaseService):
         except Exception as e:
             logger.error(f"Error terminating assignment {assignment_id}: {e}")
             raise
-    
+
+    def terminate_assignment(self, assignment_id: int, termination_date: date = None) -> Assignment:
+        """Terminate an assignment"""
+        #db_manager = get_db_manager()
+        
+        if not termination_date:
+            termination_date = date.today()
+        
+        update_query = """
+        UPDATE person_job_assignments 
+        SET valid_to = ?, is_current = 0, datetime_updated = CURRENT_TIMESTAMP
+        WHERE id = ? AND is_current = 1
+        """
+        
+        self.db_manager.execute_query(update_query, (
+            termination_date.isoformat(),
+            assignment_id
+        ))
+        
+        # Return updated assignment
+        return self.get_by_id(assignment_id)
+
     def terminate_assignment_by_combination(self, person_id: int, unit_id: int, job_title_id: int, 
                                           termination_date: date = None) -> bool:
         """Terminate current assignment by person/unit/job_title combination"""
@@ -495,8 +674,8 @@ class AssignmentService(BaseService):
             total_percentage = self.db_manager.fetch_one("""
                 SELECT SUM(percentage) as total
                 FROM person_job_assignments
-                WHERE person_id = ? AND is_current = 1
-            """, (assignment.person_id,))
+                WHERE id != ? AND person_id = ? AND is_current = 1
+            """, (assignment.id, assignment.person_id,))
             
             if total_percentage and total_percentage['total']:
                 current_total = float(total_percentage['total']) + assignment.percentage
@@ -579,8 +758,6 @@ class AssignmentService(BaseService):
         except Exception as e:
             logger.error(f"Error fetching current assignment: {e}")
             return None
-    
-
     
     def _validate_version_consistency(self, person_id: int, unit_id: int, job_title_id: int) -> List[str]:
         """Validate version consistency for an assignment combination"""
