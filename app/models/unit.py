@@ -27,8 +27,9 @@ class Unit(BaseModel):
     level: int = field(default=0, init=False)
     path: str = field(default="", init=True)
     full_path: str = field(default="", init=False)
-    short_path: str = field(default="", init=False)
+    full_short_path: str = field(default="", init=False)
     unit_type: Optional[str] = field(default=None, init=True)
+    unit_short_type: Optional[str] = field(default=None, init=True)
     assignments: Optional[List[Assignment]] = field(default_factory=list, init=True)
     children: Optional[List[Any]] = field(default_factory=list, init=True)
     
@@ -110,8 +111,9 @@ class Unit(BaseModel):
             'level': data.pop('level', 0),
             'path': data.pop('path', ''),
             'full_path': data.pop('path', ''),
-            'short_path': data.pop('short_path', ''),
+            'full_short_path': data.pop('full_short_path', ''),
             'unit_type': data.pop('unit_type', ''),
+            'unit_short_type': data.pop('unit_short_type', ''),
             'assignments': data.pop('assignments', []),
             'children': data.pop('children', [])
         }
