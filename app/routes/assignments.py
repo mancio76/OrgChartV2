@@ -126,48 +126,6 @@ async def list_assignments(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{assignment_id}", response_class=HTMLResponse)
-async def assignment_detail(
-    request: Request,
-    assignment_id: int,
-    assignment_service: AssignmentService = Depends(get_assignment_service)
-):
-    """Show assignment details with version history"""
-    try:
-        assignment = assignment_service.get_by_id(assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Incarico non trovato")
-        
-        # Get version history for this assignment combination
-        version_history = assignment_service.get_assignment_history(
-            assignment.person_id, assignment.unit_id, assignment.job_title_id
-        )
-        
-        # Get business rule validation warnings
-        warnings = assignment_service.validate_assignment_rules(assignment)
-        
-        return templates.TemplateResponse(
-            "assignments/detail.html",
-            {
-                "request": request,
-                "assignment": assignment,
-                "version_history": version_history,
-                "warnings": warnings,
-                "page_title": f"Incarico: {assignment.person_name} - {assignment.job_title_name}",
-                "page_icon": "person-badge",
-                "breadcrumb": [
-                    {"name": "Incarichi", "url": "/assignments"},
-                    {"name": f"{assignment.person_name} - {assignment.job_title_name}"}
-                ]
-            }
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error showing assignment {assignment_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @router.get("/new", response_class=HTMLResponse)
 async def create_assignment_form(
     request: Request,
@@ -297,210 +255,6 @@ async def create_assignment(
         )
     except Exception as e:
         logger.error(f"Error creating assignment: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/{assignment_id}/edit", response_class=HTMLResponse)
-async def edit_assignment_form(
-    request: Request,
-    assignment_id: int,
-    assignment_service: AssignmentService = Depends(get_assignment_service),
-    person_service: PersonService = Depends(get_person_service),
-    unit_service: UnitService = Depends(get_unit_service),
-    job_title_service: JobTitleService = Depends(get_job_title_service)
-):
-    """Show edit assignment form (creates new version)"""
-    try:
-        assignment = assignment_service.get_by_id(assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Incarico non trovato")
-        
-        # Get all options for dropdowns
-        all_persons = person_service.get_all()
-        all_units = unit_service.get_all()
-        all_job_titles = job_title_service.get_all()
-        
-        # Get version history
-        version_history = assignment_service.get_assignment_history(
-            assignment.person_id, assignment.unit_id, assignment.job_title_id
-        )
-        
-        return templates.TemplateResponse(
-            "assignments/edit.html",
-            {
-                "request": request,
-                "assignment": assignment,
-                "all_persons": all_persons,
-                "all_units": all_units,
-                "all_job_titles": all_job_titles,
-                "version_history": version_history,
-                "page_title": f"Modifica Incarico: {assignment.person_name} - {assignment.job_title_name}",
-                "page_icon": "person-gear",
-                "breadcrumb": [
-                    {"name": "Incarichi", "url": "/assignments"},
-                    {"name": f"{assignment.person_name} - {assignment.job_title_name}", "url": f"/assignments/{assignment_id}"},
-                    {"name": "Modifica"}
-                ]
-            }
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error loading edit form for assignment {assignment_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/{assignment_id}/edit")
-async def update_assignment(
-    request: Request,
-    assignment_id: int,
-    person_id: int = Form(...),
-    unit_id: int = Form(...),
-    job_title_id: int = Form(...),
-    percentage: float = Form(...),
-    is_ad_interim: bool = Form(False),
-    is_unit_boss: bool = Form(False),
-    notes: Optional[str] = Form(None),
-    flags: Optional[str] = Form(None),
-    valid_from: Optional[str] = Form(None),
-    assignment_service: AssignmentService = Depends(get_assignment_service),
-    person_service: PersonService = Depends(get_person_service),
-    unit_service: UnitService = Depends(get_unit_service),
-    job_title_service: JobTitleService = Depends(get_job_title_service)
-):
-    """Update assignment (creates new version)"""
-    try:
-        # Get existing assignment
-        existing_assignment = assignment_service.get_by_id(assignment_id)
-        if not existing_assignment:
-            raise HTTPException(status_code=404, detail="Incarico non trovato")
-        
-        # Parse date
-        valid_from_parsed = None
-        if valid_from:
-            try:
-                valid_from_parsed = date.fromisoformat(valid_from)
-            except ValueError:
-                pass
-        
-        # Create new assignment (will create new version)
-        new_assignment = Assignment(
-            person_id=person_id,
-            unit_id=unit_id,
-            job_title_id=job_title_id,
-            percentage=percentage / 100.0,  # Convert percentage to decimal
-            is_ad_interim=is_ad_interim,
-            is_unit_boss=is_unit_boss,
-            notes=notes.strip() if notes else None,
-            flags=flags.strip() if flags else None,
-            valid_from=valid_from_parsed,
-            is_current=True
-        )
-        
-        # Create new version
-        updated_assignment = assignment_service.create_or_update_assignment(new_assignment)
-        
-        return RedirectResponse(
-            url=f"/assignments/{updated_assignment.id}",
-            status_code=303
-        )
-        
-    except ModelValidationException as e:
-        # Show form again with errors
-        assignment = assignment_service.get_by_id(assignment_id)
-        all_persons = person_service.get_all()
-        all_units = unit_service.get_all()
-        all_job_titles = job_title_service.get_all()
-        version_history = assignment_service.get_assignment_history(
-            assignment.person_id, assignment.unit_id, assignment.job_title_id
-        )
-        form_data = await request.form()
-        
-        return templates.TemplateResponse(
-            "assignments/edit.html",
-            {
-                "request": request,
-                "assignment": assignment,
-                "all_persons": all_persons,
-                "all_units": all_units,
-                "all_job_titles": all_job_titles,
-                "version_history": version_history,
-                "errors": [{"field": err.field, "message": err.message} for err in e.errors],
-                "form_data": form_data,
-                "page_title": f"Modifica Incarico: {assignment.person_name} - {assignment.job_title_name}",
-                "page_icon": "person-gear",
-                "breadcrumb": [
-                    {"name": "Incarichi", "url": "/assignments"},
-                    {"name": f"{assignment.person_name} - {assignment.job_title_name}", "url": f"/assignments/{assignment_id}"},
-                    {"name": "Modifica"}
-                ]
-            },
-            status_code=400
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error updating assignment {assignment_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/{assignment_id}/terminate")
-async def terminate_assignment(
-    request: Request,
-    assignment_id: int,
-    termination_date: Optional[str] = Form(None),
-    assignment_service: AssignmentService = Depends(get_assignment_service)
-):
-    """Terminate an active assignment"""
-    try:
-        # Parse termination date
-        termination_date_parsed = date.today()
-        if termination_date:
-            try:
-                termination_date_parsed = date.fromisoformat(termination_date)
-            except ValueError:
-                pass
-        
-        # Terminate assignment
-        success = assignment_service.terminate_assignment(assignment_id, termination_date_parsed)
-        if not success:
-            raise HTTPException(status_code=500, detail="Errore durante la terminazione dell'incarico")
-        
-        return RedirectResponse(
-            url=f"/assignments/{assignment_id}",
-            status_code=303
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error terminating assignment {assignment_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/{assignment_id}/delete")
-async def delete_assignment(
-    assignment_id: int,
-    assignment_service: AssignmentService = Depends(get_assignment_service)
-):
-    """Delete assignment version"""
-    try:
-        # Check if assignment can be deleted
-        can_delete, reason = assignment_service.can_delete(assignment_id)
-        if not can_delete:
-            raise HTTPException(status_code=400, detail=reason)
-        
-        # Delete assignment
-        success = assignment_service.delete(assignment_id)
-        if not success:
-            raise HTTPException(status_code=500, detail="Errore durante l'eliminazione dell'incarico")
-        
-        return RedirectResponse(url="/assignments", status_code=303)
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error deleting assignment {assignment_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1101,3 +855,250 @@ async def export_assignments_csv(
     except Exception as e:
         logger.error(f"Error exporting assignments to CSV: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{assignment_id}", response_class=HTMLResponse)
+async def assignment_detail(
+    request: Request,
+    assignment_id: int,
+    assignment_service: AssignmentService = Depends(get_assignment_service)
+):
+    """Show assignment details with version history"""
+    try:
+        assignment = assignment_service.get_by_id(assignment_id)
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Incarico non trovato")
+        
+        # Get version history for this assignment combination
+        version_history = assignment_service.get_assignment_history(
+            assignment.person_id, assignment.unit_id, assignment.job_title_id
+        )
+        
+        # Get business rule validation warnings
+        warnings = assignment_service.validate_assignment_rules(assignment)
+        
+        return templates.TemplateResponse(
+            "assignments/detail.html",
+            {
+                "request": request,
+                "assignment": assignment,
+                "version_history": version_history,
+                "warnings": warnings,
+                "page_title": f"Incarico: {assignment.person_name} - {assignment.job_title_name}",
+                "page_icon": "person-badge",
+                "breadcrumb": [
+                    {"name": "Incarichi", "url": "/assignments"},
+                    {"name": f"{assignment.person_name} - {assignment.job_title_name}"}
+                ]
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error showing assignment {assignment_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{assignment_id}/edit", response_class=HTMLResponse)
+async def edit_assignment_form(
+    request: Request,
+    assignment_id: int,
+    assignment_service: AssignmentService = Depends(get_assignment_service),
+    person_service: PersonService = Depends(get_person_service),
+    unit_service: UnitService = Depends(get_unit_service),
+    job_title_service: JobTitleService = Depends(get_job_title_service)
+):
+    """Show edit assignment form (creates new version)"""
+    try:
+        assignment = assignment_service.get_by_id(assignment_id)
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Incarico non trovato")
+        
+        # Get all options for dropdowns
+        all_persons = person_service.get_all()
+        all_units = unit_service.get_all()
+        all_job_titles = job_title_service.get_all()
+        
+        # Get version history
+        version_history = assignment_service.get_assignment_history(
+            assignment.person_id, assignment.unit_id, assignment.job_title_id
+        )
+        
+        return templates.TemplateResponse(
+            "assignments/edit.html",
+            {
+                "request": request,
+                "assignment": assignment,
+                "all_persons": all_persons,
+                "all_units": all_units,
+                "all_job_titles": all_job_titles,
+                "version_history": version_history,
+                "page_title": f"Modifica Incarico: {assignment.person_name} - {assignment.job_title_name}",
+                "page_icon": "person-gear",
+                "breadcrumb": [
+                    {"name": "Incarichi", "url": "/assignments"},
+                    {"name": f"{assignment.person_name} - {assignment.job_title_name}", "url": f"/assignments/{assignment_id}"},
+                    {"name": "Modifica"}
+                ]
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error loading edit form for assignment {assignment_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{assignment_id}/edit")
+async def update_assignment(
+    request: Request,
+    assignment_id: int,
+    person_id: int = Form(...),
+    unit_id: int = Form(...),
+    job_title_id: int = Form(...),
+    percentage: float = Form(...),
+    is_ad_interim: bool = Form(False),
+    is_unit_boss: bool = Form(False),
+    notes: Optional[str] = Form(None),
+    flags: Optional[str] = Form(None),
+    valid_from: Optional[str] = Form(None),
+    assignment_service: AssignmentService = Depends(get_assignment_service),
+    person_service: PersonService = Depends(get_person_service),
+    unit_service: UnitService = Depends(get_unit_service),
+    job_title_service: JobTitleService = Depends(get_job_title_service)
+):
+    """Update assignment (creates new version)"""
+    try:
+        # Get existing assignment
+        existing_assignment = assignment_service.get_by_id(assignment_id)
+        if not existing_assignment:
+            raise HTTPException(status_code=404, detail="Incarico non trovato")
+        
+        # Parse date
+        valid_from_parsed = None
+        if valid_from:
+            try:
+                valid_from_parsed = date.fromisoformat(valid_from)
+            except ValueError:
+                pass
+        
+        # Create new assignment (will create new version)
+        new_assignment = Assignment(
+            person_id=person_id,
+            unit_id=unit_id,
+            job_title_id=job_title_id,
+            percentage=percentage / 100.0,  # Convert percentage to decimal
+            is_ad_interim=is_ad_interim,
+            is_unit_boss=is_unit_boss,
+            notes=notes.strip() if notes else None,
+            flags=flags.strip() if flags else None,
+            valid_from=valid_from_parsed,
+            is_current=True
+        )
+        
+        # Create new version
+        updated_assignment = assignment_service.create_or_update_assignment(new_assignment)
+        
+        return RedirectResponse(
+            url=f"/assignments/{updated_assignment.id}",
+            status_code=303
+        )
+        
+    except ModelValidationException as e:
+        # Show form again with errors
+        assignment = assignment_service.get_by_id(assignment_id)
+        all_persons = person_service.get_all()
+        all_units = unit_service.get_all()
+        all_job_titles = job_title_service.get_all()
+        version_history = assignment_service.get_assignment_history(
+            assignment.person_id, assignment.unit_id, assignment.job_title_id
+        )
+        form_data = await request.form()
+        
+        return templates.TemplateResponse(
+            "assignments/edit.html",
+            {
+                "request": request,
+                "assignment": assignment,
+                "all_persons": all_persons,
+                "all_units": all_units,
+                "all_job_titles": all_job_titles,
+                "version_history": version_history,
+                "errors": [{"field": err.field, "message": err.message} for err in e.errors],
+                "form_data": form_data,
+                "page_title": f"Modifica Incarico: {assignment.person_name} - {assignment.job_title_name}",
+                "page_icon": "person-gear",
+                "breadcrumb": [
+                    {"name": "Incarichi", "url": "/assignments"},
+                    {"name": f"{assignment.person_name} - {assignment.job_title_name}", "url": f"/assignments/{assignment_id}"},
+                    {"name": "Modifica"}
+                ]
+            },
+            status_code=400
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating assignment {assignment_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{assignment_id}/terminate")
+async def terminate_assignment(
+    request: Request,
+    assignment_id: int,
+    termination_date: Optional[str] = Form(None),
+    assignment_service: AssignmentService = Depends(get_assignment_service)
+):
+    """Terminate an active assignment"""
+    try:
+        # Parse termination date
+        termination_date_parsed = date.today()
+        if termination_date:
+            try:
+                termination_date_parsed = date.fromisoformat(termination_date)
+            except ValueError:
+                pass
+        
+        # Terminate assignment
+        success = assignment_service.terminate_assignment(assignment_id, termination_date_parsed)
+        if not success:
+            raise HTTPException(status_code=500, detail="Errore durante la terminazione dell'incarico")
+        
+        return RedirectResponse(
+            url=f"/assignments/{assignment_id}",
+            status_code=303
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error terminating assignment {assignment_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{assignment_id}/delete")
+async def delete_assignment(
+    assignment_id: int,
+    assignment_service: AssignmentService = Depends(get_assignment_service)
+):
+    """Delete assignment version"""
+    try:
+        # Check if assignment can be deleted
+        can_delete, reason = assignment_service.can_delete(assignment_id)
+        if not can_delete:
+            raise HTTPException(status_code=400, detail=reason)
+        
+        # Delete assignment
+        success = assignment_service.delete(assignment_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="Errore durante l'eliminazione dell'incarico")
+        
+        return RedirectResponse(url="/assignments", status_code=303)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting assignment {assignment_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+

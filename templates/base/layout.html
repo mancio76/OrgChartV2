@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="X-CSRF-Token" content="{{ csrf_token }}">  <!-- Global CSRF token -->
     <title>{% block title %}{{ page_title or 'Organigramma' }}{% endblock %}</title>
     
     <!-- Bootstrap CSS -->
@@ -106,6 +107,22 @@
     <script src="{{ url_for('static', path='/js/form-validation.js') }}"></script>
     <script src="{{ url_for('static', path='/js/form-enhancements.js') }}"></script>
     <script src="{{ url_for('static', path='/js/components.js') }}"></script>
+    
+     <!-- Global JavaScript for CSRF -->
+     <script>
+        // Set up global CSRF token for all AJAX requests
+        const csrfToken = document.querySelector('meta[name="X-CSRF-Token"]').getAttribute('content');
+        
+        // Configure fetch to always include CSRF token
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options = {}) {
+            if (options.method && options.method.toUpperCase() !== 'GET') {
+                options.headers = options.headers || {};
+                options.headers['X-CSRF-Token'] = csrfToken;
+            }
+            return originalFetch(url, options);
+        };
+    </script>
     
     {% block extra_js %}{% endblock %}
 </body>

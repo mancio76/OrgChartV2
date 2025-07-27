@@ -17,6 +17,7 @@ from app.config import get_settings
 from app.database import init_database, cleanup_database
 from app.security import SecurityConfig, get_security_config
 from app.middleware.security import SecurityMiddleware, InputValidationMiddleware, SQLInjectionProtectionMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from app.routes import (
     home, units, job_titles, persons, 
     assignments, orgchart, api, health
@@ -101,6 +102,15 @@ security_config = SecurityConfig({
     'rate_limit_enabled': True,
     'max_requests_per_minute': 100
 })
+
+# REQUIRED: Add SessionMiddleware for CSRF to work properly
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key=settings.security.secret_key,
+    max_age=86400,  # 24 hours
+    same_site="lax",
+    https_only=settings.security.https_only
+)
 
 # Add security middleware (order matters - add in reverse order of execution)
 app.add_middleware(SecurityMiddleware, security_config=security_config)

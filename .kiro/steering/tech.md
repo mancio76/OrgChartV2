@@ -106,3 +106,49 @@ pytest tests/test_models.py      # Run specific test file
 3. **Italian language**: Primary language for UI text and error messages
 4. **Hierarchical units**: Maintain parent-child relationships
 5. **No external JS frameworks**: Keep frontend dependencies minimal  
+
+## FastAPI Route Ordering
+
+### Route Declaration Order
+
+**CRITICAL RULE**: Always declare static routes BEFORE dynamic routes to prevent path parameter parsing conflicts.
+
+```python
+# ✅ CORRECT ORDER
+@router.get("/new")           # Static route first
+@router.get("/search")        # Static route first  
+@router.get("/{id}")          # Dynamic route after
+@router.get("/{id}/edit")     # Dynamic route after
+
+# ❌ WRONG ORDER
+@router.get("/{id}")          # Dynamic route first
+@router.get("/new")           # Static route - will never match!
+```
+
+### Route Ordering Pattern
+
+1. **Static routes first**: `/new`, `/search`, `/statistics`, `/bulk-operations`
+2. **Simple dynamic routes**: `/{id}`, `/{id}/edit`, `/{id}/delete`
+3. **Complex dynamic routes**: `/{id}/sub-resource/{sub_id}`
+
+### Why This Matters
+
+FastAPI evaluates routes in declaration order. If `/{id}` comes before `/new`, FastAPI tries to parse "new" as an integer for the `id` parameter, causing parsing errors.
+
+### Example Implementation
+
+```python
+# Static routes - declare these FIRST
+@router.get("/new", response_class=HTMLResponse)
+async def create_form(): pass
+
+@router.get("/search", response_class=HTMLResponse) 
+async def search(): pass
+
+# Dynamic routes - declare these AFTER static routes
+@router.get("/{id}", response_class=HTMLResponse)
+async def get_item(id: int): pass
+
+@router.get("/{id}/edit", response_class=HTMLResponse)
+async def edit_form(id: int): pass
+```

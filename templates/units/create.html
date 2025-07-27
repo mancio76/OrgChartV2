@@ -48,7 +48,7 @@
                                     <option value="">Seleziona tipo...</option>
                                     {% for unit_type in unit_types %}
                                     <option value="{{ unit_type.id }}" {% if form_data and form_data.unit_type_id==unit_type.id|string %}selected{% endif %}>
-                                        {{ unit.unit_type }}
+                                        {{ unit_type.name }}
                                     </option>
                                     {% endfor %}
                                 </select>

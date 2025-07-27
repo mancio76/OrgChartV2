@@ -74,68 +74,6 @@ async def list_units(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{unit_id}", response_class=HTMLResponse)
-async def unit_detail(
-    request: Request,
-    unit_id: int,
-    unit_service: UnitService = Depends(get_unit_service),
-    unit_type_service: UnitTypeService = Depends(get_unit_type_service),
-    assignment_service: AssignmentService = Depends(get_assignment_service),
-    jobtitle_service: JobTitleService = Depends(get_job_title_service),
-    person_service: PersonService = Depends(get_person_service)
-):
-    """Show unit details"""
-    try:
-        unit = unit_service.get_by_id(unit_id)
-
-        if not unit:
-            raise HTTPException(status_code=404, detail="Unit not found")
-        
-        type = unit_type_service.get_by_id(unit.unit_type_id)
-        unit.unit_type = type.name;
-
-        # Get children units
-        children = unit_service.get_children(unit_id)
-        assignments = assignment_service.get_current_assignments_by_unit(unit_id)
-        if assignments:
-            for assignment in assignments:
-                assignment.unit_name = unit.name
-                assignment.unit_short_name = unit.short_name
-                person = person_service.get_by_id(assignment.person_id)
-                if person:
-                    assignment.person_name = person.name
-                    assignment.person_short_name = person.short_name
-
-                job_title = jobtitle_service.get_by_id(assignment.job_title_id)
-                if job_title:
-                    assignment.job_title_name = job_title.name
-                    assignment.job_title_short_name = job_title.short_name
-        
-        # Get parent unit if exists
-        parent = None
-        if unit.parent_unit_id:
-            parent = unit_service.get_by_id(unit.parent_unit_id)
-        
-        return templates.TemplateResponse(
-            "units/detail.html",
-            {
-                "request": request,
-                "unit": unit,
-                #"type": type.name,
-                "assignments": assignments,
-                "children": children,
-                "parent": parent,
-                "page_title": f"Unit: {unit.name}"
-            }
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error showing unit {unit_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @router.get("/new", response_class=HTMLResponse)
 async def create_unit_form(
     request: Request,
@@ -416,3 +354,67 @@ async def delete_unit(
     except Exception as e:
         logger.error(f"Error deleting unit {unit_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{unit_id}", response_class=HTMLResponse)
+async def unit_detail(
+    request: Request,
+    unit_id: int,
+    unit_service: UnitService = Depends(get_unit_service),
+    unit_type_service: UnitTypeService = Depends(get_unit_type_service),
+    assignment_service: AssignmentService = Depends(get_assignment_service),
+    jobtitle_service: JobTitleService = Depends(get_job_title_service),
+    person_service: PersonService = Depends(get_person_service)
+):
+    """Show unit details"""
+    try:
+        unit = unit_service.get_by_id(unit_id)
+
+        if not unit:
+            raise HTTPException(status_code=404, detail="Unit not found")
+        
+        type = unit_type_service.get_by_id(unit.unit_type_id)
+        unit.unit_type = type.name;
+
+        # Get children units
+        children = unit_service.get_children(unit_id)
+        assignments = assignment_service.get_current_assignments_by_unit(unit_id)
+        if assignments:
+            for assignment in assignments:
+                assignment.unit_name = unit.name
+                assignment.unit_short_name = unit.short_name
+                person = person_service.get_by_id(assignment.person_id)
+                if person:
+                    assignment.person_name = person.name
+                    assignment.person_short_name = person.short_name
+
+                job_title = jobtitle_service.get_by_id(assignment.job_title_id)
+                if job_title:
+                    assignment.job_title_name = job_title.name
+                    assignment.job_title_short_name = job_title.short_name
+        
+        # Get parent unit if exists
+        parent = None
+        if unit.parent_unit_id:
+            parent = unit_service.get_by_id(unit.parent_unit_id)
+        
+        return templates.TemplateResponse(
+            "units/detail.html",
+            {
+                "request": request,
+                "unit": unit,
+                #"type": type.name,
+                "assignments": assignments,
+                "children": children,
+                "parent": parent,
+                "page_title": f"Unit: {unit.name}"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error showing unit {unit_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
