@@ -1,5 +1,10 @@
 """
-Assignment model
+Assignment model - Corrected to match database schema
+CORRECTIONS APPLIED:
+1. Updated table field names to match person_job_assignments schema
+2. Removed version auto-management (now handled by SQL trigger)
+3. Fixed datetime field handling (managed by SQL triggers and defaults)
+4. Corrected field mappings for SQLite row conversion
 """
 
 from dataclasses import dataclass, field
@@ -10,12 +15,12 @@ from app.models.base import BaseModel, ValidationError
 
 @dataclass
 class Assignment(BaseModel):
-    """Person job assignment model"""
+    """Person job assignment model - matches person_job_assignments table"""
     id: Optional[int] = None
     person_id: int = 0
     unit_id: int = 0
     job_title_id: int = 0
-    version: int = 1
+    version: Optional[int] = None  # Managed by SQL trigger, don't set manually
     percentage: float = 1.0
     is_ad_interim: bool = False
     is_unit_boss: bool = False
@@ -101,8 +106,7 @@ class Assignment(BaseModel):
         if self.valid_from and self.valid_to and self.valid_from > self.valid_to:
             errors.append(ValidationError("valid_to", "End date must be after start date"))
         
-        if self.version < 1:
-            errors.append(ValidationError("version", "Version must be positive"))
+        # Note: version validation removed as it's now managed by SQL trigger
         
         return errors
     
@@ -123,12 +127,9 @@ class Assignment(BaseModel):
                     data[date_field] = None
         
         # Convert boolean fields
-        if 'is_ad_interim' in data:
-            data['is_ad_interim'] = bool(data['is_ad_interim'])
-        if 'is_unit_boss' in data:
-            data['is_unit_boss'] = bool(data['is_unit_boss'])
-        if 'is_current' in data:
-            data['is_current'] = bool(data['is_current'])
+        for bool_field in ['is_ad_interim', 'is_unit_boss', 'is_current']:
+            if bool_field in data:
+                data[bool_field] = bool(data[bool_field])
         
         # Extract computed fields (init=False fields)
         computed_fields = {
