@@ -59,8 +59,8 @@
                             
                             <dt class="col-sm-4">Tipo:</dt>
                             <dd class="col-sm-8">
-                                <span class="badge bg-{{ 'primary' if unit.unit_type == 'Function' else 'info' }}">
-                                    {{ 'Funzione' if unit.unit_type == 'Function' else 'Unità Organizzativa' }}
+                                <span class="badge bg-{{ 'primary' if unit.unit_type.lower() == 'function' else 'info' }}">
+                                    {{ unit.unit_type }}
                                 </span>
                             </dd>
                             
@@ -139,16 +139,50 @@
                                 <th>Percentuale</th>
                                 <th>Tipo</th>
                                 <th>Data Inizio</th>
-                                <th>Azioni</th>
+                                <th width="120">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
+                            {% if assignments %}
+                                {% for assignment in assignments %}
+                            <tr>
+                                <td colspan="1" class="text-muted">
+                                    {{ assignment.person_name }}
+                                </td>
+                                <td colspan="1" class="text-muted">
+                                    {{ assignment.job_title_name }}
+                                </td>
+                                <td colspan="1" class="text-muted">
+                                    {{ assignment.percentage_display }}
+                                </td>
+                                <td colspan="1" class="text-muted">
+                                    {{ assignment.job_title_name }}
+                                </td>
+                                <td colspan="1" class="text-muted">
+                                    {{ assignment.valid_from.strftime('%d/%m/%Y') if assignment.valid_from else '' }}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="/assignments/{{ assignment.id }}" class="btn btn-outline-primary" 
+                                           data-bs-toggle="tooltip" title="Visualizza dettagli">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="/assignments/{{ assignment.id }}/edit" class="btn btn-outline-secondary"
+                                           data-bs-toggle="tooltip" title="Modifica">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                                {% endfor %}
+                            {% else %}
                             <!-- This would be populated by assignments data from the route -->
                             <tr>
                                 <td colspan="6" class="text-center text-muted">
                                     <i>Dati incarichi da implementare nel route</i>
                                 </td>
                             </tr>
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>

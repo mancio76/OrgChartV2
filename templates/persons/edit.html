@@ -11,6 +11,9 @@
             </div>
             <div class="card-body">
                 <form method="post" class="needs-validation" novalidate>
+                    <!-- CSRF Token -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
                     <!-- Name -->
                     <div class="mb-3">
                         <label for="name" class="form-label">Nome Completo *</label>
@@ -129,6 +132,9 @@
                     {% endif %}
                 </p>
                 <form method="post" action="/persons/{{ person.id }}/delete" class="d-inline">
+                    <!-- CSRF Token -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
                     <button type="submit" class="btn btn-danger btn-delete"
                             data-item-name="{{ person.name }}" 
                             data-item-type="persona">

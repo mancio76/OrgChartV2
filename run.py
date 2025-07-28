@@ -64,6 +64,8 @@ def main():
             "reload": os.getenv("RUN_DEBUG", "true").lower() == "true",
             "log_level": os.getenv("RUN_LOG_LEVEL", "info"),
             "access_log": True,
+            "reload": True,
+            "reload_dirs": ['/app']
         }
         
         print("=" * 50)

@@ -447,7 +447,7 @@
                     <div class="mb-3">
                         <label for="termination_date" class="form-label">Data di Terminazione</label>
                         <input type="date" class="form-control" id="termination_date" name="termination_date" 
-                               value="{{ date.today().isoformat() }}" required>
+                               value="{{ date }}" required>
                         <div class="form-text">La data di terminazione dell'incarico</div>
                     </div>
                     
@@ -505,6 +505,8 @@
 
 {% block extra_js %}
 <script>
+const date = Date().toISOString();
+
 function showTerminateModal() {
     const modal = new bootstrap.Modal(document.getElementById('terminateModal'));
     modal.show();

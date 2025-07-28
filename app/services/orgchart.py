@@ -141,7 +141,8 @@ class OrgchartService:
             # Get hierarchical structure
             tree_query = """
             WITH RECURSIVE unit_tree AS (
-                SELECT id, name, short_name, unit_type_id, parent_unit_id, 0 as level,
+                SELECT id, name, short_name, unit_type_id, parent_unit_id, 
+                       0 as level,
                        CAST(id AS TEXT) as path
                 FROM units 
                 WHERE parent_unit_id IS NULL OR parent_unit_id = -1
@@ -162,7 +163,7 @@ class OrgchartService:
             GROUP BY ut.id, ut.name, ut.short_name, ut.unit_type_id, ut.parent_unit_id, ut.level, ut.path
             ORDER BY ut.path
             """
-            
+            tree_query = "select id, name, short_name, unit_type_id, parent_unit_id, level, path from get_complete_tree order by path"
             units = self.db_manager.fetch_all(tree_query)
             
             # Build tree structure
@@ -288,14 +289,42 @@ class OrgchartService:
             logger.error(f"Error getting subtree for unit {root_unit_id}: {e}")
             return []
     
+    def get_unit(self, unit_id: int) -> Optional[Dict[str, Any]]:
+        """Get unit with full details"""
+        try:
+            unit_query = """
+            SELECT u.* --, 
+                   --p.name as parent_name,
+                   --COUNT(DISTINCT c.id) as children_count,
+                   --COUNT(DISTINCT pja.person_id) as person_count
+            FROM units u
+            LEFT JOIN units p ON u.parent_unit_id = p.id
+            LEFT JOIN units c ON c.parent_unit_id = u.id
+            LEFT JOIN person_job_assignments pja ON u.id = pja.unit_id AND pja.is_current = 1
+            WHERE u.id = ?
+            GROUP BY u.id
+            """
+            
+            unit_row = self.db_manager.fetch_one(unit_query, (unit_id,))
+            if not unit_row:
+                return None
+            
+            unit_data = dict(unit_row)
+
+            return unit_data
+            
+        except Exception as e:
+            logger.error(f"Error getting unit for {unit_id}: {e}")
+            return None
+    
     def get_unit_with_details(self, unit_id: int) -> Optional[Dict[str, Any]]:
         """Get unit with full details"""
         try:
             unit_query = """
-            SELECT u.*, 
-                   p.name as parent_name,
-                   COUNT(DISTINCT c.id) as children_count,
-                   COUNT(DISTINCT pja.person_id) as person_count
+            SELECT u.* --, 
+                   --p.name as parent_name,
+                   --COUNT(DISTINCT c.id) as children_count,
+                   --COUNT(DISTINCT pja.person_id) as person_count
             FROM units u
             LEFT JOIN units p ON u.parent_unit_id = p.id
             LEFT JOIN units c ON c.parent_unit_id = u.id
@@ -422,22 +451,42 @@ class OrgchartService:
             logger.error(f"Error getting unit path for {unit_id}: {e}")
             return []
     
+    def get_unit_type(self, unit_id: int) -> List[Dict[str, Any]]:
+        """Get the type of the unit"""
+        try:
+            type_query = """
+            SELECT ut.id, ut.name, ut.short_name
+            FROM unit_types ut
+            JOIN units u ON ut.id = u.unit_type_id
+            WHERE u.id = ?
+            """
+            
+            type_rows = self.db_manager.fetch_all(type_query, (unit_id,))
+            return [{'id': row['id'], 'name': row['name'], 'short_name': row['short_name']} for row in type_rows]
+            
+        except Exception as e:
+            logger.error(f"Error getting unit path for {unit_id}: {e}")
+            return []
+
     def get_unit_organizational_context(self, unit_id: int) -> Optional[Dict[str, Any]]:
         """Get unit with full organizational context"""
         try:
-            unit_details = self.get_unit_with_details(unit_id)
-            if not unit_details:
+            unit = self.get_unit_with_details(unit_id)
+            if not unit:
                 return None
             
+            unit_type = self.get_unit_type(unit_id)
+            unit['unit_type'] = unit_type[0]['name']
+
             context = {
-                'unit': Unit.from_dict(unit_details),
-                'assignments': unit_details.get('assignments', []),
-                'children': unit_details.get('children', []),
+                'unit': Unit.from_dict(unit),
+                'assignments': unit.get('assignments', []),
+                'children': unit.get('children', []),
                 'path': self.get_unit_path(unit_id)
             }
             
             # Add sibling units
-            if unit_details.get('parent_unit_id'):
+            if unit.get('parent_unit_id'):
                 siblings_query = """
                 SELECT u.id, u.name, u.short_name, u.unit_type_id,
                        COUNT(DISTINCT pja.person_id) as person_count
@@ -447,7 +496,7 @@ class OrgchartService:
                 GROUP BY u.id, u.name, u.short_name, u.unit_type_id
                 ORDER BY u.name
                 """
-                siblings = self.db_manager.fetch_all(siblings_query, (unit_details['parent_unit_id'], unit_id))
+                siblings = self.db_manager.fetch_all(siblings_query, (unit['parent_unit_id'], unit_id))
                 context['siblings'] = [dict(sibling) for sibling in siblings]
             else:
                 context['siblings'] = []

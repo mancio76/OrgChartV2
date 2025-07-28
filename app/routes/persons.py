@@ -11,6 +11,8 @@ from app.services.person import PersonService
 from app.services.assignment import AssignmentService
 from app.models.person import Person
 from app.models.base import ModelValidationException
+from app.security import CSRFProtection
+from app.security_csfr import generate_csrf_token, validate_csrf_token, validate_csrf_token_flexible, add_csrf_to_context
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -64,6 +66,132 @@ async def list_persons(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/new", response_class=HTMLResponse)
+async def create_person_form(
+    request: Request,
+    csrf_token: str = Depends(generate_csrf_token)
+    ):
+    """Show create person form"""
+    try:
+        context = {
+            "request": request,
+            "page_title": "Nuova Persona",
+            "page_icon": "person-plus",
+            "breadcrumb": [
+                {"name": "Persone", "url": "/persons"},
+                {"name": "Nuova Persona"}
+            ],
+            "csrf_token": csrf_token
+        }
+        return templates.TemplateResponse("persons/create.html", context)
+    except Exception as e:
+        logger.error(f"Error loading create person form: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/new")
+async def create_person(
+    request: Request,
+    csrf_protection: bool = Depends(validate_csrf_token_flexible),
+    name: str = Form(...),
+    short_name: Optional[str] = Form(None),
+    email: Optional[str] = Form(None),
+    person_service: PersonService = Depends(get_person_service)
+):
+    """Create new person"""
+    try:
+        # Create person model
+        person = Person(
+            name=name.strip(),
+            short_name=short_name.strip() if short_name else None,
+            email=email.strip() if email else None
+        )
+        
+        # Create person
+        created_person = person_service.create(person)
+        
+        return RedirectResponse(
+            url=f"/persons/{created_person.id}",
+            status_code=303
+        )
+        
+    except ModelValidationException as e:
+        # Show form again with errors
+        return templates.TemplateResponse(
+            "persons/create.html",
+            {
+                "request": request,
+                "errors": [{"field": err.field, "message": err.message} for err in e.errors],
+                "form_data": await request.form(),
+                "page_title": "Nuova Persona",
+                "page_icon": "person-plus",
+                "breadcrumb": [
+                    {"name": "Persone", "url": "/persons"},
+                    {"name": "Nuova Persona"}
+                ]
+            },
+            status_code=400
+        )
+    except Exception as e:
+        logger.error(f"Error creating person: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/search/duplicates", response_class=HTMLResponse)
+async def find_duplicate_persons(
+    request: Request,
+    person_service: PersonService = Depends(get_person_service)
+):
+    """Find potential duplicate persons"""
+    try:
+        # Find potential duplicates based on name similarity
+        duplicates = person_service.find_potential_duplicates()
+        
+        return templates.TemplateResponse(
+            "persons/duplicates.html",
+            {
+                "request": request,
+                "duplicates": duplicates,
+                "page_title": "Persone Duplicate",
+                "page_icon": "people-fill",
+                "breadcrumb": [
+                    {"name": "Persone", "url": "/persons"},
+                    {"name": "Duplicati"}
+                ]
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error finding duplicate persons: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/reports/statistics", response_class=HTMLResponse)
+async def person_statistics_report(
+    request: Request,
+    person_service: PersonService = Depends(get_person_service)
+):
+    """Show person statistics report"""
+    try:
+        # Get comprehensive statistics
+        statistics = person_service.get_comprehensive_statistics()
+        
+        return templates.TemplateResponse(
+            "persons/statistics.html",
+            {
+                "request": request,
+                "statistics": statistics,
+                "page_title": "Statistiche Persone",
+                "page_icon": "bar-chart",
+                "breadcrumb": [
+                    {"name": "Persone", "url": "/persons"},
+                    {"name": "Statistiche"}
+                ]
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error generating person statistics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/{person_id}", response_class=HTMLResponse)
 async def person_detail(
     request: Request,
@@ -106,74 +234,6 @@ async def person_detail(
         raise
     except Exception as e:
         logger.error(f"Error showing person {person_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/new", response_class=HTMLResponse)
-async def create_person_form(request: Request):
-    """Show create person form"""
-    try:
-        return templates.TemplateResponse(
-            "persons/create.html",
-            {
-                "request": request,
-                "page_title": "Nuova Persona",
-                "page_icon": "person-plus",
-                "breadcrumb": [
-                    {"name": "Persone", "url": "/persons"},
-                    {"name": "Nuova Persona"}
-                ]
-            }
-        )
-    except Exception as e:
-        logger.error(f"Error loading create person form: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/new")
-async def create_person(
-    request: Request,
-    name: str = Form(...),
-    short_name: Optional[str] = Form(None),
-    email: Optional[str] = Form(None),
-    person_service: PersonService = Depends(get_person_service)
-):
-    """Create new person"""
-    try:
-        # Create person model
-        person = Person(
-            name=name.strip(),
-            short_name=short_name.strip() if short_name else None,
-            email=email.strip() if email else None
-        )
-        
-        # Create person
-        created_person = person_service.create(person)
-        
-        return RedirectResponse(
-            url=f"/persons/{created_person.id}",
-            status_code=303
-        )
-        
-    except ModelValidationException as e:
-        # Show form again with errors
-        return templates.TemplateResponse(
-            "persons/create.html",
-            {
-                "request": request,
-                "errors": [{"field": err.field, "message": err.message} for err in e.errors],
-                "form_data": await request.form(),
-                "page_title": "Nuova Persona",
-                "page_icon": "person-plus",
-                "breadcrumb": [
-                    {"name": "Persone", "url": "/persons"},
-                    {"name": "Nuova Persona"}
-                ]
-            },
-            status_code=400
-        )
-    except Exception as e:
-        logger.error(f"Error creating person: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -519,58 +579,3 @@ async def merge_person(
         logger.error(f"Error merging person {person_id} with {target_person_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.get("/search/duplicates", response_class=HTMLResponse)
-async def find_duplicate_persons(
-    request: Request,
-    person_service: PersonService = Depends(get_person_service)
-):
-    """Find potential duplicate persons"""
-    try:
-        # Find potential duplicates based on name similarity
-        duplicates = person_service.find_potential_duplicates()
-        
-        return templates.TemplateResponse(
-            "persons/duplicates.html",
-            {
-                "request": request,
-                "duplicates": duplicates,
-                "page_title": "Persone Duplicate",
-                "page_icon": "people-fill",
-                "breadcrumb": [
-                    {"name": "Persone", "url": "/persons"},
-                    {"name": "Duplicati"}
-                ]
-            }
-        )
-    except Exception as e:
-        logger.error(f"Error finding duplicate persons: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/reports/statistics", response_class=HTMLResponse)
-async def person_statistics_report(
-    request: Request,
-    person_service: PersonService = Depends(get_person_service)
-):
-    """Show person statistics report"""
-    try:
-        # Get comprehensive statistics
-        statistics = person_service.get_comprehensive_statistics()
-        
-        return templates.TemplateResponse(
-            "persons/statistics.html",
-            {
-                "request": request,
-                "statistics": statistics,
-                "page_title": "Statistiche Persone",
-                "page_icon": "bar-chart",
-                "breadcrumb": [
-                    {"name": "Persone", "url": "/persons"},
-                    {"name": "Statistiche"}
-                ]
-            }
-        )
-    except Exception as e:
-        logger.error(f"Error generating person statistics: {e}")
-        raise HTTPException(status_code=500, detail=str(e))

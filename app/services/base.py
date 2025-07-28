@@ -403,7 +403,17 @@ class BaseService(ABC):
                 params.append(f"%{search_term}%")
             
             where_clause = " OR ".join(conditions)
-            query = f"{self.get_list_query()} WHERE {where_clause}"
+            base_query = self.get_list_query()
+
+            index = base_query.lower().find('group by')
+            if index != -1:
+                query = base_query[:index] + f" WHERE {where_clause} " + base_query[index:]
+            else:
+                index = base_query.lower().find('order by')
+                if index != -1:
+                    query = base_query[:index] + f" WHERE {where_clause} " + base_query[index:]
+                else:
+                    query = f"{base_query} WHERE {where_clause}"
             
             rows = self.db_manager.fetch_all(query, tuple(params))
             results = [self.model_class.from_sqlite_row(row) for row in rows]

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">  <!-- Global CSRF token -->
     <title>{% block title %}{{ page_title or 'Organigramma' }}{% endblock %}</title>
     
     <!-- Bootstrap CSS -->
@@ -106,6 +107,51 @@
     <script src="{{ url_for('static', path='/js/form-validation.js') }}"></script>
     <script src="{{ url_for('static', path='/js/form-enhancements.js') }}"></script>
     <script src="{{ url_for('static', path='/js/components.js') }}"></script>
+    
+     <!-- Global JavaScript for CSRF -->
+     <script>
+        // Get CSRF token from meta tag
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
+        // Configure fetch to always include CSRF token with CONSISTENT header name
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options = {}) {
+            if (options.method && options.method.toUpperCase() !== 'GET') {
+                options.headers = options.headers || {};
+                // CORRECTED: Use X-CSRF-Token consistently
+                options.headers['X-CSRF-Token'] = csrfToken;
+            }
+            return originalFetch(url, options);
+        };
+        
+        // Helper function for forms that need CSRF via JavaScript
+        function getCSRFToken() {
+            return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        }
+        
+        // Helper function for AJAX requests
+        function makeSecureRequest(url, data, method = 'POST') {
+            return fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCSRFToken()  // CONSISTENT header name
+                },
+                body: JSON.stringify(data)
+            });
+        }
+        
+        // Helper for form data requests
+        function makeSecureFormRequest(url, formData) {
+            // Add CSRF token to FormData
+            formData.append('csrf_token', getCSRFToken());
+            
+            return fetch(url, {
+                method: 'POST',
+                body: formData  // Don't set Content-Type for FormData
+            });
+        }
+    </script>
     
     {% block extra_js %}{% endblock %}
 </body>

@@ -11,6 +11,9 @@
             </div>
             <div class="card-body">
                 <form method="post" class="needs-validation" novalidate>
+                    <!-- CSRF Token -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
                     <div class="row">
                         <!-- Assignment Details -->
                         <div class="col-md-6">
@@ -124,7 +127,7 @@
                             <div class="mb-3">
                                 <label for="valid_from" class="form-label">Data Inizio</label>
                                 <input type="date" class="form-control" id="valid_from" name="valid_from" 
-                                       value="{{ form_data.valid_from if form_data else date.today().isoformat() }}">
+                                       value="{{ form_data.valid_from.isoformat() if form_data else '' }}">
                                 <div class="form-text">Data di inizio dell'incarico (default: oggi)</div>
                             </div>
                             

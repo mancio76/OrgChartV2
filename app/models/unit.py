@@ -1,32 +1,47 @@
 """
-Unit model
+Unit model - Corrected to match database schema
+CORRECTIONS APPLIED:
+1. Updated table field names to match units table schema
+2. Fixed datetime field handling (managed by SQL triggers and defaults)
+3. Corrected field mappings for SQLite row conversion
+4. Fixed computed field handling for views like units_types
 """
 
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Optional, List
+from typing import Optional, List, Any
 from app.models.base import BaseModel, Alias, parse_aliases, serialize_aliases, ValidationError
-
+from app.models.assignment import Assignment
 
 @dataclass
 class Unit(BaseModel):
-    """Unit organizational model"""
+    """Unit organizational model - matches units table"""
     id: Optional[int] = None
     name: str = ""
     short_name: Optional[str] = None
-    unit_type_id: int = 1  # Function or OrganizationalUnit unit_type.id
+    unit_type_id: int = 1  # References unit_types.id
     parent_unit_id: Optional[int] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     aliases: List[Alias] = field(default_factory=list)
     
-    # Computed fields (not stored in DB)
+    # Computed fields from joins/views (not stored in units table)
+    # These come from units_types view and other joins
+    unit_name: Optional[str] = field(default=None, init=False)  # From units_types view
+    unit_short_name: Optional[str] = field(default=None, init=False)  # From units_types view
+    unit_type: Optional[str] = field(default=None, init=True)  # unit_types.name
+    unit_type_short: Optional[str] = field(default=None, init=True)  # unit_types.short_name
+    unit_aliases: Optional[str] = field(default=None, init=False)  # From units_types view
     parent_name: Optional[str] = field(default=None, init=False)
     children_count: int = field(default=0, init=False)
     person_count: int = field(default=0, init=False)
     level: int = field(default=0, init=False)
     path: str = field(default="", init=False)
     full_path: str = field(default="", init=False)
+    full_short_path: str = field(default="", init=False)
+    short_path: str = field(default="", init=False)
+    assignments: Optional[List[Assignment]] = field(default_factory=list, init=True)
+    children: Optional[List[Any]] = field(default_factory=list, init=True)
     
     def __post_init__(self):
         """Post-initialization validation"""
@@ -41,7 +56,24 @@ class Unit(BaseModel):
     @property
     def display_name(self) -> str:
         """Get display name (short_name if available, otherwise name)"""
-        return self.short_name if self.short_name else self.name
+        # Use computed fields from views if available
+        if hasattr(self, 'unit_short_name') and self.unit_short_name:
+            return self.unit_short_name
+        elif self.short_name:
+            return self.short_name
+        elif hasattr(self, 'unit_name') and self.unit_name:
+            return self.unit_name
+        else:
+            return self.name
+    
+    @property
+    def full_name(self) -> str:
+        """Get full name for display"""
+        # Use computed fields from views if available
+        if hasattr(self, 'unit_name') and self.unit_name:
+            return self.unit_name
+        else:
+            return self.name
     
     @property
     def is_root(self) -> bool:
@@ -99,22 +131,40 @@ class Unit(BaseModel):
             data['aliases'] = parse_aliases(data['aliases'])
         
         # Extract computed fields (init=False fields)
+        # These fields come from views like units_types, units_hierarchy, etc.
         computed_fields = {
+            'unit_name': data.pop('unit_name', None),
+            'unit_short_name': data.pop('unit_short_name', None),
+            'unit_type': data.pop('unit_type', None),
+            'unit_type_short': data.pop('unit_type_short', None),
+            'unit_aliases': data.pop('unit_aliases', None),
             'parent_name': data.pop('parent_name', None),
             'children_count': data.pop('children_count', 0),
             'person_count': data.pop('person_count', 0),
             'level': data.pop('level', 0),
             'path': data.pop('path', ''),
-            'full_path': data.pop('full_path', '')
+            'full_path': data.pop('full_path', ''),
+            'full_short_path': data.pop('full_short_path', ''),
+            'short_path': data.pop('short_path', ''),
+            'assignments': data.pop('assignments', []),
+            'children': data.pop('children', [])
         }
         
-        # Create instance with regular fields
-        instance = cls.from_dict(data)
+        # Create instance with regular fields only
+        # Filter out computed fields from data before creating instance
+        filtered_data = {k: v for k, v in data.items() 
+                        if k not in computed_fields.keys()}
+        
+        instance = cls.from_dict(filtered_data)
         
         # Set computed fields
         for field_name, value in computed_fields.items():
             if hasattr(instance, field_name):
-                setattr(instance, field_name, value)
+                if field_name in ['children_count', 'person_count', 'level']:
+                    # Ensure numeric fields are properly converted
+                    setattr(instance, field_name, int(value) if value is not None else 0)
+                else:
+                    setattr(instance, field_name, value)
         
         return instance
     

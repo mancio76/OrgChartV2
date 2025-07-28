@@ -54,50 +54,6 @@ async def list_job_titles(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{job_title_id}", response_class=HTMLResponse)
-async def job_title_detail(
-    request: Request,
-    job_title_id: int,
-    job_title_service: JobTitleService = Depends(get_job_title_service)
-):
-    """Show job title details"""
-    try:
-        job_title = job_title_service.get_by_id(job_title_id)
-        if not job_title:
-            raise HTTPException(status_code=404, detail="Ruolo lavorativo non trovato")
-        
-        # Get assignable units
-        assignable_units = job_title_service.get_assignable_units(job_title_id)
-        
-        # Get current assignments for this job title
-        current_assignments = job_title_service.get_current_assignments(job_title_id)
-        
-        # Get assignment history
-        assignment_history = job_title_service.get_assignment_history(job_title_id)
-        
-        return templates.TemplateResponse(
-            "job_titles/detail.html",
-            {
-                "request": request,
-                "job_title": job_title,
-                "assignable_units": assignable_units,
-                "current_assignments": current_assignments,
-                "assignment_history": assignment_history,
-                "page_title": f"Ruolo: {job_title.name}",
-                "page_icon": "briefcase",
-                "breadcrumb": [
-                    {"name": "Ruoli", "url": "/job-titles"},
-                    {"name": job_title.name}
-                ]
-            }
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error showing job title {job_title_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @router.get("/new", response_class=HTMLResponse)
 async def create_job_title_form(
     request: Request,
@@ -209,6 +165,50 @@ async def create_job_title(
         )
     except Exception as e:
         logger.error(f"Error creating job title: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{job_title_id}", response_class=HTMLResponse)
+async def job_title_detail(
+    request: Request,
+    job_title_id: int,
+    job_title_service: JobTitleService = Depends(get_job_title_service)
+):
+    """Show job title details"""
+    try:
+        job_title = job_title_service.get_by_id(job_title_id)
+        if not job_title:
+            raise HTTPException(status_code=404, detail="Ruolo lavorativo non trovato")
+        
+        # Get assignable units
+        assignable_units = job_title_service.get_assignable_units(job_title_id)
+        
+        # Get current assignments for this job title
+        current_assignments = job_title_service.get_current_assignments(job_title_id)
+        
+        # Get assignment history
+        assignment_history = job_title_service.get_assignment_history(job_title_id)
+        
+        return templates.TemplateResponse(
+            "job_titles/detail.html",
+            {
+                "request": request,
+                "job_title": job_title,
+                "assignable_units": assignable_units,
+                "current_assignments": current_assignments,
+                "assignment_history": assignment_history,
+                "page_title": f"Ruolo: {job_title.name}",
+                "page_icon": "briefcase",
+                "breadcrumb": [
+                    {"name": "Ruoli", "url": "/job-titles"},
+                    {"name": job_title.name}
+                ]
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error showing job title {job_title_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

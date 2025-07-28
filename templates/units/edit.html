@@ -165,6 +165,9 @@
                     Questa unità non ha persone assegnate né sotto-unità. Puoi eliminarla se non è più necessaria.
                 </p>
                 <form method="post" action="/units/{{ unit.id }}/delete" class="d-inline">
+                    <!-- CSRF Token -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
                     <button type="submit" class="btn btn-danger btn-delete"
                             data-item-name="{{ unit.name }}" 
                             data-item-type="unità">

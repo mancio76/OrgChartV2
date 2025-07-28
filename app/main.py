@@ -9,7 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,6 +17,7 @@ from app.config import get_settings
 from app.database import init_database, cleanup_database
 from app.security import SecurityConfig, get_security_config
 from app.middleware.security import SecurityMiddleware, InputValidationMiddleware, SQLInjectionProtectionMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from app.routes import (
     home, units, job_titles, persons, 
     assignments, orgchart, api, health
@@ -102,6 +103,15 @@ security_config = SecurityConfig({
     'max_requests_per_minute': 100
 })
 
+# REQUIRED: Add SessionMiddleware for CSRF to work properly
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key=settings.security.secret_key,
+    max_age=86400,  # 24 hours
+    same_site="lax",
+    https_only=settings.security.https_only
+)
+
 # Add security middleware (order matters - add in reverse order of execution)
 app.add_middleware(SecurityMiddleware, security_config=security_config)
 app.add_middleware(InputValidationMiddleware)
@@ -132,6 +142,10 @@ app.include_router(persons.router, prefix="/persons", tags=["Persons"])
 app.include_router(assignments.router, prefix="/assignments", tags=["Assignments"])
 app.include_router(orgchart.router, prefix="/orgchart", tags=["Orgchart"])
 app.include_router(api.router, prefix="/api", tags=["API"])
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse("static/img/favicon.ico")
 
 # Test route for Task 6.3 - Form validation and user feedback
 @app.get("/test-validation", response_class=HTMLResponse)
