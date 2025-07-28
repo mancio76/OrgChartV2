@@ -462,7 +462,7 @@ FormValidator.submitForm = function(form) {
     // Check if form has custom submit handler
     if (form.hasAttribute('data-custom-submit')) {
         const customHandler = form.getAttribute('data-custom-submit');
-        if (window[customHandler] && typeof window[customHandler] === 'function') {
+        if (customHandler && window[customHandler] && typeof window[customHandler] === 'function') {
             window[customHandler](form);
             return;
         }

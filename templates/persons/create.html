@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (name && !shortNameInput.value.trim()) {
             const parts = name.split(' ');
             if (parts.length >= 2) {
-                const suggestion = parts[0].charAt(0).toUpperCase() + '. ' + parts[parts.length - 1];
+                const suggestion = parts[parts.length - 1].toUpperCase() + '. ' + parts[0].charAt(0).toUpperCase();
                 shortNameInput.placeholder = `Suggerimento: ${suggestion}`;
                 
                 // Show suggestion with animation
