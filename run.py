@@ -20,6 +20,9 @@ def main():
         from app.config import get_settings
         settings = get_settings()
         
+        if settings.is_development:
+            settings.logging.level = "DEBUG".lower()
+
         # Use new configuration system
         config = {
             "app": "app.main:app",
