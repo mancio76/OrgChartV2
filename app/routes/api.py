@@ -16,6 +16,7 @@ from app.services.job_title import JobTitleService
 from app.services.assignment import AssignmentService
 from app.services.orgchart import OrgchartService
 from app.models.base import ModelValidationException
+from app.security_csfr import generate_csrf_token, validate_csrf_token, validate_csrf_token_flexible, add_csrf_to_context
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -340,6 +341,7 @@ async def api_get_person(
 @router.post("/persons")
 async def api_create_person(
     person_data: PersonCreateRequest,
+    csrf_valid: bool = Depends(validate_csrf_token_flexible),
     person_service: PersonService = Depends(get_person_service)
 ):
     """Create new person"""

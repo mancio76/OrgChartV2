@@ -12,7 +12,7 @@ from app.services.assignment import AssignmentService
 from app.models.person import Person
 from app.models.base import ModelValidationException
 from app.security import CSRFProtection
-from app.security_csfr import generate_csrf_token, validate_csrf_token, add_csrf_to_context
+from app.security_csfr import generate_csrf_token, validate_csrf_token, validate_csrf_token_flexible, add_csrf_to_context
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -92,7 +92,7 @@ async def create_person_form(
 @router.post("/new")
 async def create_person(
     request: Request,
-    csrf_protection: bool = Depends(validate_csrf_token),
+    csrf_protection: bool = Depends(validate_csrf_token_flexible),
     name: str = Form(...),
     short_name: Optional[str] = Form(None),
     email: Optional[str] = Form(None),

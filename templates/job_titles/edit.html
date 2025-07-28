@@ -11,6 +11,9 @@
             </div>
             <div class="card-body">
                 <form method="post" class="needs-validation" novalidate>
+                    <!-- CSRF Token -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
                     <div class="row">
                         <!-- Basic Information -->
                         <div class="col-md-6">
@@ -296,6 +299,9 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
                 <form method="post" action="/job-titles/{{ job_title.id }}/delete" class="d-inline">
+                    <!-- CSRF Token -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
                     <button type="submit" class="btn btn-danger">
                         <i class="bi bi-trash me-1"></i>Elimina Definitivamente
                     </button>
