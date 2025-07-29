@@ -34,7 +34,7 @@
                         <input type="text" class="form-control" id="short_name" name="short_name" 
                                value="{{ form_data.short_name if form_data else '' }}" 
                                maxlength="50"
-                               placeholder="es. M. Rossi">
+                               placeholder="es. ROSSI M.">
                         <div class="form-text">Nome abbreviato per visualizzazioni compatte (opzionale)</div>
                     </div>
                     
@@ -163,20 +163,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const previewEmail = document.getElementById('preview-email');
     const form = document.querySelector('form.needs-validation') ?? document.querySelector('form.simple-form');
 
-    // if (form) {
-    //     // Add debug logging
-    //     form.addEventListener('submit', function(e) {
-    //         console.log('Form submit event triggered');
-    //         console.log('Default prevented:', e.defaultPrevented);
-    //         console.log('Form action:', this.action);
-    //         console.log('Form method:', this.method);
+    if (form) {
+        // Add debug logging
+        form.addEventListener('submit', function(e) {
+            console.log('Form submit event triggered');
+            console.log('Default prevented:', e.defaultPrevented);
+            console.log('Form action:', this.action);
+            console.log('Form method:', this.method);
+
+            // Check if any scripts are preventing submission
+            console.log('Default prevented:', e.defaultPrevented);
             
-    //         // Get CSRF token value
-    //         const csrfToken = this.querySelector('input[name="csrf_token"]');
-    //         console.log('CSRF token present:', !!csrfToken);
-    //         console.log('CSRF token value:', csrfToken ? csrfToken.value : 'MISSING');
-    //     });
-    // }
+            // Get CSRF token value
+            const csrfToken = this.querySelector('input[name="csrf_token"]');
+            console.log('CSRF token present:', !!csrfToken);
+            console.log('CSRF token value:', csrfToken ? csrfToken.value : 'MISSING');
+
+            // Check form data
+            const formData = new FormData(this);
+            console.log('Form data entries:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`  ${key}: ${value}`);
+            }
+
+            // Let's see what happens if we don't prevent default
+            e.preventDefault(); // ← Comment this out temporarily
+        });
+    }
     
     function updatePreview() {
         const name = nameInput.value.trim();

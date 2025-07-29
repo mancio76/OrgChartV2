@@ -41,6 +41,7 @@ def main():
         print(f"📝 Log level: {config['log_level'].upper()}")
         print(f"👥 Workers: {config['workers']}")
         print(f"🔒 Security: {'HTTPS' if settings.security.https_only else 'HTTP'}")
+        print(f"🔒 CSRF: {'ON' if settings.security.csrf_protection else 'OFF'}")
         print("=" * 60)
         
         # Production warnings

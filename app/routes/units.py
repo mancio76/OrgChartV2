@@ -18,6 +18,8 @@ from app.services.job_title import JobTitleService
 from app.models.unit import Unit
 from app.models.base import Alias, ModelValidationException
 from app.security import InputValidator, SecurityValidationError, get_client_ip, log_security_event
+from app.security import CSRFProtection
+from app.security_csfr import generate_csrf_token, validate_csrf_token, validate_csrf_token_flexible, add_csrf_to_context
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -77,6 +79,7 @@ async def list_units(
 @router.get("/new", response_class=HTMLResponse)
 async def create_unit_form(
     request: Request,
+    csrf_token: str = Depends(generate_csrf_token),
     unit_service: UnitService = Depends(get_unit_service),
     unit_type_service: UnitTypeService = Depends(get_unit_type_service)
 ):
@@ -87,16 +90,20 @@ async def create_unit_form(
         
         # Get unit types
         unit_types = unit_type_service.get_all()
-        
-        return templates.TemplateResponse(
-            "units/create.html",
-            {
-                "request": request,
-                "available_parents": available_parents,
-                "unit_types": unit_types,
-                "page_title": "Create Unit"
-            }
-        )
+
+        context = {
+            "request": request,
+            "available_parents": available_parents,
+            "unit_types": unit_types,
+            "page_title": "Crea Unità",
+            "breadcrumb": [
+                {"name": "Unità", "url": "/units"},
+                {"name": "Nuova Unità"}
+            ],
+            "csrf_token": csrf_token
+        }
+
+        return templates.TemplateResponse("units/create.html", context)
     except Exception as e:
         logger.error(f"Error loading create unit form: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -112,11 +119,22 @@ async def create_unit(
     parent_unit_id: Optional[int] = Form(None),
     start_date: Optional[str] = Form(None),
     end_date: Optional[str] = Form(None),
+    csrf_protection: bool = Depends(validate_csrf_token_flexible),
+    csrf_token: Optional[str] = Form(None),
     unit_service: UnitService = Depends(get_unit_service),
     unit_type_service: UnitTypeService = Depends(get_unit_type_service)
 ):
     """Create new unit with security validation"""
     try:
+        # from app.security import SecurityConfig, get_security_config
+        # sec = get_security_config()
+        # csrf_protection = sec.get_csrf_protection()
+        # session_id = request.session.get('session_id')
+
+        # if not csrf_protection.validate_token(csrf_token, session_id):
+        #     logger.warning(f"CSRF validation failed for session: {session_id[:8]}...")
+        #     ##raise HTTPException(status_code=403, detail="CSRF token validation failed")
+
         # Security validation
         form_data = {
             'name': name,
