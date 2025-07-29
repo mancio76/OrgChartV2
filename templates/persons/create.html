@@ -11,6 +11,7 @@
             </div>
             <div class="card-body">
                 <form method="post" class="needs-validation" novalidate>
+                <!-- <form method="post" class="simple-form" novalidate> -->
                     <!-- CSRF Token -->
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
@@ -122,7 +123,7 @@
                 <ul class="small text-muted mb-0">
                     <li>Usa il nome completo per identificazione univoca</li>
                     <li>Il nome breve è utile per visualizzazioni compatte</li>
-                    <li>L'email è importante per notifiche e comunicazioni</li>
+                    <li>Un indirizzo email è importante per notifiche e comunicazioni</li>
                     <li>Tutti i campi possono essere modificati successivamente</li>
                 </ul>
             </div>
@@ -160,6 +161,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const previewName = document.getElementById('preview-name');
     const previewShortName = document.getElementById('preview-short-name');
     const previewEmail = document.getElementById('preview-email');
+    const form = document.querySelector('form.needs-validation') ?? document.querySelector('form.simple-form');
+
+    // if (form) {
+    //     // Add debug logging
+    //     form.addEventListener('submit', function(e) {
+    //         console.log('Form submit event triggered');
+    //         console.log('Default prevented:', e.defaultPrevented);
+    //         console.log('Form action:', this.action);
+    //         console.log('Form method:', this.method);
+            
+    //         // Get CSRF token value
+    //         const csrfToken = this.querySelector('input[name="csrf_token"]');
+    //         console.log('CSRF token present:', !!csrfToken);
+    //         console.log('CSRF token value:', csrfToken ? csrfToken.value : 'MISSING');
+    //     });
+    // }
     
     function updatePreview() {
         const name = nameInput.value.trim();

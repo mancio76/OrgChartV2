@@ -28,6 +28,7 @@ FormValidator.setupValidation = function() {
     
     forms.forEach(function(form) {
         form.addEventListener('submit', function(event) {
+            console.log('.FormValidator.setupValidation.prevent-default-submit');
             event.preventDefault();
             event.stopPropagation();
             
@@ -459,8 +460,10 @@ FormValidator.hideFormLoading = function(form) {
  * Submit form
  */
 FormValidator.submitForm = function(form) {
+    console.log('.FormValidator.submitForm');
     // Check if form has custom submit handler
     if (form.hasAttribute('data-custom-submit')) {
+        console.log('.FormValidator.submitForm.data-custom-submit');
         const customHandler = form.getAttribute('data-custom-submit');
         if (customHandler && window[customHandler] && typeof window[customHandler] === 'function') {
             window[customHandler](form);
@@ -470,6 +473,7 @@ FormValidator.submitForm = function(form) {
     
     // Default form submission
     setTimeout(function() {
+        console.log('.FormValidator.submit');
         form.submit();
     }, 500);
 };
@@ -1120,10 +1124,12 @@ FormValidator.clearFieldError = function(field) {
  * Enhanced form submission with better user feedback
  */
 FormValidator.enhanceFormSubmission = function() {
+    console.log('.FormValidator.enhanceFormSubmission');
     const forms = document.querySelectorAll('.needs-validation');
     
     forms.forEach(function(form) {
         form.addEventListener('submit', function(e) {
+            console.log('.FormValidator.enhanceFormSubmission.preventDefault');
             e.preventDefault();
             
             const isValid = FormValidator.validateForm(form);
@@ -1135,8 +1141,10 @@ FormValidator.enhanceFormSubmission = function() {
                 // Submit after brief delay for user feedback
                 setTimeout(() => {
                     if (form.hasAttribute('data-ajax-submit')) {
+                        console.log('.FormValidator.enhanceFormSubmission.submitFormAjax');
                         FormValidator.submitFormAjax(form);
                     } else {
+                        console.log('.FormValidator.enhanceFormSubmission.submit');
                         form.submit();
                     }
                 }, 500);

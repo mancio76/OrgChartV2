@@ -92,13 +92,15 @@ async def create_person_form(
 @router.post("/new")
 async def create_person(
     request: Request,
-    csrf_protection: bool = Depends(validate_csrf_token_flexible),
+    ##csrf_protection: bool = Depends(validate_csrf_token_flexible),
+    csrf_token: str,
     name: str = Form(...),
     short_name: Optional[str] = Form(None),
     email: Optional[str] = Form(None),
     person_service: PersonService = Depends(get_person_service)
 ):
     """Create new person"""
+
     try:
         # Create person model
         person = Person(
