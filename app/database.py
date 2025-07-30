@@ -199,11 +199,11 @@ class DatabaseManager:
         if len(params) < 2:
             return False
 
-        keyword = params[-1].upper()
+        keyword = str(params[-1]).upper()
         if keyword == self.__bypass__:
             return True
 
-        return false
+        return False
 
     def execute_query(self, query: str, params: tuple = None) -> sqlite3.Cursor:
         """Execute a single query with proper error handling, logging, and security validation"""
