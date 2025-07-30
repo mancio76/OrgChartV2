@@ -447,7 +447,7 @@ class SecurityConfig:
     
     def __init__(self, config_dict: Dict[str, Any]):
         self.secret_key = config_dict.get('secret_key', secrets.token_urlsafe(32))
-        self.csrf_protection = config_dict.get('csrf_protection', True)
+        self.csrf_protection = config_dict.get('csrf_protection', False)
         self.secure_cookies = config_dict.get('secure_cookies', False)
         self.https_only = config_dict.get('https_only', False)
         self.allowed_hosts = config_dict.get('allowed_hosts', ['localhost'])

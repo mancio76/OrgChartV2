@@ -47,6 +47,7 @@ FormEnhancements.setupRealTimeValidation = function() {
         
         // Enhanced form submission
         form.addEventListener('submit', function(e) {
+            console.log('.FormEnhancements.setupRealTimeValidation.needs-validation.handleFormSubmission');
             e.preventDefault();
             FormEnhancements.handleFormSubmission(this);
         });
@@ -534,6 +535,7 @@ FormEnhancements.showNotification = function(type, message) {
  * Handle form submission
  */
 FormEnhancements.handleFormSubmission = function(form) {
+    console.log('.FormEnhancements.handleFormSubmission');
     // Validate all fields
     const fields = form.querySelectorAll('.form-control, .form-select');
     let isValid = true;
@@ -551,6 +553,14 @@ FormEnhancements.handleFormSubmission = function(form) {
     });
     
     if (isValid) {
+        console.log('.FormEnhancements.handleFormSubmission.valid');
+        // Skip enhanced submission for simple forms
+        if (form.hasAttribute('data-simple-submit')) {
+            console.log('.FormEnhancements.handleFormSubmission.data-simple-submit');
+            form.submit();
+            return;
+        }
+        
         // Show loading state
         FormEnhancements.setFormLoading(form, true);
         
@@ -559,9 +569,11 @@ FormEnhancements.handleFormSubmission = function(form) {
         
         // Submit form after brief delay
         setTimeout(() => {
+            console.log('.FormEnhancements.handleFormSubmission.submit');
             form.submit();
         }, 500);
     } else {
+        console.log('.FormEnhancements.handleFormSubmission.invalid');
         // Show error summary
         FormEnhancements.showValidationSummary(form, errors);
         

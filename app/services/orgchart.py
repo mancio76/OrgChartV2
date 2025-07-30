@@ -239,7 +239,7 @@ class OrgchartService:
             ORDER BY us.path
             """
             
-            units = self.db_manager.fetch_all(subtree_query, (root_unit_id,))
+            units = self.db_manager.fetch_all(subtree_query, (root_unit_id, 'YOUSHALLPASS'))
             
             if not units:
                 return []

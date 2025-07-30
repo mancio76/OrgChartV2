@@ -16,8 +16,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.database import init_database, cleanup_database
 from app.security import SecurityConfig, get_security_config
+
 from app.middleware.security import SecurityMiddleware, InputValidationMiddleware, SQLInjectionProtectionMiddleware
+from app.middleware.security_mini import MiniSecurityMiddleware
 from starlette.middleware.sessions import SessionMiddleware
+
 from app.routes import (
     home, units, job_titles, persons, 
     assignments, orgchart, api, health
@@ -111,6 +114,12 @@ app.add_middleware(
     same_site="lax",
     https_only=settings.security.https_only
 )
+
+#OR (for a more lightweight check)
+# app.add_middleware(
+#     MiniSecurityMiddleware,
+#     secret_key=settings.security.secret_key
+# )
 
 # Add security middleware (order matters - add in reverse order of execution)
 app.add_middleware(SecurityMiddleware, security_config=security_config)

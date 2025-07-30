@@ -23,7 +23,13 @@
             "request": "launch",
             "name": "Firefox Run",
             "url": "http://localhost:8000",
-            "webRoot": "${workspaceFolder}/app"
+            "webRoot": "${workspaceFolder}/app",
+            "pathMappings": [
+                {
+                    "url": "http://localhost:8000/static",
+                    "path": "${workspaceFolder}/static"
+                }
+            ]
         }
     ]
 }

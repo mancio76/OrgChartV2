@@ -70,7 +70,7 @@ async def list_persons(
 async def create_person_form(
     request: Request,
     csrf_token: str = Depends(generate_csrf_token)
-    ):
+):
     """Show create person form"""
     try:
         context = {
@@ -92,13 +92,17 @@ async def create_person_form(
 @router.post("/new")
 async def create_person(
     request: Request,
-    csrf_protection: bool = Depends(validate_csrf_token_flexible),
     name: str = Form(...),
     short_name: Optional[str] = Form(None),
     email: Optional[str] = Form(None),
+    csrf_protection: bool = Depends(validate_csrf_token_flexible),
+    csrf_token: Optional[str] = Form(None),
     person_service: PersonService = Depends(get_person_service)
 ):
     """Create new person"""
+    logger.info("=== STARTING PERSON CREATION ===")
+    logger.info(f"Request received - Name: {name}, Email: {email}")
+
     try:
         # Create person model
         person = Person(

@@ -5,6 +5,7 @@ Unit service for business logic
 import logging
 from typing import List, Optional, Dict, Any
 from app.services.base import BaseService
+from app.services.unit_type import UnitTypeService
 from app.models.unit import Unit
 from app.models.assignment import Assignment
 from app.models.person import Person
