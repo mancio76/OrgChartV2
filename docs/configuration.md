@@ -217,20 +217,12 @@ python scripts/validate_config.py
 ```
 
 Common validation errors:
+
 - Invalid log level
 - Port out of range
 - Debug mode enabled in production
 - Weak secret key
 - Missing required directories
-
-## Migration from Legacy Configuration
-
-The system maintains backward compatibility with legacy environment variables:
-
-- `RUN_HOST` → `SERVER_HOST`
-- `RUN_PORT` → `SERVER_PORT`
-- `RUN_DEBUG` → `DEBUG`
-- `RUN_LOG_LEVEL` → `LOG_LEVEL`
 
 ## Examples
 

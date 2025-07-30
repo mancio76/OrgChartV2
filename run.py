@@ -32,6 +32,7 @@ def main():
             "log_level": settings.logging.level.lower(),
             "access_log": settings.server.access_log,
             "workers": settings.server.workers if not settings.server.reload else 1,
+            "reload_dirs": ['/app']
         }
         
         print("=" * 60)
@@ -56,30 +57,6 @@ def main():
             if not settings.security.https_only:
                 print("⚠️  WARNING: HTTPS is not enforced in production!")
         
-    except ImportError as e:
-        print(f"❌ Configuration error: {e}")
-        print("📋 Falling back to legacy configuration...")
-        
-        # Fallback to legacy environment variables
-        config = {
-            "app": "app.main:app",
-            "host": os.getenv("RUN_HOST", "127.0.0.1"),
-            "port": int(os.getenv("RUN_PORT", 8000)),
-            "reload": os.getenv("RUN_DEBUG", "true").lower() == "true",
-            "log_level": os.getenv("RUN_LOG_LEVEL", "info"),
-            "access_log": True,
-            "reload": True,
-            "reload_dirs": ['/app']
-        }
-        
-        print("=" * 50)
-        print("🏢 ORGANIGRAMMA WEB APP (Legacy Mode)")
-        print("=" * 50)
-        print(f"🚀 Starting server on http://{config['host']}:{config['port']}")
-        print(f"📊 Debug mode: {'ON' if config['reload'] else 'OFF'}")
-        print(f"📝 Log level: {config['log_level'].upper()}")
-        print("=" * 50)
-    
     except Exception as e:
         print(f"❌ Configuration error: {e}")
         return 1

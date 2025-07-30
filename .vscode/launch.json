@@ -10,13 +10,7 @@
             "request": "launch",
             "program": "run.py",
             "console": "integratedTerminal",
-            "justMyCode": true,
-            "env": {
-                "RUN_HOST": "localhost",
-                "RUN_PORT": "8000",
-                "RUN_DEBUG": "true",
-                "RUN_LOG_LEVEL": "debug"
-            }
+            "justMyCode": true
         },
         {
             "type": "firefox",
