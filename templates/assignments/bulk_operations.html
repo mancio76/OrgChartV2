@@ -29,4 +29,842 @@
     <div class="col-lg-8">
         <!-- Operation Selection -->
         <div class="card mb-4">
-            <
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-list-check me-2"></i>Seleziona Operazione
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card h-100 operation-card" data-operation="bulk-create">
+                            <div class="card-body text-center">
+                                <i class="bi bi-person-plus-fill display-4 text-success mb-3"></i>
+                                <h6 class="card-title">Creazione Multipla</h6>
+                                <p class="card-text small text-muted">
+                                    Crea più incarichi contemporaneamente per la stessa persona o ruolo
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100 operation-card" data-operation="bulk-update">
+                            <div class="card-body text-center">
+                                <i class="bi bi-pencil-square display-4 text-primary mb-3"></i>
+                                <h6 class="card-title">Modifica Multipla</h6>
+                                <p class="card-text small text-muted">
+                                    Modifica proprietà comuni di più incarichi selezionati
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100 operation-card" data-operation="bulk-terminate">
+                            <div class="card-body text-center">
+                                <i class="bi bi-x-circle-fill display-4 text-danger mb-3"></i>
+                                <h6 class="card-title">Terminazione Multipla</h6>
+                                <p class="card-text small text-muted">
+                                    Termina più incarichi contemporaneamente con data specifica
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100 operation-card" data-operation="bulk-transfer">
+                            <div class="card-body text-center">
+                                <i class="bi bi-arrow-left-right display-4 text-warning mb-3"></i>
+                                <h6 class="card-title">Trasferimento</h6>
+                                <p class="card-text small text-muted">
+                                    Trasferisci persone da un'unità all'altra mantenendo i ruoli
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Operation Forms -->
+        <div id="operation-forms">
+            <!-- Bulk Create Form -->
+            <div id="bulk-create-form" class="card operation-form" style="display: none;">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person-plus-fill me-2"></i>Creazione Multipla Incarichi
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="bulk-create" method="post" action="/assignments/bulk/create">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-muted mb-3">Selezione Base</h6>
+                                
+                                <!-- Creation Mode -->
+                                <div class="mb-3">
+                                    <label class="form-label">Modalità Creazione</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="creation_mode" id="mode_person" value="person" checked>
+                                        <label class="form-check-label" for="mode_person">
+                                            <strong>Stessa Persona, Ruoli Multipli</strong>
+                                            <div class="small text-muted">Assegna una persona a più ruoli/unità</div>
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="creation_mode" id="mode_role" value="role">
+                                        <label class="form-check-label" for="mode_role">
+                                            <strong>Stesso Ruolo, Persone Multiple</strong>
+                                            <div class="small text-muted">Assegna più persone allo stesso ruolo/unità</div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Person Selection (for mode_person) -->
+                                <div class="mb-3" id="person-selection">
+                                    <label for="bulk_person_id" class="form-label">Persona *</label>
+                                    <select class="form-select" id="bulk_person_id" name="person_id">
+                                        <option value="">Seleziona persona...</option>
+                                        {% for person in all_persons %}
+                                        <option value="{{ person.id }}">{{ person.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- Role/Unit Selection (for mode_role) -->
+                                <div class="mb-3" id="role-selection" style="display: none;">
+                                    <label for="bulk_unit_id" class="form-label">Unità *</label>
+                                    <select class="form-select" id="bulk_unit_id" name="unit_id">
+                                        <option value="">Seleziona unità...</option>
+                                        {% for unit in all_units %}
+                                        <option value="{{ unit.id }}">{{ unit.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    
+                                    <label for="bulk_job_title_id" class="form-label mt-3">Ruolo *</label>
+                                    <select class="form-select" id="bulk_job_title_id" name="job_title_id">
+                                        <option value="">Seleziona ruolo...</option>
+                                        {% for job_title in all_job_titles %}
+                                        <option value="{{ job_title.id }}">{{ job_title.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6 class="text-muted mb-3">Proprietà Comuni</h6>
+                                
+                                <!-- Common Properties -->
+                                <div class="mb-3">
+                                    <label for="bulk_percentage" class="form-label">Percentuale Default</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="bulk_percentage" name="percentage" 
+                                               min="1" max="100" value="100">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="bulk_valid_from" class="form-label">Data Inizio</label>
+                                    <input type="date" class="form-control" id="bulk_valid_from" name="valid_from">
+                                </div>
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="bulk_is_ad_interim" name="is_ad_interim">
+                                    <label class="form-check-label" for="bulk_is_ad_interim">
+                                        <i class="bi bi-hourglass-split me-1"></i>Ad Interim
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="bulk_is_unit_boss" name="is_unit_boss">
+                                    <label class="form-check-label" for="bulk_is_unit_boss">
+                                        <i class="bi bi-star me-1"></i>Responsabile Unità
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Dynamic Selection Area -->
+                        <div id="dynamic-selections">
+                            <h6 class="text-muted mb-3">Selezioni Multiple</h6>
+                            <div id="selections-container">
+                                <!-- Dynamic content will be added here -->
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="addSelection()">
+                                <i class="bi bi-plus-circle me-1"></i>Aggiungi Selezione
+                            </button>
+                        </div>
+                        
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-secondary" onclick="resetOperation()">
+                                <i class="bi bi-arrow-left me-1"></i>Indietro
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle me-1"></i>Crea Incarichi
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Bulk Update Form -->
+            <div id="bulk-update-form" class="card operation-form" style="display: none;">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-pencil-square me-2"></i>Modifica Multipla Incarichi
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="bulk-update" method="post" action="/assignments/bulk/update">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        
+                        <!-- Assignment Selection -->
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3">Selezione Incarichi</h6>
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label for="filter_person" class="form-label">Filtra per Persona</label>
+                                            <select class="form-select" id="filter_person" onchange="loadAssignments()">
+                                                <option value="">Tutte le persone</option>
+                                                {% for person in all_persons %}
+                                                <option value="{{ person.id }}">{{ person.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="filter_unit" class="form-label">Filtra per Unità</label>
+                                            <select class="form-select" id="filter_unit" onchange="loadAssignments()">
+                                                <option value="">Tutte le unità</option>
+                                                {% for unit in all_units %}
+                                                <option value="{{ unit.id }}">{{ unit.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="filter_job_title" class="form-label">Filtra per Ruolo</label>
+                                            <select class="form-select" id="filter_job_title" onchange="loadAssignments()">
+                                                <option value="">Tutti i ruoli</option>
+                                                {% for job_title in all_job_titles %}
+                                                <option value="{{ job_title.id }}">{{ job_title.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="assignments-list" class="mt-3">
+                                <!-- Assignments will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Update Fields -->
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3">Campi da Modificare</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="update_percentage" name="update_percentage">
+                                        <label class="form-check-label" for="update_percentage">
+                                            Modifica Percentuale
+                                        </label>
+                                        <div class="input-group mt-2" id="percentage_group" style="display: none;">
+                                            <input type="number" class="form-control" name="new_percentage" min="1" max="100" value="100">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="update_valid_from" name="update_valid_from">
+                                        <label class="form-check-label" for="update_valid_from">
+                                            Modifica Data Inizio
+                                        </label>
+                                        <input type="date" class="form-control mt-2" name="new_valid_from" id="valid_from_group" style="display: none;">
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="update_ad_interim" name="update_ad_interim">
+                                        <label class="form-check-label" for="update_ad_interim">
+                                            Modifica Status Ad Interim
+                                        </label>
+                                        <select class="form-select mt-2" name="new_ad_interim" id="ad_interim_group" style="display: none;">
+                                            <option value="true">Sì - Ad Interim</option>
+                                            <option value="false">No - Definitivo</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="update_unit_boss" name="update_unit_boss">
+                                        <label class="form-check-label" for="update_unit_boss">
+                                            Modifica Status Responsabile
+                                        </label>
+                                        <select class="form-select mt-2" name="new_unit_boss" id="unit_boss_group" style="display: none;">
+                                            <option value="true">Sì - Responsabile</option>
+                                            <option value="false">No - Non Responsabile</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-secondary" onclick="resetOperation()">
+                                <i class="bi bi-arrow-left me-1"></i>Indietro
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-1"></i>Aggiorna Incarichi
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Bulk Terminate Form -->
+            <div id="bulk-terminate-form" class="card operation-form" style="display: none;">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-x-circle-fill me-2"></i>Terminazione Multipla Incarichi
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="bulk-terminate" method="post" action="/assignments/bulk/terminate">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        
+                        <!-- Termination Criteria -->
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3">Criteri di Terminazione</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="terminate_person" class="form-label">Persona (opzionale)</label>
+                                    <select class="form-select" id="terminate_person" name="person_id">
+                                        <option value="">Tutte le persone</option>
+                                        {% for person in all_persons %}
+                                        <option value="{{ person.id }}">{{ person.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="terminate_unit" class="form-label">Unità (opzionale)</label>
+                                    <select class="form-select" id="terminate_unit" name="unit_id">
+                                        <option value="">Tutte le unità</option>
+                                        {% for unit in all_units %}
+                                        <option value="{{ unit.id }}">{{ unit.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Termination Details -->
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3">Dettagli Terminazione</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="termination_date" class="form-label">Data Terminazione *</label>
+                                    <input type="date" class="form-control" id="termination_date" name="termination_date" required>
+                                    <div class="form-text">Data di fine degli incarichi selezionati</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="termination_reason" class="form-label">Motivo Terminazione</label>
+                                    <select class="form-select" id="termination_reason" name="termination_reason">
+                                        <option value="">Seleziona motivo...</option>
+                                        <option value="REORGANIZATION">Riorganizzazione</option>
+                                        <option value="RESIGNATION">Dimissioni</option>
+                                        <option value="TRANSFER">Trasferimento</option>
+                                        <option value="RETIREMENT">Pensionamento</option>
+                                        <option value="OTHER">Altro</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Preview -->
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Attenzione:</strong> Questa operazione terminerà tutti gli incarichi che corrispondono ai criteri selezionati.
+                            Verifica attentamente la selezione prima di procedere.
+                        </div>
+                        
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-secondary" onclick="resetOperation()">
+                                <i class="bi bi-arrow-left me-1"></i>Indietro
+                            </button>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-x-circle me-1"></i>Termina Incarichi
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Bulk Transfer Form -->
+            <div id="bulk-transfer-form" class="card operation-form" style="display: none;">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-arrow-left-right me-2"></i>Trasferimento Multiplo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="bulk-transfer" method="post" action="/assignments/bulk/transfer">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        
+                        <!-- Transfer Details -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-muted mb-3">Da (Origine)</h6>
+                                <label for="from_unit" class="form-label">Unità di Origine *</label>
+                                <select class="form-select" id="from_unit" name="from_unit_id" required>
+                                    <option value="">Seleziona unità di origine...</option>
+                                    {% for unit in all_units %}
+                                    <option value="{{ unit.id }}">{{ unit.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                
+                                <label for="from_job_title" class="form-label mt-3">Ruolo (opzionale)</label>
+                                <select class="form-select" id="from_job_title" name="from_job_title_id">
+                                    <option value="">Tutti i ruoli</option>
+                                    {% for job_title in all_job_titles %}
+                                    <option value="{{ job_title.id }}">{{ job_title.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6 class="text-muted mb-3">A (Destinazione)</h6>
+                                <label for="to_unit" class="form-label">Unità di Destinazione *</label>
+                                <select class="form-select" id="to_unit" name="to_unit_id" required>
+                                    <option value="">Seleziona unità di destinazione...</option>
+                                    {% for unit in all_units %}
+                                    <option value="{{ unit.id }}">{{ unit.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                
+                                <label for="to_job_title" class="form-label mt-3">Nuovo Ruolo (opzionale)</label>
+                                <select class="form-select" id="to_job_title" name="to_job_title_id">
+                                    <option value="">Mantieni ruolo esistente</option>
+                                    {% for job_title in all_job_titles %}
+                                    <option value="{{ job_title.id }}">{{ job_title.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Transfer Options -->
+                        <div class="mt-4">
+                            <h6 class="text-muted mb-3">Opzioni Trasferimento</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="transfer_date" class="form-label">Data Trasferimento</label>
+                                    <input type="date" class="form-control" id="transfer_date" name="transfer_date">
+                                    <div class="form-text">Data di effetto del trasferimento (default: oggi)</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check mt-4">
+                                        <input class="form-check-input" type="checkbox" id="maintain_properties" name="maintain_properties" checked>
+                                        <label class="form-check-label" for="maintain_properties">
+                                            Mantieni proprietà esistenti (percentuale, ad interim, etc.)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-secondary" onclick="resetOperation()">
+                                <i class="bi bi-arrow-left me-1"></i>Indietro
+                            </button>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-arrow-left-right me-1"></i>Esegui Trasferimento
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Help Card -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-question-circle me-2"></i>Guida Operazioni
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="help-content">
+                    <p class="text-muted">Seleziona un'operazione per visualizzare la guida specifica.</p>
+                    
+                    <h6 class="mt-3">Operazioni Disponibili:</h6>
+                    <ul class="list-unstyled small">
+                        <li class="mb-2">
+                            <i class="bi bi-person-plus-fill text-success me-2"></i>
+                            <strong>Creazione Multipla:</strong> Crea più incarichi con proprietà comuni
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-pencil-square text-primary me-2"></i>
+                            <strong>Modifica Multipla:</strong> Aggiorna proprietà di incarichi esistenti
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                            <strong>Terminazione:</strong> Termina più incarichi contemporaneamente
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-arrow-left-right text-warning me-2"></i>
+                            <strong>Trasferimento:</strong> Sposta persone tra unità diverse
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Statistics Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-bar-chart me-2"></i>Statistiche Rapide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h4 class="text-primary mb-0">{{ stats.total_assignments if stats else '0' }}</h4>
+                            <small class="text-muted">Incarichi Totali</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success mb-0">{{ stats.unique_persons if stats else '0' }}</h4>
+                        <small class="text-muted">Persone Attive</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h4 class="text-warning mb-0">{{ stats.interim_count if stats else '0' }}</h4>
+                            <small class="text-muted">Ad Interim</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-info mb-0">{{ stats.unique_units if stats else '0' }}</h4>
+                        <small class="text-muted">Unità Coinvolte</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.operation-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.operation-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.operation-card.selected {
+    border-color: var(--bs-primary);
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+.operation-form {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.selection-item {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background-color: #f8f9fa;
+}
+
+.selection-item .btn-remove {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectionCounter = 0;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Operation card selection
+    document.querySelectorAll('.operation-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const operation = this.dataset.operation;
+            selectOperation(operation);
+        });
+    });
+    
+    // Creation mode toggle
+    document.querySelectorAll('input[name="creation_mode"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            toggleCreationMode(this.value);
+        });
+    });
+    
+    // Update field toggles
+    document.querySelectorAll('input[type="checkbox"][id^="update_"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            toggleUpdateField(this);
+        });
+    });
+});
+
+function selectOperation(operation) {
+    // Hide all forms
+    document.querySelectorAll('.operation-form').forEach(form => {
+        form.style.display = 'none';
+    });
+    
+    // Remove selected class from all cards
+    document.querySelectorAll('.operation-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    // Show selected form and mark card as selected
+    const selectedCard = document.querySelector(`[data-operation="${operation}"]`);
+    const selectedForm = document.getElementById(`${operation}-form`);
+    
+    if (selectedCard && selectedForm) {
+        selectedCard.classList.add('selected');
+        selectedForm.style.display = 'block';
+        updateHelpContent(operation);
+    }
+}
+
+function resetOperation() {
+    // Hide all forms
+    document.querySelectorAll('.operation-form').forEach(form => {
+        form.style.display = 'none';
+    });
+    
+    // Remove selected class from all cards
+    document.querySelectorAll('.operation-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    // Reset help content
+    updateHelpContent(null);
+}
+
+function toggleCreationMode(mode) {
+    const personSelection = document.getElementById('person-selection');
+    const roleSelection = document.getElementById('role-selection');
+    
+    if (mode === 'person') {
+        personSelection.style.display = 'block';
+        roleSelection.style.display = 'none';
+    } else {
+        personSelection.style.display = 'none';
+        roleSelection.style.display = 'block';
+    }
+}
+
+function addSelection() {
+    const container = document.getElementById('selections-container');
+    const mode = document.querySelector('input[name="creation_mode"]:checked').value;
+    
+    selectionCounter++;
+    
+    let selectionHtml = '';
+    if (mode === 'person') {
+        // Add unit/role selection for person mode
+        selectionHtml = `
+            <div class="selection-item position-relative" id="selection-${selectionCounter}">
+                <button type="button" class="btn btn-sm btn-outline-danger btn-remove" onclick="removeSelection(${selectionCounter})">
+                    <i class="bi bi-x"></i>
+                </button>
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">Unità</label>
+                        <select class="form-select" name="selections[${selectionCounter}][unit_id]" required>
+                            <option value="">Seleziona unità...</option>
+                            {% for unit in all_units %}
+                            <option value="{{ unit.id }}">{{ unit.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Ruolo</label>
+                        <select class="form-select" name="selections[${selectionCounter}][job_title_id]" required>
+                            <option value="">Seleziona ruolo...</option>
+                            {% for job_title in all_job_titles %}
+                            <option value="{{ job_title.id }}">{{ job_title.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        // Add person selection for role mode
+        selectionHtml = `
+            <div class="selection-item position-relative" id="selection-${selectionCounter}">
+                <button type="button" class="btn btn-sm btn-outline-danger btn-remove" onclick="removeSelection(${selectionCounter})">
+                    <i class="bi bi-x"></i>
+                </button>
+                <div class="row">
+                    <div class="col-md-12">
+                        <label class="form-label">Persona</label>
+                        <select class="form-select" name="selections[${selectionCounter}][person_id]" required>
+                            <option value="">Seleziona persona...</option>
+                            {% for person in all_persons %}
+                            <option value="{{ person.id }}">{{ person.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    container.insertAdjacentHTML('beforeend', selectionHtml);
+}
+
+function removeSelection(id) {
+    const element = document.getElementById(`selection-${id}`);
+    if (element) {
+        element.remove();
+    }
+}
+
+function toggleUpdateField(checkbox) {
+    const fieldName = checkbox.id.replace('update_', '');
+    const group = document.getElementById(`${fieldName}_group`);
+    
+    if (group) {
+        group.style.display = checkbox.checked ? 'block' : 'none';
+    }
+}
+
+function loadAssignments() {
+    // This would typically make an AJAX call to load assignments based on filters
+    // For now, we'll show a placeholder
+    const container = document.getElementById('assignments-list');
+    container.innerHTML = `
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-search display-4 text-muted mb-3"></i>
+                <p class="text-muted">Seleziona i filtri per caricare gli incarichi da modificare.</p>
+            </div>
+        </div>
+    `;
+}
+
+function updateHelpContent(operation) {
+    const helpContent = document.getElementById('help-content');
+    
+    const helpTexts = {
+        'bulk-create': `
+            <h6>Creazione Multipla</h6>
+            <p class="small text-muted">Crea più incarichi contemporaneamente:</p>
+            <ul class="small">
+                <li><strong>Modalità Persona:</strong> Assegna una persona a più ruoli/unità</li>
+                <li><strong>Modalità Ruolo:</strong> Assegna più persone allo stesso ruolo/unità</li>
+                <li>Imposta proprietà comuni per tutti gli incarichi</li>
+                <li>Aggiungi selezioni multiple con il pulsante "+"</li>
+            </ul>
+        `,
+        'bulk-update': `
+            <h6>Modifica Multipla</h6>
+            <p class="small text-muted">Modifica proprietà di più incarichi:</p>
+            <ul class="small">
+                <li>Filtra gli incarichi da modificare</li>
+                <li>Seleziona i campi da aggiornare</li>
+                <li>Imposta i nuovi valori</li>
+                <li>Tutte le modifiche creano nuove versioni</li>
+            </ul>
+        `,
+        'bulk-terminate': `
+            <h6>Terminazione Multipla</h6>
+            <p class="small text-muted">Termina più incarichi contemporaneamente:</p>
+            <ul class="small">
+                <li>Seleziona criteri di terminazione</li>
+                <li>Imposta data di terminazione</li>
+                <li>Specifica il motivo (opzionale)</li>
+                <li><strong>Attenzione:</strong> Operazione irreversibile</li>
+            </ul>
+        `,
+        'bulk-transfer': `
+            <h6>Trasferimento Multiplo</h6>
+            <p class="small text-muted">Trasferisci persone tra unità:</p>
+            <ul class="small">
+                <li>Seleziona unità di origine e destinazione</li>
+                <li>Opzionalmente cambia anche il ruolo</li>
+                <li>Mantieni o modifica le proprietà esistenti</li>
+                <li>Imposta data di trasferimento</li>
+            </ul>
+        `
+    };
+    
+    if (operation && helpTexts[operation]) {
+        helpContent.innerHTML = helpTexts[operation];
+    } else {
+        helpContent.innerHTML = `
+            <p class="text-muted">Seleziona un'operazione per visualizzare la guida specifica.</p>
+            <h6 class="mt-3">Operazioni Disponibili:</h6>
+            <ul class="list-unstyled small">
+                <li class="mb-2">
+                    <i class="bi bi-person-plus-fill text-success me-2"></i>
+                    <strong>Creazione Multipla:</strong> Crea più incarichi con proprietà comuni
+                </li>
+                <li class="mb-2">
+                    <i class="bi bi-pencil-square text-primary me-2"></i>
+                    <strong>Modifica Multipla:</strong> Aggiorna proprietà di incarichi esistenti
+                </li>
+                <li class="mb-2">
+                    <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                    <strong>Terminazione:</strong> Termina più incarichi contemporaneamente
+                </li>
+                <li class="mb-2">
+                    <i class="bi bi-arrow-left-right text-warning me-2"></i>
+                    <strong>Trasferimento:</strong> Sposta persone tra unità diverse
+                </li>
+            </ul>
+        `;
+    }
+}
+
+function resetForm() {
+    // Reset all forms
+    document.querySelectorAll('form').forEach(form => {
+        form.reset();
+    });
+    
+    // Reset operation selection
+    resetOperation();
+    
+    // Reset dynamic selections
+    document.getElementById('selections-container').innerHTML = '';
+    selectionCounter = 0;
+}
+</script>
+{% endblock %}

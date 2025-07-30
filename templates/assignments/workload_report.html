@@ -32,7 +32,7 @@
                 <div class="d-flex align-items-center">
                     <i class="bi bi-people fs-1 me-3"></i>
                     <div>
-                        <h4 class="mb-0">{{ workload_stats.total_persons }}</h4>
+                        <h4 class="mb-0">{{ workload_stats.total_persons or 0 }}</h4>
                         <small>Persone Totali</small>
                     </div>
                 </div>
@@ -45,7 +45,7 @@
                 <div class="d-flex align-items-center">
                     <i class="bi bi-speedometer fs-1 me-3"></i>
                     <div>
-                        <h4 class="mb-0">{{ workload_stats.avg_workload }}</h4>
+                        <h4 class="mb-0">{{ workload_stats.avg_workload or '0%' }}</h4>
                         <small>Carico Medio</small>
                     </div>
                 </div>
@@ -58,7 +58,7 @@
                 <div class="d-flex align-items-center">
                     <i class="bi bi-exclamation-triangle fs-1 me-3"></i>
                     <div>
-                        <h4 class="mb-0">{{ workload_stats.overloaded_count }}</h4>
+                        <h4 class="mb-0">{{ workload_stats.overloaded_count or 0 }}</h4>
                         <small>Sovraccariche</small>
                     </div>
                 </div>
@@ -71,9 +71,617 @@
                 <div class="d-flex align-items-center">
                     <i class="bi bi-arrow-down-circle fs-1 me-3"></i>
                     <div>
-                        <h4 class="mb-0">{{ workload_stats.low_workload_count }}</h4>
+                        <h4 class="mb-0">{{ workload_stats.low_workload_count or 0 }}</h4>
                         <small>Sottoutilizzate</small>
                     </div>
                 </div>
             </div>
-        <
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Controls -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-funnel me-2"></i>Filtri e Controlli
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="unit_filter" class="form-label">Unità</label>
+                        <select class="form-select" id="unit_filter" name="unit_id">
+                            <option value="">Tutte le unità</option>
+                            {% for unit in all_units %}
+                            <option value="{{ unit.id }}" {{ 'selected' if unit_id == unit.id else '' }}>
+                                {{ unit.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="workload_filter" class="form-label">Carico di Lavoro</label>
+                        <select class="form-select" id="workload_filter" name="workload_filter">
+                            <option value="">Tutti i carichi</option>
+                            <option value="overloaded" {{ 'selected' if workload_filter == 'overloaded' else '' }}>Sovraccarichi (&gt;120%)</option>
+                            <option value="high" {{ 'selected' if workload_filter == 'high' else '' }}>Alto (100-120%)</option>
+                            <option value="normal" {{ 'selected' if workload_filter == 'normal' else '' }}>Normale (50-100%)</option>
+                            <option value="low" {{ 'selected' if workload_filter == 'low' else '' }}>Basso (&lt;50%)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="sort_by" class="form-label">Ordina per</label>
+                        <select class="form-select" id="sort_by" name="sort_by">
+                            <option value="workload_desc" {{ 'selected' if sort_by == 'workload_desc' else '' }}>Carico Decrescente</option>
+                            <option value="workload_asc" {{ 'selected' if sort_by == 'workload_asc' else '' }}>Carico Crescente</option>
+                            <option value="name" {{ 'selected' if sort_by == 'name' else '' }}>Nome</option>
+                            <option value="assignments_count" {{ 'selected' if sort_by == 'assignments_count' else '' }}>Numero Incarichi</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i>
+                            </button>
+                            <a href="/assignments/reports/workload" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i>
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Distribuzione Carico
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <div class="h6 text-danger mb-0">{{ workload_distribution.overloaded or 0 }}</div>
+                            <small class="text-muted">Sovraccarichi</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="h6 text-warning mb-0">{{ workload_distribution.high or 0 }}</div>
+                        <small class="text-muted">Alto Carico</small>
+                    </div>
+                </div>
+                <hr class="my-2">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <div class="h6 text-success mb-0">{{ workload_distribution.normal or 0 }}</div>
+                            <small class="text-muted">Normale</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="h6 text-info mb-0">{{ workload_distribution.low or 0 }}</div>
+                        <small class="text-muted">Basso</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Workload Details -->
+{% if workload_data %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-speedometer2 me-2"></i>Dettaglio Carico di Lavoro
+            <span class="badge bg-primary ms-2">{{ workload_data|length }}</span>
+        </h5>
+        <div class="btn-group btn-group-sm">
+            <button type="button" class="btn btn-outline-secondary" onclick="toggleView('table')" id="table-view-btn">
+                <i class="bi bi-table"></i> Tabella
+            </button>
+            <button type="button" class="btn btn-outline-secondary" onclick="toggleView('cards')" id="cards-view-btn">
+                <i class="bi bi-grid-3x3-gap"></i> Schede
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <!-- Table View -->
+        <div id="table-view">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Persona</th>
+                            <th>Unità Principali</th>
+                            <th>Incarichi</th>
+                            <th>Carico Totale</th>
+                            <th>Status</th>
+                            <th>Dettagli</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for person_workload in workload_data %}
+                        <tr class="{{ 'table-danger' if person_workload.total_percentage > 120 else 'table-warning' if person_workload.total_percentage > 100 else 'table-success' if person_workload.total_percentage >= 50 else 'table-info' }}">
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle me-2">
+                                        {{ person_workload.person_name[:2].upper() if person_workload.person_name else '?' }}
+                                    </div>
+                                    <div>
+                                        <strong>{{ person_workload.person_name or 'N/A' }}</strong>
+                                        {% if person_workload.person_email %}
+                                        <br><small class="text-muted">{{ person_workload.person_email }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% for unit in person_workload.main_units[:2] %}
+                                <div class="d-flex align-items-center mb-1">
+                                    <i class="bi bi-building me-1 text-primary"></i>
+                                    <small>{{ unit.name }}</small>
+                                </div>
+                                {% endfor %}
+                                {% if person_workload.main_units|length > 2 %}
+                                <small class="text-muted">+{{ person_workload.main_units|length - 2 }} altre</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ person_workload.assignments_count }}</span>
+                                {% if person_workload.interim_count > 0 %}
+                                <br><span class="badge bg-warning mt-1">{{ person_workload.interim_count }} ad interim</span>
+                                {% endif %}
+                                {% if person_workload.boss_count > 0 %}
+                                <br><span class="badge bg-info mt-1">{{ person_workload.boss_count }} responsabile</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress me-2" style="width: 80px; height: 20px;">
+                                        <div class="progress-bar bg-{{ 'danger' if person_workload.total_percentage > 120 else 'warning' if person_workload.total_percentage > 100 else 'success' if person_workload.total_percentage >= 50 else 'info' }}" 
+                                             role="progressbar" 
+                                             style="width: {{ [person_workload.total_percentage, 100]|min }}%">
+                                        </div>
+                                    </div>
+                                    <strong class="text-{{ 'danger' if person_workload.total_percentage > 120 else 'warning' if person_workload.total_percentage > 100 else 'success' if person_workload.total_percentage >= 50 else 'info' }}">
+                                        {{ person_workload.total_percentage|round }}%
+                                    </strong>
+                                </div>
+                            </td>
+                            <td>
+                                {% if person_workload.total_percentage > 120 %}
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Sovraccarico
+                                </span>
+                                {% elif person_workload.total_percentage > 100 %}
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-exclamation-circle me-1"></i>Alto Carico
+                                </span>
+                                {% elif person_workload.total_percentage >= 50 %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle me-1"></i>Normale
+                                </span>
+                                {% else %}
+                                <span class="badge bg-info">
+                                    <i class="bi bi-arrow-down-circle me-1"></i>Basso
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-primary" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#workloadModal" 
+                                            onclick="showWorkloadDetails({{ person_workload.person_id }})">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <a href="/assignments?person_id={{ person_workload.person_id }}" 
+                                       class="btn btn-outline-secondary">
+                                        <i class="bi bi-list"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Cards View -->
+        <div id="cards-view" style="display: none;">
+            <div class="row g-3 p-3">
+                {% for person_workload in workload_data %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 border-{{ 'danger' if person_workload.total_percentage > 120 else 'warning' if person_workload.total_percentage > 100 else 'success' if person_workload.total_percentage >= 50 else 'info' }}">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="avatar-circle me-2">
+                                    {{ person_workload.person_name[:2].upper() if person_workload.person_name else '?' }}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="card-title mb-0">{{ person_workload.person_name or 'N/A' }}</h6>
+                                    {% if person_workload.person_email %}
+                                    <small class="text-muted">{{ person_workload.person_email }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small">Carico di Lavoro</span>
+                                    <strong class="text-{{ 'danger' if person_workload.total_percentage > 120 else 'warning' if person_workload.total_percentage > 100 else 'success' if person_workload.total_percentage >= 50 else 'info' }}">
+                                        {{ person_workload.total_percentage|round }}%
+                                    </strong>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar bg-{{ 'danger' if person_workload.total_percentage > 120 else 'warning' if person_workload.total_percentage > 100 else 'success' if person_workload.total_percentage >= 50 else 'info' }}" 
+                                         role="progressbar" 
+                                         style="width: {{ [person_workload.total_percentage, 100]|min }}%">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row text-center mb-3">
+                                <div class="col-4">
+                                    <div class="small text-muted">Incarichi</div>
+                                    <div class="fw-bold">{{ person_workload.assignments_count }}</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="small text-muted">Ad Interim</div>
+                                    <div class="fw-bold text-warning">{{ person_workload.interim_count }}</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="small text-muted">Responsabile</div>
+                                    <div class="fw-bold text-info">{{ person_workload.boss_count }}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="small text-muted mb-1">Unità Principali:</div>
+                                {% for unit in person_workload.main_units[:2] %}
+                                <div class="small">
+                                    <i class="bi bi-building me-1"></i>{{ unit.name }}
+                                </div>
+                                {% endfor %}
+                                {% if person_workload.main_units|length > 2 %}
+                                <div class="small text-muted">+{{ person_workload.main_units|length - 2 }} altre unità</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary flex-grow-1" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#workloadModal" 
+                                        onclick="showWorkloadDetails({{ person_workload.person_id }})">
+                                    <i class="bi bi-eye me-1"></i>Dettagli
+                                </button>
+                                <a href="/assignments?person_id={{ person_workload.person_id }}" 
+                                   class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-list"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-speedometer2 display-1 text-muted mb-3"></i>
+        <h4 class="text-muted">Nessun dato di carico di lavoro</h4>
+        <p class="text-muted mb-4">
+            Non ci sono dati di carico di lavoro da visualizzare con i filtri selezionati.
+        </p>
+        <a href="/assignments/reports/workload" class="btn btn-outline-primary me-2">
+            <i class="bi bi-arrow-clockwise me-1"></i>Ricarica
+        </a>
+        <a href="/assignments" class="btn btn-primary">
+            <i class="bi bi-person-badge me-1"></i>Visualizza Incarichi
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Workload Details Modal -->
+<div class="modal fade" id="workloadModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-speedometer2 me-2"></i>Dettaglio Carico di Lavoro
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="workloadModalBody">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Caricamento...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bs-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.table-danger {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.table-warning {
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+.table-success {
+    background-color: rgba(25, 135, 84, 0.1);
+}
+
+.table-info {
+    background-color: rgba(13, 202, 240, 0.1);
+}
+
+.progress {
+    height: 8px;
+}
+
+.card.border-danger {
+    border-width: 2px;
+}
+
+.card.border-warning {
+    border-width: 2px;
+}
+
+.card.border-success {
+    border-width: 2px;
+}
+
+.card.border-info {
+    border-width: 2px;
+}
+
+@media print {
+    .btn, .dropdown, .modal {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #dee2e6 !important;
+        box-shadow: none !important;
+        break-inside: avoid;
+    }
+    
+    #cards-view {
+        display: block !important;
+    }
+    
+    #table-view {
+        display: none !important;
+    }
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentView = 'table';
+
+function toggleView(view) {
+    const tableView = document.getElementById('table-view');
+    const cardsView = document.getElementById('cards-view');
+    const tableBtn = document.getElementById('table-view-btn');
+    const cardsBtn = document.getElementById('cards-view-btn');
+    
+    if (view === 'table') {
+        tableView.style.display = 'block';
+        cardsView.style.display = 'none';
+        tableBtn.classList.add('active');
+        cardsBtn.classList.remove('active');
+    } else {
+        tableView.style.display = 'none';
+        cardsView.style.display = 'block';
+        tableBtn.classList.remove('active');
+        cardsBtn.classList.add('active');
+    }
+    
+    currentView = view;
+    localStorage.setItem('workloadViewPreference', view);
+}
+
+function showWorkloadDetails(personId) {
+    const modalBody = document.getElementById('workloadModalBody');
+    
+    // Show loading spinner
+    modalBody.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Caricamento...</span>
+            </div>
+        </div>
+    `;
+    
+    // Fetch workload details
+    fetch(`/assignments/reports/workload/person/${personId}`)
+        .then(response => response.json())
+        .then(data => {
+            modalBody.innerHTML = generateWorkloadDetailsHTML(data);
+        })
+        .catch(error => {
+            modalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Errore nel caricamento dei dettagli: ${error.message}
+                </div>
+            `;
+        });
+}
+
+function generateWorkloadDetailsHTML(data) {
+    let html = `
+        <div class="row mb-4">
+            <div class="col-md-4 text-center">
+                <div class="avatar-circle mx-auto mb-2" style="width: 60px; height: 60px; font-size: 1.2rem;">
+                    ${data.person_name ? data.person_name.substring(0, 2).toUpperCase() : '?'}
+                </div>
+                <h5>${data.person_name || 'N/A'}</h5>
+                ${data.person_email ? `<small class="text-muted">${data.person_email}</small>` : ''}
+            </div>
+            <div class="col-md-8">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h4 class="text-primary mb-0">${Math.round(data.total_percentage)}%</h4>
+                            <small class="text-muted">Carico Totale</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h4 class="text-secondary mb-0">${data.assignments.length}</h4>
+                            <small class="text-muted">Incarichi Attivi</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="progress mt-3">
+                    <div class="progress-bar bg-${data.total_percentage > 120 ? 'danger' : data.total_percentage > 100 ? 'warning' : data.total_percentage >= 50 ? 'success' : 'info'}" 
+                         role="progressbar" 
+                         style="width: ${Math.min(data.total_percentage, 100)}%">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <h6>Dettaglio Incarichi:</h6>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Unità</th>
+                        <th>Ruolo</th>
+                        <th>Percentuale</th>
+                        <th>Tipo</th>
+                        <th>Data Inizio</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    data.assignments.forEach(assignment => {
+        html += `
+            <tr>
+                <td>
+                    <i class="bi bi-building me-1 text-primary"></i>
+                    ${assignment.unit_name}
+                </td>
+                <td>
+                    <i class="bi bi-briefcase me-1 text-secondary"></i>
+                    ${assignment.job_title_name}
+                </td>
+                <td>
+                    <span class="badge bg-${assignment.percentage === 100 ? 'success' : assignment.percentage >= 50 ? 'warning' : 'info'}">
+                        ${assignment.percentage}%
+                    </span>
+                </td>
+                <td>
+                    ${assignment.is_ad_interim ? '<span class="badge bg-warning">Ad Interim</span>' : ''}
+                    ${assignment.is_unit_boss ? '<span class="badge bg-info">Responsabile</span>' : ''}
+                </td>
+                <td>
+                    <small class="text-muted">
+                        ${assignment.valid_from ? new Date(assignment.valid_from).toLocaleDateString('it-IT') : 'N/A'}
+                    </small>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    return html;
+}
+
+function exportToCSV() {
+    const table = document.querySelector('#table-view table');
+    if (!table) return;
+    
+    let csv = [];
+    const rows = table.querySelectorAll('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = [];
+        const cols = rows[i].querySelectorAll('td, th');
+        
+        for (let j = 0; j < cols.length - 1; j++) { // Exclude last column (actions)
+            let cellText = cols[j].innerText.replace(/\n/g, ' ').replace(/,/g, ';');
+            row.push('"' + cellText + '"');
+        }
+        csv.push(row.join(','));
+    }
+    
+    const csvContent = csv.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `workload_report_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+}
+
+// Initialize view preference
+document.addEventListener('DOMContentLoaded', function() {
+    const savedView = localStorage.getItem('workloadViewPreference') || 'table';
+    toggleView(savedView);
+});
+
+// Auto-refresh every 10 minutes
+setInterval(function() {
+    window.location.reload();
+}, 600000);
+</script>
+{% endblock %}
