@@ -11,10 +11,8 @@
 <div class="row mb-4">
     <div class="col-md-8">
         <form method="get" class="d-flex">
-            <input type="search" name="search" class="form-control me-2" 
-                   placeholder="Cerca unità per nome..." 
-                   value="{{ search }}" 
-                   aria-label="Cerca unità">
+            <input type="search" name="search" class="form-control me-2" placeholder="Cerca unità per nome..."
+                value="{{ search }}" aria-label="Cerca unità">
             <button type="submit" class="btn btn-outline-primary">
                 <i class="bi bi-search"></i>
             </button>
@@ -47,12 +45,13 @@
             <button type="button" class="btn btn-outline-secondary" onclick="toggleView('table')" id="btn-table-view">
                 <i class="bi bi-table"></i> Tabella
             </button>
-            <button type="button" class="btn btn-outline-secondary" onclick="toggleView('hierarchy')" id="btn-hierarchy-view">
+            <button type="button" class="btn btn-outline-secondary" onclick="toggleView('hierarchy')"
+                id="btn-hierarchy-view">
                 <i class="bi bi-diagram-3"></i> Gerarchia
             </button>
         </div>
     </div>
-    
+
     <!-- Table View -->
     <div id="table-view" class="card-body p-0">
         <div class="table-responsive">
@@ -73,7 +72,8 @@
                     <tr>
                         <td>
                             <div class="d-flex align-items-center">
-                                <i class="bi bi-{{ 'building' if unit.unit_type == 'Function' else 'diagram-2' }} me-2 text-primary"></i>
+                                <i
+                                    class="bi bi-{{ 'building' if unit.unit_type == 'Function' else 'diagram-2' }} me-2 text-primary"></i>
                                 <div>
                                     <strong>{{ unit.name }}</strong>
                                     {% if unit.short_name %}
@@ -117,19 +117,18 @@
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <a href="/units/{{ unit.id }}" class="btn btn-outline-primary" 
-                                   data-bs-toggle="tooltip" title="Visualizza dettagli">
+                                <a href="/units/{{ unit.id }}" class="btn btn-outline-primary" data-bs-toggle="tooltip"
+                                    title="Visualizza dettagli">
                                     <i class="bi bi-eye"></i>
                                 </a>
                                 <a href="/units/{{ unit.id }}/edit" class="btn btn-outline-secondary"
-                                   data-bs-toggle="tooltip" title="Modifica">
+                                    data-bs-toggle="tooltip" title="Modifica">
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 <form method="post" action="/units/{{ unit.id }}/delete" class="d-inline">
                                     <button type="submit" class="btn btn-outline-danger btn-delete"
-                                            data-item-name="{{ unit.name }}" 
-                                            data-item-type="unità"
-                                            data-bs-toggle="tooltip" title="Elimina">
+                                        data-item-name="{{ unit.name }}" data-item-type="unità" data-bs-toggle="tooltip"
+                                        title="Elimina">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
@@ -141,38 +140,118 @@
             </table>
         </div>
     </div>
-    
+
     <!-- Hierarchy View -->
     <div id="hierarchy-view" class="card-body" style="display: none;">
         <div class="hierarchy-container">
             {% for unit in units %}
-            {% if unit.is_root %}
-            <div class="hierarchy-item root-unit" data-level="0">
-                <div class="unit-card">
-                    <div class="unit-header">
-                        <i class="bi bi-{{ 'building' if unit.unit_type == 'Function' else 'diagram-2' }} me-2"></i>
-                        <strong>{{ unit.name }}</strong>
-                        {% if unit.short_name %}
-                        <small class="text-muted ms-2">({{ unit.short_name }})</small>
-                        {% endif %}
-                        <div class="unit-actions ms-auto">
-                            <a href="/units/{{ unit.id }}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                        </div>
+            <div class="hierarchy-item {{ 'root-unit' if unit.level == 0 else '' }}" data-level="{{ unit.level or 0 }}"
+                data-unit-id="{{ unit.id }}" data-parent-id="{{ unit.parent_unit_id or '' }}">
+                <div class="unit-card level-{{ unit.level or 0 }}">
+                    <!-- Tree connector lines -->
+                    {% if unit.level and unit.level > 0 %}
+                    <div class="tree-connector">
+                        {% for i in range(unit.level) %}
+                        <div class="connector-line level-{{ i }}"></div>
+                        {% endfor %}
+                        <div class="connector-branch"></div>
                     </div>
-                    <div class="unit-stats">
-                        <span class="badge bg-light text-dark me-2">
-                            <i class="bi bi-people me-1"></i>{{ unit.person_count }}
-                        </span>
-                        <span class="badge bg-light text-dark">
-                            <i class="bi bi-diagram-2 me-1"></i>{{ unit.children_count }}
-                        </span>
+                    {% endif %}
+
+                    <div class="unit-content">
+                        <div class="unit-header">
+                            <!-- Expand/collapse button for units with children -->
+                            {% if unit.children_count > 0 %}
+                            <button type="button" class="btn btn-sm btn-outline-secondary me-2 expand-btn"
+                                onclick="toggleUnitChildren({{ unit.id }})" data-bs-toggle="tooltip"
+                                title="Espandi/Comprimi sotto-unità">
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                            {% else %}
+                            <span class="me-2" style="width: 32px; display: inline-block;"></span>
+                            {% endif %}
+
+                            <i
+                                class="bi bi-{{ 'building' if unit.unit_type == 'Function' else 'diagram-2' }} me-2 text-{{ 'primary' if unit.unit_type == 'Function' else 'info' }}"></i>
+                            <strong>{{ unit.name }}</strong>
+                            {% if unit.short_name %}
+                            <small class="text-muted ms-2">({{ unit.short_name }})</small>
+                            {% endif %}
+
+                            <!-- Unit type badge -->
+                            <span class="badge bg-{{ 'primary' if unit.unit_type == 'Function' else 'info' }} ms-2">
+                                {{ unit.unit_type }}
+                            </span>
+
+                            <div class="unit-actions ms-auto">
+                                <a href="/units/{{ unit.id }}" class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="tooltip" title="Visualizza dettagli">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="/units/{{ unit.id }}/edit" class="btn btn-sm btn-outline-secondary"
+                                    data-bs-toggle="tooltip" title="Modifica unità">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="unit-stats mt-2">
+                            <span class="badge bg-light text-dark me-2" data-bs-toggle="tooltip"
+                                title="Persone assegnate">
+                                <i class="bi bi-people me-1"></i>{{ unit.person_count or 0 }}
+                            </span>
+                            <span class="badge bg-light text-dark me-2" data-bs-toggle="tooltip" title="Sotto-unità">
+                                <i class="bi bi-diagram-2 me-1"></i>{{ unit.children_count or 0 }}
+                            </span>
+                            {% if unit.parent_name %}
+                            <span class="badge bg-secondary me-2" data-bs-toggle="tooltip" title="Unità padre">
+                                <i class="bi bi-arrow-up me-1"></i>{{ unit.parent_name }}
+                            </span>
+                            {% endif %}
+                            {% if not unit.is_active %}
+                            <span class="badge bg-warning" data-bs-toggle="tooltip" title="Unità non attiva">
+                                <i class="bi bi-exclamation-triangle me-1"></i>Inattiva
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Additional info for expanded view -->
+                        <div class="unit-details mt-2" style="display: none;">
+                            {% if unit.start_date %}
+                            <small class="text-muted d-block">
+                                <i class="bi bi-calendar-event me-1"></i>
+                                Inizio: {{ unit.start_date.strftime('%d/%m/%Y') if unit.start_date else 'N/A' }}
+                            </small>
+                            {% endif %}
+                            {% if unit.end_date %}
+                            <small class="text-muted d-block">
+                                <i class="bi bi-calendar-x me-1"></i>
+                                Fine: {{ unit.end_date.strftime('%d/%m/%Y') if unit.end_date else 'N/A' }}
+                            </small>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
-            {% endif %}
             {% endfor %}
+        </div>
+
+        <!-- Hierarchy Controls -->
+        <div class="hierarchy-controls mt-3 border-top pt-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-primary" onclick="expandAllUnits()">
+                        <i class="bi bi-arrows-expand me-1"></i>Espandi Tutto
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="collapseAllUnits()">
+                        <i class="bi bi-arrows-collapse me-1"></i>Comprimi Tutto
+                    </button>
+                </div>
+                <div class="text-muted small">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Clicca sui pulsanti per espandere/comprimere le sotto-unità
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -191,7 +270,7 @@
         </h4>
         <p class="text-muted mb-4">
             {% if search %}
-            Prova a modificare i termini di ricerca o 
+            Prova a modificare i termini di ricerca o
             <a href="/units">visualizza tutte le unità</a>.
             {% else %}
             Inizia creando la prima unità organizzativa del sistema.
@@ -207,74 +286,452 @@
 
 {% block extra_css %}
 <style>
-.hierarchy-container {
-    max-height: 600px;
-    overflow-y: auto;
-}
+    .hierarchy-container {
+        max-height: 700px;
+        overflow-y: auto;
+        padding: 1rem 0;
+    }
 
-.hierarchy-item {
-    margin-bottom: 1rem;
-}
+    .hierarchy-item {
+        margin-bottom: 0.75rem;
+        position: relative;
+    }
 
-.unit-card {
-    border: 2px solid #e9ecef;
-    border-radius: 0.5rem;
-    padding: 1rem;
-    background: white;
-    transition: all 0.3s ease;
-}
+    .unit-card {
+        border: 2px solid #e9ecef;
+        border-radius: 0.5rem;
+        background: white;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
 
-.unit-card:hover {
-    border-color: var(--primary-color);
-    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
-}
+    .unit-card:hover {
+        border-color: var(--bs-primary);
+        box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.1);
+        transform: translateY(-1px);
+    }
 
-.unit-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 0.5rem;
-}
+    .unit-content {
+        padding: 1rem;
+    }
 
-.unit-actions {
-    margin-left: auto;
-}
+    .unit-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
 
-.unit-stats {
-    display: flex;
-    gap: 0.5rem;
-}
+    .unit-actions {
+        margin-left: auto;
+        display: flex;
+        gap: 0.25rem;
+    }
 
-.root-unit .unit-card {
-    border-color: var(--primary-color);
-    border-width: 3px;
-}
+    .unit-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    /* Tree structure styling */
+    .root-unit .unit-card {
+        border-color: var(--bs-primary);
+        border-width: 3px;
+        background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+    }
+
+    .unit-card.level-0 {
+        margin-left: 0;
+    }
+
+    .unit-card.level-1 {
+        margin-left: 2rem;
+        border-left: 4px solid var(--bs-info);
+    }
+
+    .unit-card.level-2 {
+        margin-left: 4rem;
+        border-left: 4px solid var(--bs-success);
+    }
+
+    .unit-card.level-3 {
+        margin-left: 6rem;
+        border-left: 4px solid var(--bs-warning);
+    }
+
+    .unit-card.level-4 {
+        margin-left: 8rem;
+        border-left: 4px solid var(--bs-danger);
+    }
+
+    .unit-card.level-5,
+    .unit-card.level-6,
+    .unit-card.level-7,
+    .unit-card.level-8,
+    .unit-card.level-9 {
+        margin-left: 10rem;
+        border-left: 4px solid var(--bs-secondary);
+    }
+
+    /* Tree connector lines */
+    .tree-connector {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        pointer-events: none;
+    }
+
+    .connector-line {
+        position: absolute;
+        width: 2px;
+        height: 100%;
+        background-color: #dee2e6;
+    }
+
+    .connector-line.level-0 {
+        left: 1rem;
+    }
+
+    .connector-line.level-1 {
+        left: 3rem;
+    }
+
+    .connector-line.level-2 {
+        left: 5rem;
+    }
+
+    .connector-line.level-3 {
+        left: 7rem;
+    }
+
+    .connector-branch {
+        position: absolute;
+        top: 50%;
+        width: 1rem;
+        height: 2px;
+        background-color: #dee2e6;
+        right: -1rem;
+    }
+
+    /* Expand/collapse button styling */
+    .expand-btn {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+    }
+
+    .expand-btn:hover {
+        background-color: var(--bs-primary);
+        border-color: var(--bs-primary);
+        color: white;
+    }
+
+    .expand-btn.collapsed i {
+        transform: rotate(-90deg);
+    }
+
+    /* Hidden children styling */
+    .hierarchy-item.child-hidden {
+        display: none;
+    }
+
+    /* Hierarchy controls */
+    .hierarchy-controls {
+        background-color: #f8f9fa;
+        border-radius: 0.375rem;
+        padding: 0.75rem;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+
+        .unit-card.level-1,
+        .unit-card.level-2,
+        .unit-card.level-3,
+        .unit-card.level-4,
+        .unit-card.level-5,
+        .unit-card.level-6,
+        .unit-card.level-7,
+        .unit-card.level-8,
+        .unit-card.level-9 {
+            margin-left: 1rem;
+        }
+
+        .unit-header {
+            flex-wrap: wrap;
+        }
+
+        .unit-actions {
+            margin-left: 0;
+            margin-top: 0.5rem;
+            width: 100%;
+        }
+    }
+
+    /* Animation for expand/collapse */
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            max-height: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            max-height: 200px;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 1;
+            max-height: 200px;
+            transform: translateY(0);
+        }
+
+        to {
+            opacity: 0;
+            max-height: 0;
+            transform: translateY(-10px);
+        }
+    }
+
+    .hierarchy-item.expanding {
+        animation: slideDown 0.3s ease-out;
+    }
+
+    .hierarchy-item.collapsing {
+        animation: slideUp 0.3s ease-out;
+    }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function toggleView(viewType) {
-    const tableView = document.getElementById('table-view');
-    const hierarchyView = document.getElementById('hierarchy-view');
-    const tableBtn = document.getElementById('btn-table-view');
-    const hierarchyBtn = document.getElementById('btn-hierarchy-view');
-    
-    if (viewType === 'table') {
-        tableView.style.display = 'block';
-        hierarchyView.style.display = 'none';
-        tableBtn.classList.add('active');
-        hierarchyBtn.classList.remove('active');
-    } else {
-        tableView.style.display = 'none';
-        hierarchyView.style.display = 'block';
-        tableBtn.classList.remove('active');
-        hierarchyBtn.classList.add('active');
-    }
-}
+    let expandedUnits = new Set();
 
-// Initialize table view as default
-document.addEventListener('DOMContentLoaded', function() {
-    toggleView('table');
-});
+    function toggleView(viewType) {
+        const tableView = document.getElementById('table-view');
+        const hierarchyView = document.getElementById('hierarchy-view');
+        const tableBtn = document.getElementById('btn-table-view');
+        const hierarchyBtn = document.getElementById('btn-hierarchy-view');
+
+        if (viewType === 'table') {
+            tableView.style.display = 'block';
+            hierarchyView.style.display = 'none';
+            tableBtn.classList.add('active');
+            hierarchyBtn.classList.remove('active');
+        } else {
+            tableView.style.display = 'none';
+            hierarchyView.style.display = 'block';
+            tableBtn.classList.remove('active');
+            hierarchyBtn.classList.add('active');
+
+            // Initialize hierarchy view
+            initializeHierarchyView();
+        }
+    }
+
+    function initializeHierarchyView() {
+        // Initially show only root units (level 0) and hide all children
+        const allItems = document.querySelectorAll('.hierarchy-item');
+
+        allItems.forEach(item => {
+            const level = parseInt(item.dataset.level);
+            if (level === 0) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+                item.classList.add('child-hidden');
+            }
+        });
+
+        // Reset all expand buttons
+        const expandBtns = document.querySelectorAll('.expand-btn');
+        expandBtns.forEach(btn => {
+            btn.classList.add('collapsed');
+            const icon = btn.querySelector('i');
+            if (icon) {
+                icon.className = 'bi bi-chevron-right';
+            }
+        });
+
+        expandedUnits.clear();
+    }
+
+    function toggleUnitChildren(unitId) {
+        const isExpanded = expandedUnits.has(unitId);
+        const expandBtn = document.querySelector(`[data-unit-id="${unitId}"] .expand-btn`);
+        const icon = expandBtn ? expandBtn.querySelector('i') : null;
+
+        if (isExpanded) {
+            // Collapse: hide all descendants
+            collapseUnit(unitId);
+            expandedUnits.delete(unitId);
+
+            if (expandBtn) {
+                expandBtn.classList.add('collapsed');
+            }
+            if (icon) {
+                icon.className = 'bi bi-chevron-right';
+            }
+        } else {
+            // Expand: show direct children only
+            expandUnit(unitId);
+            expandedUnits.add(unitId);
+
+            if (expandBtn) {
+                expandBtn.classList.remove('collapsed');
+            }
+            if (icon) {
+                icon.className = 'bi bi-chevron-down';
+            }
+        }
+    }
+
+    function expandUnit(unitId) {
+        const allItems = document.querySelectorAll('.hierarchy-item');
+        const parentLevel = parseInt(document.querySelector(`[data-unit-id="${unitId}"]`).dataset.level);
+
+        // Show direct children (parent level + 1)
+        allItems.forEach(item => {
+            const parentId = item.dataset.parentId;
+            const level = parseInt(item.dataset.level);
+
+            if (parentId == unitId && level === parentLevel + 1) {
+                item.style.display = 'block';
+                item.classList.remove('child-hidden');
+                item.classList.add('expanding');
+
+                // Remove animation class after animation completes
+                setTimeout(() => {
+                    item.classList.remove('expanding');
+                }, 300);
+            }
+        });
+    }
+
+    function collapseUnit(unitId) {
+        const allItems = document.querySelectorAll('.hierarchy-item');
+
+        // Hide all descendants recursively
+        function hideDescendants(parentId) {
+            allItems.forEach(item => {
+                const itemParentId = item.dataset.parentId;
+                const itemId = item.dataset.unitId;
+
+                if (itemParentId == parentId) {
+                    item.classList.add('collapsing');
+
+                    setTimeout(() => {
+                        item.style.display = 'none';
+                        item.classList.add('child-hidden');
+                        item.classList.remove('collapsing');
+                    }, 300);
+
+                    // Recursively hide children of this item
+                    hideDescendants(itemId);
+
+                    // Collapse this unit's expand button if it has one
+                    const expandBtn = item.querySelector('.expand-btn');
+                    if (expandBtn) {
+                        expandBtn.classList.add('collapsed');
+                        const icon = expandBtn.querySelector('i');
+                        if (icon) {
+                            icon.className = 'bi bi-chevron-right';
+                        }
+                    }
+
+                    // Remove from expanded units
+                    expandedUnits.delete(itemId);
+                }
+            });
+        }
+
+        hideDescendants(unitId);
+    }
+
+    function expandAllUnits() {
+        const allItems = document.querySelectorAll('.hierarchy-item');
+        const expandBtns = document.querySelectorAll('.expand-btn');
+
+        // Show all items
+        allItems.forEach(item => {
+            item.style.display = 'block';
+            item.classList.remove('child-hidden');
+
+            const unitId = item.dataset.unitId;
+            if (unitId) {
+                expandedUnits.add(unitId);
+            }
+        });
+
+        // Update all expand buttons
+        expandBtns.forEach(btn => {
+            btn.classList.remove('collapsed');
+            const icon = btn.querySelector('i');
+            if (icon) {
+                icon.className = 'bi bi-chevron-down';
+            }
+        });
+    }
+
+    function collapseAllUnits() {
+        initializeHierarchyView();
+    }
+
+    // Initialize tooltips
+    function initializeTooltips() {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        toggleView('table');
+        initializeTooltips();
+
+        // Save view preference
+        const savedView = localStorage.getItem('unitsViewPreference') || 'table';
+        toggleView(savedView);
+
+        // Save view preference when changed
+        document.getElementById('btn-table-view').addEventListener('click', function () {
+            localStorage.setItem('unitsViewPreference', 'table');
+        });
+
+        document.getElementById('btn-hierarchy-view').addEventListener('click', function () {
+            localStorage.setItem('unitsViewPreference', 'hierarchy');
+        });
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function (e) {
+        // Ctrl/Cmd + E: Expand all
+        if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+            e.preventDefault();
+            if (document.getElementById('hierarchy-view').style.display !== 'none') {
+                expandAllUnits();
+            }
+        }
+
+        // Ctrl/Cmd + R: Collapse all
+        if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+            e.preventDefault();
+            if (document.getElementById('hierarchy-view').style.display !== 'none') {
+                collapseAllUnits();
+            }
+        }
+    });
 </script>
 {% endblock %}

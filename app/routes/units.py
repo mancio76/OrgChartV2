@@ -59,8 +59,23 @@ async def list_units(
         else:
             units = unit_service.get_all()
         
+        hierarchy_tree = unit_service.get_hierarchy()
+
         for unit in units:
             unit.unit_type = unit_type_service.get_by_id(unit.unit_type_id).name
+            if hierarchy_tree and len(hierarchy_tree) > 0:
+                level = 0
+                parent_unit_id = None
+                path = ''
+                for hierarchy_item in hierarchy_tree:
+                    if hierarchy_item['id'] == unit.id:
+                        level = int(hierarchy_item['level'])
+                        parent_unit_id = hierarchy_item['parent_unit_id']
+                        path = hierarchy_item['path']
+                        break
+                unit.level = level
+                unit.parent_unit_id = parent_unit_id
+                unit.path = path
 
         return templates.TemplateResponse(
             "units/list.html",
@@ -68,7 +83,7 @@ async def list_units(
                 "request": request,
                 "units": units,
                 "search": search or "",
-                "page_title": "Units"
+                "page_title": "Unità"
             }
         )
     except Exception as e:
@@ -258,7 +273,7 @@ async def edit_unit_form(
                 "unit": unit,
                 "available_parents": available_parents,
                 "unit_types": unit_types,
-                "page_title": f"Edit Unit: {unit.name}"
+                "page_title": f"Modifica Unità: {unit.name}"
             }
         )
     except HTTPException:
@@ -337,7 +352,7 @@ async def update_unit(
                 "unit_types": unit_types,
                 "errors": [{"field": err.field, "message": err.message} for err in e.errors],
                 "form_data": await request.form(),
-                "page_title": f"Edit Unit: {unit.name}"
+                "page_title": f"Modifica Unità: {unit.name}"
             },
             status_code=400
         )
@@ -425,7 +440,7 @@ async def unit_detail(
                 "assignments": assignments,
                 "children": children,
                 "parent": parent,
-                "page_title": f"Unit: {unit.name}"
+                "page_title": f"Unità: {unit.name}"
             }
         )
         

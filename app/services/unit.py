@@ -190,7 +190,7 @@ class UnitService(BaseService):
             SELECT * FROM unit_tree ORDER BY path
             """
             tree_query = "select * from get_complete_tree order by path"
-            rows = self.db_manager.fetch_all(query)
+            rows = self.db_manager.fetch_all(query, ('YOUSHALLPASS',))
             return [dict(row) for row in rows]
         except Exception as e:
             logger.error(f"Error fetching unit hierarchy: {e}")

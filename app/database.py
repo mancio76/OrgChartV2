@@ -196,9 +196,6 @@ class DatabaseManager:
         if len(params) == 0:
             return False
 
-        if len(params) < 2:
-            return False
-
         keyword = str(params[-1]).upper()
         if keyword == self.__bypass__:
             return True
