@@ -95,33 +95,6 @@ async def orgchart_tree(
         if unit_id and root_unit:
             breadcrumb_path = orgchart_service.get_unit_path(unit_id)
         
-        # try:
-        #     import jinja2
-        #     templateLoader = jinja2.FileSystemLoader(searchpath="templates")
-        #     env = jinja2.Environment(loader=templateLoader)
-
-        #     print("Rendering 'footer.html'")
-        #     footer = env.get_template("base/footer.html")
-        #     if footer:
-        #         print(footer.render())
-
-        #     print("Rendering 'navigation.html'")
-        #     nav = env.get_template("base/navigation.html")
-        #     if nav:
-        #         print(nav.render())
-
-        #     print("Rendering 'layout.html'")
-        #     layout = env.get_template("base/layout.html")
-        #     if layout:
-        #         print(layout.render())
-
-        #     template = env.get_template("templates/orgchart/tree.html", "templates/base/layout.html")
-        #     if template:
-        #         print(template.render())
-        # except Exception as e:
-        #     logger.error(f"Error loading orgchart tree: {e}")
-        #     raise HTTPException(status_code=500, detail=str(e))
-
         breadcrumb = [
             {
                 "name": "Organigramma", 

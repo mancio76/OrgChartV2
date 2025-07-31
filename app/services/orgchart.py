@@ -163,8 +163,8 @@ class OrgchartService:
             GROUP BY ut.id, ut.name, ut.short_name, ut.unit_type_id, ut.parent_unit_id, ut.level, ut.path
             ORDER BY ut.path
             """
-            tree_query = "select id, name, short_name, unit_type_id, parent_unit_id, level, path from get_complete_tree order by path"
-            units = self.db_manager.fetch_all(tree_query)
+            ##tree_query = "select id, name, short_name, unit_type_id, parent_unit_id, level, path from get_complete_tree order by path"
+            units = self.db_manager.fetch_all(tree_query, ('YOUSHALLPASS',))
             
             # Build tree structure
             tree_nodes = {}

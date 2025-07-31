@@ -32,8 +32,8 @@
     background: white;
     border-radius: 0.75rem;
     padding: 1.25rem;
-    min-width: 300px;
-    max-width: 380px;
+    min-width: 340px;
+    max-width: 400px;
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
     transition: all 0.3s ease;
     position: relative;
@@ -81,7 +81,7 @@
 }
 
 .unit-function .unit-type-indicator::before {
-    content: 'FUNZIONE';
+    content: 'FN';
 }
 
 /* Organizational Units (unit_type_id=2) - Normal-framed boxes */
@@ -109,7 +109,7 @@
 }
 
 .unit-organizational .unit-type-indicator::before {
-    content: 'UNITÀ ORG.';
+    content: 'UO';
 }
 
 /* Vacant units styling */
