@@ -3,6 +3,7 @@ Base service class with common CRUD operations, search functionality, and valida
 """
 
 import logging
+import re
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any, Type, TypeVar, Union
 from app.database import get_db_manager
@@ -367,6 +368,53 @@ class BaseService(ABC):
                 }
             }
     
+    def _inject_where_clause(self, sql: str, conditions: str) -> str:
+        """Safely inject WHERE conditions into SQL query using regex"""
+        # Remove extra whitespace and normalize
+        sql = re.sub(r'\s+', ' ', sql.strip())
+        
+        # Regex patterns for SQL clause detection (case-insensitive)
+        patterns = {
+            'cte_pattern': r'^(\s*WITH\s+.+?\s+)\s*(SELECT\b.*)',
+            'select': r'^(\s*SELECT\s+.+?\s+)\s*(FROM\b.*)',
+            'where': r'\bWHERE\b',
+            'group_by': r'\bGROUP\s+BY\b',
+            'having': r'\bHAVING\b', 
+            'order_by': r'\bORDER\s+BY\b',
+            'limit': r'\bLIMIT\b',
+            'offset': r'\bOFFSET\b'
+        }
+        
+        # Check if WHERE clause already exists
+        where_match = re.search(patterns['where'], sql, re.IGNORECASE)
+        
+        if where_match:
+            # WHERE exists - add our conditions with AND
+            # Find the position right after WHERE
+            where_end = where_match.end()
+            
+            # Insert our conditions with proper grouping
+            new_sql = (sql[:where_end] + 
+                    f" ({conditions}) AND " + 
+                    sql[where_end:])
+            return new_sql
+        
+        else:
+            # No WHERE clause - find the best insertion point
+            insertion_point = len(sql)
+            
+            # Check for clauses that should come after WHERE (in order of precedence)
+            for clause_name in ['group_by', 'having', 'order_by', 'limit', 'offset']:
+                match = re.search(patterns[clause_name], sql, re.IGNORECASE)
+                if match:
+                    insertion_point = min(insertion_point, match.start())
+            
+            # Insert WHERE clause
+            new_sql = (sql[:insertion_point].rstrip() + 
+                    f" WHERE {conditions} " + 
+                    sql[insertion_point:])
+            return new_sql
+
     def search(self, search_term: str, fields: List[str] = None, **kwargs) -> List[T]:
         """
         Search records by term in specified fields with advanced filtering options.
@@ -405,15 +453,7 @@ class BaseService(ABC):
             where_clause = " OR ".join(conditions)
             base_query = self.get_list_query()
 
-            index = base_query.lower().find('group by')
-            if index != -1:
-                query = base_query[:index] + f" WHERE {where_clause} " + base_query[index:]
-            else:
-                index = base_query.lower().find('order by')
-                if index != -1:
-                    query = base_query[:index] + f" WHERE {where_clause} " + base_query[index:]
-                else:
-                    query = f"{base_query} WHERE {where_clause}"
+            query = self._inject_where_clause(base_query, search_conditions)
             
             rows = self.db_manager.fetch_all(query, tuple(params))
             results = [self.model_class.from_sqlite_row(row) for row in rows]

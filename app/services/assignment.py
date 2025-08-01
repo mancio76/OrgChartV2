@@ -296,53 +296,6 @@ class AssignmentService(BaseService):
             logger.error(f"Error fetching historical assignments: {e}")
             return []
     
-    def create_assignment_old(self, assignment: Assignment) -> Assignment:
-        """Create new assignment with automatic version assignment (version=1, is_current=true)"""
-        try:
-            # Validate assignment
-            errors = assignment.validate()
-            if errors:
-                from app.models.base import ModelValidationException
-                raise ModelValidationException(errors)
-            
-            # Validate foreign key references
-            self._validate_for_create(assignment)
-            
-            # Check if assignment combination already exists
-            existing = self._get_current_assignment(
-                assignment.person_id, 
-                assignment.unit_id, 
-                assignment.job_title_id
-            )
-            
-            if existing:
-                raise ValueError(f"Assignment already exists for person {assignment.person_id}, unit {assignment.unit_id}, job_title {assignment.job_title_id}. Use modify_assignment instead.")
-            
-            # For new assignments, ensure is_current=True (version will be set by trigger)
-            assignment.is_current = True
-            
-            # Set valid_from to today if not provided
-            if not assignment.valid_from:
-                assignment.valid_from = date.today()
-            
-            logger.info(f"Creating new assignment {assignment.person_id}-{assignment.unit_id}-{assignment.job_title_id}")
-            
-            # Insert new assignment (trigger will handle versioning)
-            cursor = self.db_manager.execute_query(
-                self.get_insert_query(),
-                self.model_to_insert_params(assignment)
-            )
-            
-            # Return created assignment
-            if cursor.lastrowid:
-                return self.get_by_id(cursor.lastrowid)
-            
-            return assignment
-            
-        except Exception as e:
-            logger.error(f"Error creating assignment: {e}")
-            raise
-    
     def create_assignment(self, assignment: Assignment) -> Assignment:
         """Create new assignment with proper versioning"""
         #db_manager = get_db_manager()
@@ -410,53 +363,6 @@ class AssignmentService(BaseService):
             logger.error(f"Failed to create assignment: {e}")
             raise
 
-    def modify_assignment_old(self, person_id: int, unit_id: int, job_title_id: int, new_assignment_data: Assignment) -> Assignment:
-        """Create new version of existing assignment with version increment logic"""
-        try:
-            # Find current assignment
-            current_assignment = self._get_current_assignment(person_id, unit_id, job_title_id)
-            if not current_assignment:
-                raise ValueError(f"No current assignment found for person {person_id}, unit {unit_id}, job_title {job_title_id}")
-            
-            # Validate new assignment data
-            errors = new_assignment_data.validate()
-            if errors:
-                from app.models.base import ModelValidationException
-                raise ModelValidationException(errors)
-            
-            # Validate foreign key references
-            self._validate_for_create(new_assignment_data)
-            
-            # Prepare new version
-            new_assignment_data.person_id = person_id
-            new_assignment_data.unit_id = unit_id
-            new_assignment_data.job_title_id = job_title_id
-            new_assignment_data.is_current = True
-            
-            # Set valid_from to today if not provided
-            if not new_assignment_data.valid_from:
-                new_assignment_data.valid_from = date.today()
-            
-            logger.info(f"Creating new version for assignment {person_id}-{unit_id}-{job_title_id}")
-            
-            # Insert new version (trigger will handle marking previous as historical and version numbering)
-            cursor = self.db_manager.execute_query(
-                self.get_insert_query(),
-                self.model_to_insert_params(new_assignment_data)
-            )
-            
-            new_id = cursor.lastrowid
-            
-            # Return created assignment
-            if new_id:
-                return self.get_by_id(new_id)
-            
-            return new_assignment_data
-            
-        except Exception as e:
-            logger.error(f"Error modifying assignment: {e}")
-            raise
-    
     def _modify_assignment(self, assignment: Assignment) -> Assignment:
         """Update assignment - creates new version if current"""
         if assignment.is_current:
