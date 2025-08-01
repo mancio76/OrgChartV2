@@ -483,7 +483,7 @@ async def export_orgchart(
     """Export orgchart in various formats"""
     try:
         if format_type not in ["svg", "pdf", "png"]:
-            raise HTTPException(status_code=400, detail="Formato non supportato")
+            raise HTTPException(status_code=400, detail=f"Formato '{format_type}' non supportato")
         
         # Get tree data
         if unit_id:

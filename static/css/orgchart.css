@@ -76,8 +76,8 @@
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;
     position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
+    top: 5.1rem;
+    left: 2.2rem;
 }
 
 .unit-function .unit-type-indicator::before {
@@ -104,8 +104,8 @@
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;
     position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
+    top: 5.1rem;
+    left: 2.2rem;
 }
 
 .unit-organizational .unit-type-indicator::before {

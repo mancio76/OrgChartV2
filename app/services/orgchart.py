@@ -444,7 +444,7 @@ class OrgchartService:
             SELECT id, name FROM unit_path WHERE level > 0 ORDER BY level DESC
             """
             
-            path_rows = self.db_manager.fetch_all(path_query, (unit_id,))
+            path_rows = self.db_manager.fetch_all(path_query, (unit_id, 'YOUSHALLPASS',))
             return [{'id': row['id'], 'name': row['name']} for row in path_rows]
             
         except Exception as e:
@@ -526,7 +526,7 @@ class OrgchartService:
             LIMIT ?
             """
             
-            changes = self.db_manager.fetch_all(changes_query, (limit,))
+            changes = self.db_manager.fetch_all(changes_query, (limit, 'YOUSHALLPASS',))
             return [dict(change) for change in changes]
             
         except Exception as e:
@@ -537,9 +537,14 @@ class OrgchartService:
         """Get workload matrix view"""
         try:
             matrix_query = """
-            SELECT p.name as person_name, p.short_name as person_short_name,
-                   u.name as unit_name, jt.name as job_title_name,
-                   pja.percentage, pja.is_ad_interim, pja.is_unit_boss
+            SELECT p.id as person_id,
+                   p.name as person_name,
+                   p.short_name as person_short_name,
+                   u.name as unit_name,
+                   jt.name as job_title_name,
+                   pja.percentage,
+                   pja.is_ad_interim,
+                   pja.is_unit_boss
             FROM person_job_assignments pja
             JOIN persons p ON pja.person_id = p.id
             JOIN units u ON pja.unit_id = u.id
@@ -556,6 +561,7 @@ class OrgchartService:
                 person_name = assignment['person_name']
                 if person_name not in matrix:
                     matrix[person_name] = {
+                        'person_id': assignment['person_id'],
                         'person_short_name': assignment['person_short_name'],
                         'total_percentage': 0,
                         'assignments': []
@@ -591,7 +597,8 @@ class OrgchartService:
         try:
             # This is a simplified version - in a real system you'd have skills data
             skills_query = """
-            SELECT p.name as person_name,
+            SELECT p.id as person_id,
+                   p.name as person_name,
                    jt.name as job_title_name,
                    u.name as unit_name,
                    ut.name as unit_type,
@@ -616,6 +623,7 @@ class OrgchartService:
                 
                 skill_level = "Expert" if row['experience_count'] > 3 else "Experienced" if row['experience_count'] > 1 else "Beginner"
                 matrix[person_name]['skills'].append({
+                    'person_id' : row['person_id'],
                     'area': f"{row['unit_name']} ({row['unit_type']})",
                     'role': row['job_title_name'],
                     'level': skill_level,
@@ -633,16 +641,23 @@ class OrgchartService:
         try:
             hierarchy_query = """
             WITH RECURSIVE unit_hierarchy AS (
-                SELECT id, name, parent_unit_id, 0 as level
+                SELECT id,
+                    name,
+                    parent_unit_id,
+                    0 as level
                 FROM units WHERE parent_unit_id IS NULL OR parent_unit_id = -1
                 
                 UNION ALL
                 
-                SELECT u.id, u.name, u.parent_unit_id, uh.level + 1
+                SELECT u.id,
+                    u.name,
+                    u.parent_unit_id,
+                    uh.level + 1
                 FROM units u
                 JOIN unit_hierarchy uh ON u.parent_unit_id = uh.id
             )
-            SELECT uh.*, COUNT(DISTINCT pja.person_id) as person_count
+            SELECT uh.*,
+                COUNT(DISTINCT pja.person_id) as person_count
             FROM unit_hierarchy uh
             LEFT JOIN person_job_assignments pja ON uh.id = pja.unit_id AND pja.is_current = 1
             GROUP BY uh.id, uh.name, uh.parent_unit_id, uh.level
