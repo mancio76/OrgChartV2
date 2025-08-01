@@ -1,0 +1,421 @@
+{% extends "base/layout.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-building-add me-2"></i>Nuova Azienda
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    <!-- CSRF Token -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+                    <!-- Basic Information -->
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Nome Azienda *</label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       value="{{ form_data.name if form_data else '' }}" 
+                                       required maxlength="255"
+                                       placeholder="es. Acme Corporation">
+                                <div class="invalid-feedback">
+                                    Il nome dell'azienda è obbligatorio.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="short_name" class="form-label">Nome Breve</label>
+                                <input type="text" class="form-control" id="short_name" name="short_name" 
+                                       value="{{ form_data.short_name if form_data else '' }}" 
+                                       maxlength="100"
+                                       placeholder="es. ACME">
+                                <div class="form-text">Nome abbreviato (opzionale)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="registration_no" class="form-label">Numero Registrazione</label>
+                                <input type="text" class="form-control" id="registration_no" name="registration_no" 
+                                       value="{{ form_data.registration_no if form_data else '' }}" 
+                                       maxlength="50"
+                                       placeholder="es. 12345678901">
+                                <div class="form-text">Partita IVA o codice fiscale (opzionale)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="country" class="form-label">Paese</label>
+                                <select class="form-select" id="country" name="country">
+                                    <option value="Italy" {{ 'selected' if not form_data or form_data.country == 'Italy' else '' }}>Italia</option>
+                                    <option value="France" {{ 'selected' if form_data and form_data.country == 'France' else '' }}>Francia</option>
+                                    <option value="Germany" {{ 'selected' if form_data and form_data.country == 'Germany' else '' }}>Germania</option>
+                                    <option value="Spain" {{ 'selected' if form_data and form_data.country == 'Spain' else '' }}>Spagna</option>
+                                    <option value="United Kingdom" {{ 'selected' if form_data and form_data.country == 'United Kingdom' else '' }}>Regno Unito</option>
+                                    <option value="United States" {{ 'selected' if form_data and form_data.country == 'United States' else '' }}>Stati Uniti</option>
+                                    <option value="Other" {{ 'selected' if form_data and form_data.country == 'Other' else '' }}>Altro</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Address Information -->
+                    <h6 class="border-bottom pb-2 mb-3">
+                        <i class="bi bi-geo-alt me-2"></i>Indirizzo
+                    </h6>
+                    
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Indirizzo</label>
+                        <input type="text" class="form-control" id="address" name="address" 
+                               value="{{ form_data.address if form_data else '' }}" 
+                               maxlength="255"
+                               placeholder="es. Via Roma 123">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="city" class="form-label">Città</label>
+                                <input type="text" class="form-control" id="city" name="city" 
+                                       value="{{ form_data.city if form_data else '' }}" 
+                                       maxlength="100"
+                                       placeholder="es. Milano">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="postal_code" class="form-label">CAP</label>
+                                <input type="text" class="form-control" id="postal_code" name="postal_code" 
+                                       value="{{ form_data.postal_code if form_data else '' }}" 
+                                       maxlength="20"
+                                       placeholder="es. 20100">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <h6 class="border-bottom pb-2 mb-3">
+                        <i class="bi bi-telephone me-2"></i>Contatti
+                    </h6>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">Telefono</label>
+                                <input type="tel" class="form-control" id="phone" name="phone" 
+                                       value="{{ form_data.phone if form_data else '' }}" 
+                                       maxlength="50"
+                                       placeholder="es. +39 02 1234567">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       value="{{ form_data.email if form_data else '' }}" 
+                                       maxlength="255"
+                                       placeholder="es. info@acme.com">
+                                <div class="invalid-feedback">
+                                    Inserisci un indirizzo email valido.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="website" class="form-label">Sito Web</label>
+                        <input type="url" class="form-control" id="website" name="website" 
+                               value="{{ form_data.website if form_data else '' }}" 
+                               maxlength="255"
+                               placeholder="es. https://www.acme.com">
+                        <div class="invalid-feedback">
+                            Inserisci un URL valido (deve iniziare con http:// o https://).
+                        </div>
+                    </div>
+
+                    <!-- Contact Persons -->
+                    <h6 class="border-bottom pb-2 mb-3">
+                        <i class="bi bi-people me-2"></i>Persone di Contatto
+                    </h6>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="main_contact_id" class="form-label">Contatto Principale</label>
+                                <select class="form-select" id="main_contact_id" name="main_contact_id">
+                                    <option value="">Seleziona una persona...</option>
+                                    {% for person in contact_persons %}
+                                    <option value="{{ person.id }}" 
+                                            {{ 'selected' if form_data and form_data.main_contact_id == person.id else '' }}>
+                                        {{ person.display_name }}
+                                        {% if person.email %}({{ person.email }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Persona di riferimento principale (opzionale)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="financial_contact_id" class="form-label">Contatto Finanziario</label>
+                                <select class="form-select" id="financial_contact_id" name="financial_contact_id">
+                                    <option value="">Seleziona una persona...</option>
+                                    {% for person in contact_persons %}
+                                    <option value="{{ person.id }}" 
+                                            {{ 'selected' if form_data and form_data.financial_contact_id == person.id else '' }}>
+                                        {{ person.display_name }}
+                                        {% if person.email %}({{ person.email }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Persona per questioni finanziarie (opzionale)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Validity Period -->
+                    <h6 class="border-bottom pb-2 mb-3">
+                        <i class="bi bi-calendar-range me-2"></i>Periodo di Validità
+                    </h6>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="valid_from" class="form-label">Valido Da</label>
+                                <input type="date" class="form-control" id="valid_from" name="valid_from" 
+                                       value="{{ form_data.valid_from if form_data else '' }}">
+                                <div class="form-text">Data di inizio validità (opzionale)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="valid_to" class="form-label">Valido Fino</label>
+                                <input type="date" class="form-control" id="valid_to" name="valid_to" 
+                                       value="{{ form_data.valid_to if form_data else '' }}">
+                                <div class="form-text">Data di fine validità (opzionale)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Note</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                  maxlength="1000"
+                                  placeholder="Note aggiuntive sull'azienda...">{{ form_data.notes if form_data else '' }}</textarea>
+                        <div class="form-text">Note aggiuntive (opzionale, max 1000 caratteri)</div>
+                    </div>
+
+                    <!-- Preview -->
+                    <div class="alert alert-light border">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-eye me-1"></i>Anteprima
+                        </h6>
+                        <div class="d-flex align-items-center">
+                            <div class="company-preview-icon me-3">
+                                <i class="bi bi-building"></i>
+                            </div>
+                            <div>
+                                <strong id="preview-name">Nome Azienda</strong>
+                                <div id="preview-short-name" class="text-muted small" style="display: none;"></div>
+                                <div id="preview-location" class="text-muted small" style="display: none;"></div>
+                                <div id="preview-contacts" class="text-info small" style="display: none;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <a href="/companies" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Annulla
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-1"></i>Crea Azienda
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.company-preview-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    background: var(--bs-primary-bg-subtle);
+    color: var(--bs-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.form-section {
+    margin-bottom: 2rem;
+}
+
+.form-section h6 {
+    color: var(--bs-primary);
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form inputs
+    const nameInput = document.getElementById('name');
+    const shortNameInput = document.getElementById('short_name');
+    const cityInput = document.getElementById('city');
+    const countrySelect = document.getElementById('country');
+    const mainContactSelect = document.getElementById('main_contact_id');
+    const financialContactSelect = document.getElementById('financial_contact_id');
+    
+    // Preview elements
+    const previewName = document.getElementById('preview-name');
+    const previewShortName = document.getElementById('preview-short-name');
+    const previewLocation = document.getElementById('preview-location');
+    const previewContacts = document.getElementById('preview-contacts');
+    
+    function updatePreview() {
+        const name = nameInput.value.trim();
+        const shortName = shortNameInput.value.trim();
+        const city = cityInput.value.trim();
+        const country = countrySelect.value;
+        const mainContactText = mainContactSelect.options[mainContactSelect.selectedIndex].text;
+        const financialContactText = financialContactSelect.options[financialContactSelect.selectedIndex].text;
+        
+        // Update name
+        previewName.textContent = name || 'Nome Azienda';
+        
+        // Update short name
+        if (shortName) {
+            previewShortName.textContent = shortName;
+            previewShortName.style.display = 'block';
+        } else {
+            previewShortName.style.display = 'none';
+        }
+        
+        // Update location
+        const locationParts = [];
+        if (city) locationParts.push(city);
+        if (country && country !== 'Italy') locationParts.push(country);
+        
+        if (locationParts.length > 0) {
+            previewLocation.innerHTML = `<i class="bi bi-geo-alt me-1"></i>${locationParts.join(', ')}`;
+            previewLocation.style.display = 'block';
+        } else {
+            previewLocation.style.display = 'none';
+        }
+        
+        // Update contacts
+        const contacts = [];
+        if (mainContactSelect.value && mainContactText !== 'Seleziona una persona...') {
+            contacts.push(`Main: ${mainContactText.split('(')[0].trim()}`);
+        }
+        if (financialContactSelect.value && financialContactText !== 'Seleziona una persona...') {
+            contacts.push(`Fin: ${financialContactText.split('(')[0].trim()}`);
+        }
+        
+        if (contacts.length > 0) {
+            previewContacts.innerHTML = `<i class="bi bi-people me-1"></i>${contacts.join(' | ')}`;
+            previewContacts.style.display = 'block';
+        } else {
+            previewContacts.style.display = 'none';
+        }
+    }
+    
+    // Event listeners
+    nameInput.addEventListener('input', updatePreview);
+    shortNameInput.addEventListener('input', updatePreview);
+    cityInput.addEventListener('input', updatePreview);
+    countrySelect.addEventListener('change', updatePreview);
+    mainContactSelect.addEventListener('change', updatePreview);
+    financialContactSelect.addEventListener('change', updatePreview);
+    
+    // Validation
+    const emailInput = document.getElementById('email');
+    const websiteInput = document.getElementById('website');
+    const validFromInput = document.getElementById('valid_from');
+    const validToInput = document.getElementById('valid_to');
+    
+    emailInput.addEventListener('blur', function() {
+        const email = this.value.trim();
+        if (email && !isValidEmail(email)) {
+            this.setCustomValidity('Inserisci un indirizzo email valido');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+    
+    websiteInput.addEventListener('blur', function() {
+        const website = this.value.trim();
+        if (website && !isValidUrl(website)) {
+            this.setCustomValidity('Inserisci un URL valido (deve iniziare con http:// o https://)');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+    
+    // Date validation
+    validFromInput.addEventListener('change', validateDates);
+    validToInput.addEventListener('change', validateDates);
+    
+    function validateDates() {
+        const validFrom = validFromInput.value;
+        const validTo = validToInput.value;
+        
+        if (validFrom && validTo && validFrom > validTo) {
+            validToInput.setCustomValidity('La data di fine deve essere successiva alla data di inizio');
+        } else {
+            validToInput.setCustomValidity('');
+        }
+    }
+    
+    // Prevent same person as both contacts
+    mainContactSelect.addEventListener('change', function() {
+        if (this.value && this.value === financialContactSelect.value) {
+            alert('La stessa persona non può essere sia contatto principale che finanziario');
+            this.value = '';
+            updatePreview();
+        }
+    });
+    
+    financialContactSelect.addEventListener('change', function() {
+        if (this.value && this.value === mainContactSelect.value) {
+            alert('La stessa persona non può essere sia contatto principale che finanziario');
+            this.value = '';
+            updatePreview();
+        }
+    });
+    
+    function isValidEmail(email) {
+        const pattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        return pattern.test(email);
+    }
+    
+    function isValidUrl(url) {
+        const pattern = /^https?:\/\/[^\s/$.?#].[^\s]*$/;
+        return pattern.test(url);
+    }
+    
+    // Initialize preview
+    updatePreview();
+});
+</script>
+{% endblock %}

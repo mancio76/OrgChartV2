@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This feature enhances the database structure to support more detailed person information and company management. The changes include splitting person names into firstName/lastName fields, adding registration numbers for persons, and introducing a comprehensive companies table with contact relationships.
+This feature enhances the database structure to support more detailed person information and company management. The changes include splitting person names into firstName/lastName fields, adding registration numbers for persons, , adding profile image for persons, , adding emoji symbol for persons, and introducing a comprehensive companies table with contact relationships.
 
 ## Requirements
 
@@ -67,3 +67,14 @@ This feature enhances the database structure to support more detailed person inf
 3. WHEN viewing person lists THEN the system SHALL continue to display names using existing format
 4. WHEN accessing companies THEN the system SHALL provide a dedicated companies management interface
 5. WHEN selecting company contacts THEN the system SHALL provide dropdown/search functionality for person selection
+
+### Requirement 6: Person profile image
+
+**User Story:** As an HR administrator, I want to store optional profile image for persons, so that I can view the profile picture in the person card.
+
+#### Acceptance Criteria
+
+1. WHEN creating or editing a person THEN the system SHALL provide an optional picture field shown like an avatar image
+2. WHEN setting profile image THEN the system SHALL accept TEXT values up to 1024 characters for the file path
+3. WHEN saving a person THEN the system SHALL store the profile picture image file in a app folder named app/static/img/profiles if provided
+4. WHEN displaying person details THEN the system SHALL show the profile picture if available

@@ -187,9 +187,15 @@ class UnitService(BaseService):
                 FROM units u
                 JOIN unit_tree ut ON u.parent_unit_id = ut.id
             )
-            SELECT * FROM unit_tree ORDER BY path
+            SELECT *
+            FROM unit_tree
+            ORDER BY path
             """
-            tree_query = "select * from get_complete_tree order by path"
+            tree_query = """
+            SELECT *
+            FROM get_complete_tree
+            ORDER BY path
+            """
             rows = self.db_manager.fetch_all(query, ('YOUSHALLPASS',))
             return [dict(row) for row in rows]
         except Exception as e:

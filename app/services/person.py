@@ -19,7 +19,7 @@ class PersonService(BaseService):
         super().__init__(Person, "persons")
     
     def get_list_query(self) -> str:
-        """Get query for listing all persons with computed fields"""
+        """Get query for listing all persons with computed fields and enhanced fields"""
         return """
         SELECT p.*,
                COUNT(DISTINCT pja_current.id) as current_assignments_count,
@@ -27,12 +27,12 @@ class PersonService(BaseService):
         FROM persons p
         LEFT JOIN person_job_assignments pja_current ON p.id = pja_current.person_id AND pja_current.is_current = 1
         LEFT JOIN person_job_assignments pja_all ON p.id = pja_all.person_id
-        GROUP BY p.id, p.name, p.short_name, p.email, p.datetime_created, p.datetime_updated
-        ORDER BY p.name
+        GROUP BY p.id, p.name, p.short_name, p.email, p.first_name, p.last_name, p.registration_no, p.profile_image, p.datetime_created, p.datetime_updated
+        ORDER BY COALESCE(p.last_name, p.name), COALESCE(p.first_name, '')
         """
     
     def get_by_id_query(self) -> str:
-        """Get query for fetching single person by ID"""
+        """Get query for fetching single person by ID with enhanced fields"""
         return """
         SELECT p.*,
                COUNT(DISTINCT pja_current.id) as current_assignments_count,
@@ -41,19 +41,19 @@ class PersonService(BaseService):
         LEFT JOIN person_job_assignments pja_current ON p.id = pja_current.person_id AND pja_current.is_current = 1
         LEFT JOIN person_job_assignments pja_all ON p.id = pja_all.person_id
         WHERE p.id = ?
-        GROUP BY p.id, p.name, p.short_name, p.email, p.datetime_created, p.datetime_updated
+        GROUP BY p.id, p.name, p.short_name, p.email, p.first_name, p.last_name, p.registration_no, p.profile_image, p.datetime_created, p.datetime_updated
         """
     
     def get_insert_query(self) -> str:
         return """
-        INSERT INTO persons (name, short_name, email)
-        VALUES (?, ?, ?)
+        INSERT INTO persons (name, short_name, email, first_name, last_name, registration_no, profile_image)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """
     
     def get_update_query(self) -> str:
         return """
         UPDATE persons 
-        SET name = ?, short_name = ?, email = ?
+        SET name = ?, short_name = ?, email = ?, first_name = ?, last_name = ?, registration_no = ?, profile_image = ?
         WHERE id = ?
         """
     
@@ -61,19 +61,27 @@ class PersonService(BaseService):
         return "DELETE FROM persons WHERE id = ?"
     
     def model_to_insert_params(self, person: Person) -> tuple:
-        """Convert person to parameters for insert query"""
-        return (
-            person.name,
-            person.short_name,
-            person.email
-        )
-    
-    def model_to_update_params(self, person: Person) -> tuple:
-        """Convert person to parameters for update query"""
+        """Convert person to parameters for insert query with enhanced fields"""
         return (
             person.name,
             person.short_name,
             person.email,
+            person.first_name,
+            person.last_name,
+            person.registration_no,
+            person.profile_image
+        )
+    
+    def model_to_update_params(self, person: Person) -> tuple:
+        """Convert person to parameters for update query with enhanced fields"""
+        return (
+            person.name,
+            person.short_name,
+            person.email,
+            person.first_name,
+            person.last_name,
+            person.registration_no,
+            person.profile_image,
             person.id
         )
     
@@ -668,11 +676,31 @@ class PersonService(BaseService):
             return 0.60
     
     def get_searchable_fields(self) -> List[str]:
-        """Get list of fields that can be searched for persons"""
-        return ["name", "short_name", "email"]
+        """Get list of fields that can be searched for persons with enhanced fields"""
+        return ["name", "short_name", "email", "first_name", "last_name", "registration_no"]
+    
+    def suggest_name_format(self, person: Person) -> str:
+        """Suggest name format from first_name and last_name (Requirement 2.1)"""
+        return person.suggested_name_format
+    
+    def ensure_name_consistency(self, person: Person) -> None:
+        """Ensure consistency between name and first_name/last_name fields before saving"""
+        person.ensure_name_consistency()
+    
+    def create(self, person: Person) -> Person:
+        """Create new person with name consistency handling"""
+        # Ensure name consistency before creation
+        self.ensure_name_consistency(person)
+        return super().create(person)
+    
+    def update(self, person: Person) -> Person:
+        """Update existing person with name consistency handling"""
+        # Ensure name consistency before update
+        self.ensure_name_consistency(person)
+        return super().update(person)
     
     def _validate_for_create(self, person: Person) -> None:
-        """Perform additional validation before creating a person"""
+        """Perform additional validation before creating a person with enhanced fields"""
         # Check for duplicate email if provided
         if person.email:
             existing = self.db_manager.fetch_one(
@@ -682,9 +710,19 @@ class PersonService(BaseService):
             if existing:
                 from app.services.base import ServiceValidationException
                 raise ServiceValidationException(f"Person with email '{person.email}' already exists")
+        
+        # Check for duplicate registration number if provided
+        if person.registration_no:
+            existing = self.db_manager.fetch_one(
+                "SELECT id FROM persons WHERE registration_no = ? AND id != ?",
+                (person.registration_no, person.id or -1)
+            )
+            if existing:
+                from app.services.base import ServiceValidationException
+                raise ServiceValidationException(f"Person with registration number '{person.registration_no}' already exists")
     
     def _validate_for_update(self, person: Person, existing: Person) -> None:
-        """Perform additional validation before updating a person"""
+        """Perform additional validation before updating a person with enhanced fields"""
         # Check for duplicate email (excluding current person)
         if person.email:
             duplicate = self.db_manager.fetch_one(
@@ -694,6 +732,16 @@ class PersonService(BaseService):
             if duplicate:
                 from app.services.base import ServiceValidationException
                 raise ServiceValidationException(f"Person with email '{person.email}' already exists")
+        
+        # Check for duplicate registration number (excluding current person)
+        if person.registration_no:
+            duplicate = self.db_manager.fetch_one(
+                "SELECT id FROM persons WHERE registration_no = ? AND id != ?",
+                (person.registration_no, person.id)
+            )
+            if duplicate:
+                from app.services.base import ServiceValidationException
+                raise ServiceValidationException(f"Person with registration number '{person.registration_no}' already exists")
     
     def _validate_for_delete(self, person: Person) -> None:
         """Perform validation before deleting a person"""

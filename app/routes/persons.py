@@ -13,6 +13,7 @@ from app.models.person import Person
 from app.models.base import ModelValidationException
 from app.security import CSRFProtection
 from app.security_csfr import generate_csrf_token, validate_csrf_token, validate_csrf_token_flexible, add_csrf_to_context
+from app.services.base import ServiceValidationException
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -25,6 +26,46 @@ def get_person_service():
 
 def get_assignment_service():
     return AssignmentService()
+
+
+def validate_and_clean_form_data(form_data: dict) -> dict:
+    """Validate and clean form data for person creation/update"""
+    cleaned_data = {}
+    
+    # Clean string fields
+    string_fields = ['name', 'first_name', 'last_name', 'short_name', 'email', 'registration_no', 'profile_image']
+    for field in string_fields:
+        value = form_data.get(field)
+        if value:
+            cleaned_value = value.strip()
+            cleaned_data[field] = cleaned_value if cleaned_value else None
+        else:
+            cleaned_data[field] = None
+    
+    return cleaned_data
+
+
+def ensure_name_consistency(person_data: dict) -> dict:
+    """Ensure consistency between name fields (Requirement 2.1)"""
+    first_name = person_data.get('first_name')
+    last_name = person_data.get('last_name')
+    name = person_data.get('name')
+    
+    # If we have first_name/last_name but no name, generate it
+    if (first_name or last_name) and not name:
+        parts = [first_name, last_name]
+        person_data['name'] = ' '.join(filter(None, parts))
+    
+    # If we have name but no first_name/last_name, try to split it
+    elif name and not (first_name or last_name):
+        parts = name.split()
+        if len(parts) >= 2:
+            person_data['first_name'] = parts[0]
+            person_data['last_name'] = ' '.join(parts[1:])
+        elif len(parts) == 1:
+            person_data['first_name'] = parts[0]
+    
+    return person_data
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -92,40 +133,75 @@ async def create_person_form(
 @router.post("/new")
 async def create_person(
     request: Request,
-    name: str = Form(...),
+    name: str = Form(""),
+    first_name: Optional[str] = Form(None),
+    last_name: Optional[str] = Form(None),
     short_name: Optional[str] = Form(None),
     email: Optional[str] = Form(None),
+    registration_no: Optional[str] = Form(None),
+    profile_image: Optional[str] = Form(None),
     csrf_protection: bool = Depends(validate_csrf_token_flexible),
     csrf_token: Optional[str] = Form(None),
     person_service: PersonService = Depends(get_person_service)
 ):
-    """Create new person"""
+    """Create new person with enhanced field support (Requirements 1.1-1.5, 2.1-2.4, 6.1-6.2)"""
     logger.info("=== STARTING PERSON CREATION ===")
-    logger.info(f"Request received - Name: {name}, Email: {email}")
+    logger.info(f"Request received - Name: {name}, First: {first_name}, Last: {last_name}, Email: {email}")
 
     try:
-        # Create person model
+        # Prepare form data
+        form_data = {
+            'name': name,
+            'first_name': first_name,
+            'last_name': last_name,
+            'short_name': short_name,
+            'email': email,
+            'registration_no': registration_no,
+            'profile_image': profile_image
+        }
+        
+        # Clean and validate form data
+        cleaned_data = validate_and_clean_form_data(form_data)
+        
+        # Ensure name consistency (Requirement 2.1)
+        cleaned_data = ensure_name_consistency(cleaned_data)
+        
+        # Create person model with enhanced fields
         person = Person(
-            name=name.strip(),
-            short_name=short_name.strip() if short_name else None,
-            email=email.strip() if email else None
+            name=cleaned_data['name'] or "",
+            first_name=cleaned_data['first_name'],
+            last_name=cleaned_data['last_name'],
+            short_name=cleaned_data['short_name'],
+            email=cleaned_data['email'],
+            registration_no=cleaned_data['registration_no'],
+            profile_image=cleaned_data['profile_image']
         )
         
         # Create person
         created_person = person_service.create(person)
+        
+        logger.info(f"Successfully created person with ID: {created_person.id}")
+        logger.info(f"Person details - Name: {created_person.name}, First: {created_person.first_name}, Last: {created_person.last_name}")
         
         return RedirectResponse(
             url=f"/persons/{created_person.id}",
             status_code=303
         )
         
-    except ModelValidationException as e:
+    except (ModelValidationException, ServiceValidationException) as e:
         # Show form again with errors
+        if isinstance(e, ModelValidationException):
+            errors = [{"field": err.field, "message": err.message} for err in e.errors]
+        else:
+            # ServiceValidationException - usually field-specific
+            field_name = "registration_no" if "registration number" in str(e).lower() else "email" if "email" in str(e).lower() else "general"
+            errors = [{"field": field_name, "message": str(e)}]
+        
         return templates.TemplateResponse(
             "persons/create.html",
             {
                 "request": request,
-                "errors": [{"field": err.field, "message": err.message} for err in e.errors],
+                "errors": errors,
                 "form_data": await request.form(),
                 "page_title": "Nuova Persona",
                 "page_icon": "person-plus",
@@ -278,22 +354,49 @@ async def edit_person_form(
 async def update_person(
     request: Request,
     person_id: int,
-    name: str = Form(...),
+    name: str = Form(""),
+    first_name: Optional[str] = Form(None),
+    last_name: Optional[str] = Form(None),
     short_name: Optional[str] = Form(None),
     email: Optional[str] = Form(None),
+    registration_no: Optional[str] = Form(None),
+    profile_image: Optional[str] = Form(None),
     person_service: PersonService = Depends(get_person_service)
 ):
-    """Update existing person"""
+    """Update existing person with enhanced field support (Requirements 1.1-1.5, 2.1-2.4, 6.1-6.2)"""
     try:
         # Get existing person
         existing_person = person_service.get_by_id(person_id)
         if not existing_person:
             raise HTTPException(status_code=404, detail="Persona non trovata")
         
-        # Update person model
-        existing_person.name = name.strip()
-        existing_person.short_name = short_name.strip() if short_name else None
-        existing_person.email = email.strip() if email else None
+        # Prepare form data
+        form_data = {
+            'name': name,
+            'first_name': first_name,
+            'last_name': last_name,
+            'short_name': short_name,
+            'email': email,
+            'registration_no': registration_no,
+            'profile_image': profile_image
+        }
+        
+        # Clean and validate form data
+        cleaned_data = validate_and_clean_form_data(form_data)
+        
+        # Ensure name consistency (Requirement 2.1)
+        cleaned_data = ensure_name_consistency(cleaned_data)
+        
+        # Update person model with enhanced fields
+        existing_person.name = cleaned_data['name'] or ""
+        existing_person.first_name = cleaned_data['first_name']
+        existing_person.last_name = cleaned_data['last_name']
+        existing_person.short_name = cleaned_data['short_name']
+        existing_person.email = cleaned_data['email']
+        existing_person.registration_no = cleaned_data['registration_no']
+        existing_person.profile_image = cleaned_data['profile_image']
+        
+        logger.info(f"Updating person {person_id} - Name: {existing_person.name}, First: {existing_person.first_name}, Last: {existing_person.last_name}")
         
         # Update person
         updated_person = person_service.update(existing_person)
@@ -303,15 +406,23 @@ async def update_person(
             status_code=303
         )
         
-    except ModelValidationException as e:
+    except (ModelValidationException, ServiceValidationException) as e:
         # Show form again with errors
         person = person_service.get_by_id(person_id)
+        
+        if isinstance(e, ModelValidationException):
+            errors = [{"field": err.field, "message": err.message} for err in e.errors]
+        else:
+            # ServiceValidationException - usually field-specific
+            field_name = "registration_no" if "registration number" in str(e).lower() else "email" if "email" in str(e).lower() else "general"
+            errors = [{"field": field_name, "message": str(e)}]
+        
         return templates.TemplateResponse(
             "persons/edit.html",
             {
                 "request": request,
                 "person": person,
-                "errors": [{"field": err.field, "message": err.message} for err in e.errors],
+                "errors": errors,
                 "form_data": await request.form(),
                 "page_title": f"Modifica Persona: {person.name}",
                 "page_icon": "person-gear",
@@ -544,6 +655,37 @@ async def person_workload(
     except Exception as e:
         logger.error(f"Error showing workload for person {person_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/suggest-name-format")
+async def suggest_name_format(
+    request: Request,
+    first_name: str = Form(""),
+    last_name: str = Form(""),
+    person_service: PersonService = Depends(get_person_service)
+):
+    """API endpoint to suggest name format from first_name and last_name (Requirement 2.1)"""
+    try:
+        # Create temporary person to use the suggestion method
+        temp_person = Person(
+            first_name=first_name.strip() if first_name else None,
+            last_name=last_name.strip() if last_name else None
+        )
+        
+        suggested_format = person_service.suggest_name_format(temp_person)
+        
+        return {
+            "success": True,
+            "suggested_format": suggested_format,
+            "full_name": temp_person.suggest_name_from_parts()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error suggesting name format: {e}")
+        return {
+            "success": False,
+            "error": "Errore durante la generazione del formato nome"
+        }
 
 
 @router.post("/{person_id}/merge")

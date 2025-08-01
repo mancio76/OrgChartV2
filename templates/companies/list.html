@@ -1,0 +1,322 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<a href="/companies/new" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i>Nuova Azienda
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-9">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-building me-2"></i>Aziende
+                    <span class="badge bg-primary ms-2">{{ companies|length }}</span>
+                </h5>
+                <div class="d-flex gap-2">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-funnel me-1"></i>Filtri
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/companies">
+                                <i class="bi bi-list me-2"></i>Tutte
+                            </a></li>
+                            <li><a class="dropdown-item" href="/companies/active">
+                                <i class="bi bi-check-circle me-2"></i>Attive
+                            </a></li>
+                            <li><a class="dropdown-item" href="/companies?status=expired">
+                                <i class="bi bi-x-circle me-2"></i>Scadute
+                            </a></li>
+                            <li><a class="dropdown-item" href="/companies?status=future">
+                                <i class="bi bi-dash-circle me-2"></i>Future
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/companies/expiring">
+                                <i class="bi bi-clock me-2"></i>In Scadenza
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="card-body border-bottom">
+                <form method="get" class="row g-3">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" class="form-control" name="search" 
+                                   value="{{ search }}" placeholder="Cerca per nome, registrazione o contatto...">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-search me-1"></i>Cerca
+                            </button>
+                            {% if search %}
+                            <a href="/companies" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-1"></i>Pulisci
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="card-body p-0">
+                {% if companies %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Azienda</th>
+                                <th>Registrazione</th>
+                                <th>Contatti</th>
+                                <th>Stato</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for company in companies %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="company-icon me-3">
+                                            <i class="bi bi-building text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold">
+                                                <a href="/companies/{{ company.id }}" class="text-decoration-none">
+                                                    {{ company.name }}
+                                                </a>
+                                            </div>
+                                            {% if company.short_name %}
+                                            <small class="text-muted">{{ company.short_name }}</small>
+                                            {% endif %}
+                                            {% if company.city %}
+                                            <div class="small text-muted">
+                                                <i class="bi bi-geo-alt me-1"></i>{{ company.city }}
+                                                {% if company.country and company.country != 'Italy' %}
+                                                , {{ company.country }}
+                                                {% endif %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if company.registration_no %}
+                                    <span class="badge bg-light text-dark">{{ company.registration_no }}</span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="small">
+                                        {% if company.main_contact_name %}
+                                        <div>
+                                            <i class="bi bi-person text-primary me-1"></i>
+                                            <strong>Main:</strong> {{ company.main_contact_name }}
+                                        </div>
+                                        {% endif %}
+                                        {% if company.financial_contact_name %}
+                                        <div>
+                                            <i class="bi bi-calculator text-success me-1"></i>
+                                            <strong>Fin:</strong> {{ company.financial_contact_name }}
+                                        </div>
+                                        {% endif %}
+                                        {% if not company.main_contact_name and not company.financial_contact_name %}
+                                        <span class="text-muted">Nessun contatto</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if company.is_active %}
+                                    <span class="badge bg-success">Attiva</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Non Attiva</span>
+                                    {% endif %}
+                                    {% if company.valid_to %}
+                                    <div class="small text-muted">
+                                        Scade: {{ company.valid_to.strftime('%d/%m/%Y') }}
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="/companies/{{ company.id }}" class="btn btn-outline-primary" title="Visualizza">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="/companies/{{ company.id }}/edit" class="btn btn-outline-secondary" title="Modifica">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-outline-danger" title="Elimina"
+                                                onclick="confirmDelete('{{ company.name }}', '/companies/{{ company.id }}/delete')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-building display-1 text-muted"></i>
+                    <h4 class="mt-3">Nessuna azienda trovata</h4>
+                    {% if search %}
+                    <p class="text-muted">Nessun risultato per "{{ search }}"</p>
+                    <a href="/companies" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left me-1"></i>Torna all'elenco completo
+                    </a>
+                    {% else %}
+                    <p class="text-muted">Inizia creando la tua prima azienda</p>
+                    <a href="/companies/new" class="btn btn-primary">
+                        <i class="bi bi-building-add me-1"></i>Crea Prima Azienda
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Sidebar -->
+    <div class="col-lg-3">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-bar-chart me-2"></i>Statistiche
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <span>Totale Aziende:</span>
+                            <strong>{{ statistics.total_companies or 0 }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <span>Attive:</span>
+                            <strong class="text-success">{{ statistics.active_companies or 0 }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <span>Non Attive:</span>
+                            <strong class="text-secondary">{{ statistics.inactive_companies or 0 }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <hr class="my-2">
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <span>Con Contatto Principale:</span>
+                            <strong>{{ statistics.companies_with_main_contact or 0 }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <span>Con Contatto Finanziario:</span>
+                            <strong>{{ statistics.companies_with_financial_contact or 0 }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <span>Senza Contatti:</span>
+                            <strong class="text-warning">{{ statistics.companies_without_contacts or 0 }}</strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <a href="/companies/reports/statistics" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="bi bi-bar-chart me-1"></i>Report Completo
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Azioni Rapide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/companies/new" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-circle me-1"></i>Nuova Azienda
+                    </a>
+                    <a href="/companies/expiring" class="btn btn-warning btn-sm">
+                        <i class="bi bi-clock me-1"></i>In Scadenza
+                    </a>
+                    <a href="/companies/reports/statistics" class="btn btn-info btn-sm">
+                        <i class="bi bi-bar-chart me-1"></i>Statistiche
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.company-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: var(--bs-primary-bg-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(companyName, deleteUrl) {
+    if (confirm(`Sei sicuro di voler eliminare l'azienda "${companyName}"?\n\nQuesta azione non può essere annullata.`)) {
+        // Create a form and submit it
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = deleteUrl;
+        
+        // Add CSRF token if available
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (csrfToken) {
+            const tokenInput = document.createElement('input');
+            tokenInput.type = 'hidden';
+            tokenInput.name = 'csrf_token';
+            tokenInput.value = csrfToken.getAttribute('content');
+            form.appendChild(tokenInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

@@ -146,7 +146,7 @@
         <div class="hierarchy-container">
             {% for unit in units %}
             <div class="hierarchy-item {{ 'root-unit' if unit.level == 0 else '' }}" data-level="{{ unit.level or 0 }}"
-                data-unit-id="{{ unit.id }}" data-parent-id="{{ unit.parent_unit_id or '' }}">
+                data-unit-id="{{ unit.id }}" data-parent-id="{{ unit.parent_unit_id or '' }}" data-path="{{ unit.path or '' }}">
                 <div class="unit-card level-{{ unit.level or 0 }}">
                     <!-- Tree connector lines -->
                     {% if unit.level and unit.level > 0 %}
@@ -540,9 +540,33 @@
         }
     }
 
+    function sortHierarchyTree(item1, item2)
+    {
+        const level1 = item1.dataset.level;
+        const level2 = item2.dataset.level;
+
+        const path1 = item1.dataset.path;
+        const path2 = item2.dataset.path;
+
+        return level1 < level2
+            ? -1
+            : (level1 > level2
+                ? 1 
+                :   (
+                    path1 < path2
+                    ? -1
+                    : path1 > path2
+                    )
+                );
+    }
+
     function initializeHierarchyView() {
         // Initially show only root units (level 0) and hide all children
-        const allItems = document.querySelectorAll('.hierarchy-item');
+        // const allItems = document.querySelectorAll('.hierarchy-item');
+
+        const dataNameElements = document.querySelectorAll('.hierarchy-item');
+        const allItems = Array.from(dataNameElements)
+            .sort((a,b) => sortHierarchyTree(a, b));
 
         allItems.forEach(item => {
             const level = parseInt(item.dataset.level);

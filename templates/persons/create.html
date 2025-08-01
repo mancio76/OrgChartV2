@@ -15,17 +15,42 @@
                     <!-- CSRF Token -->
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-                    <!-- Name -->
+                    <!-- Enhanced Name Fields (Requirements 1.1, 1.2, 1.3, 1.4, 1.5) -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="first_name" class="form-label">Nome *</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" 
+                                       value="{{ form_data.first_name if form_data else '' }}" 
+                                       maxlength="255"
+                                       placeholder="es. Mario">
+                                <div class="form-text">Nome della persona</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="last_name" class="form-label">Cognome *</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" 
+                                       value="{{ form_data.last_name if form_data else '' }}" 
+                                       maxlength="255"
+                                       placeholder="es. Rossi">
+                                <div class="form-text">Cognome della persona</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Name Field (for backward compatibility) -->
                     <div class="mb-3">
-                        <label for="name" class="form-label">Nome Completo *</label>
+                        <label for="name" class="form-label">Nome Completo</label>
                         <input type="text" class="form-control" id="name" name="name" 
                                value="{{ form_data.name if form_data else '' }}" 
-                               required maxlength="255"
-                               placeholder="es. Mario Rossi">
-                        <div class="invalid-feedback">
-                            Il nome completo è obbligatorio.
+                               maxlength="255"
+                               placeholder="Generato automaticamente da Nome e Cognome"
+                               readonly>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Formato suggerito: <span id="suggested-format" class="fw-bold">Cognome, Nome</span>
                         </div>
-                        <div class="form-text">Inserisci nome e cognome della persona</div>
                     </div>
                     
                     <!-- Short Name -->
@@ -36,6 +61,16 @@
                                maxlength="50"
                                placeholder="es. ROSSI M.">
                         <div class="form-text">Nome abbreviato per visualizzazioni compatte (opzionale)</div>
+                    </div>
+                    
+                    <!-- Registration Number (Requirement 2.3) -->
+                    <div class="mb-3">
+                        <label for="registration_no" class="form-label">Numero Matricola</label>
+                        <input type="text" class="form-control" id="registration_no" name="registration_no" 
+                               value="{{ form_data.registration_no if form_data else '' }}" 
+                               maxlength="25"
+                               placeholder="es. EMP001">
+                        <div class="form-text">Numero di matricola o identificativo dipendente (opzionale, max 25 caratteri)</div>
                     </div>
                     
                     <!-- Email -->
@@ -51,19 +86,37 @@
                         <div class="form-text">Indirizzo email aziendale (opzionale)</div>
                     </div>
                     
+                    <!-- Profile Image (Requirements 6.1, 6.4) -->
+                    <div class="mb-3">
+                        <label for="profile_image" class="form-label">Immagine Profilo</label>
+                        <input type="text" class="form-control" id="profile_image" name="profile_image" 
+                               value="{{ form_data.profile_image if form_data else '' }}" 
+                               maxlength="1024"
+                               placeholder="es. mario_rossi.jpg">
+                        <div class="form-text">
+                            Percorso del file immagine profilo (opzionale, max 1024 caratteri)<br>
+                            <small class="text-muted">Formati supportati: .jpg, .jpeg, .png, .gif, .bmp, .webp, .svg</small>
+                        </div>
+                    </div>
+                    
                     <!-- Preview -->
                     <div class="alert alert-light border">
                         <h6 class="alert-heading">
                             <i class="bi bi-eye me-1"></i>Anteprima
                         </h6>
                         <div class="d-flex align-items-center">
-                            <div class="avatar-circle me-3" id="preview-avatar">
-                                --
+                            <div class="position-relative me-3">
+                                <div class="avatar-circle" id="preview-avatar">
+                                    --
+                                </div>
+                                <img id="preview-profile-image" class="avatar-image" style="display: none;" alt="Profile">
                             </div>
                             <div>
-                                <strong id="preview-name">Nome Completo</strong>
+                                <strong id="preview-display-name">Nome Completo</strong>
+                                <div id="preview-suggested-format" class="text-primary small" style="display: none;"></div>
                                 <div id="preview-short-name" class="text-muted small" style="display: none;"></div>
                                 <div id="preview-email" class="text-muted small" style="display: none;"></div>
+                                <div id="preview-registration" class="text-info small" style="display: none;"></div>
                             </div>
                         </div>
                     </div>
@@ -147,131 +200,208 @@
     font-size: 1.1rem;
     flex-shrink: 0;
 }
+
+.avatar-image {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.position-relative {
+    position: relative;
+}
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Enhanced form inputs
+    const firstNameInput = document.getElementById('first_name');
+    const lastNameInput = document.getElementById('last_name');
     const nameInput = document.getElementById('name');
     const shortNameInput = document.getElementById('short_name');
     const emailInput = document.getElementById('email');
+    const registrationInput = document.getElementById('registration_no');
+    const profileImageInput = document.getElementById('profile_image');
     
+    // Preview elements
     const previewAvatar = document.getElementById('preview-avatar');
-    const previewName = document.getElementById('preview-name');
+    const previewProfileImage = document.getElementById('preview-profile-image');
+    const previewDisplayName = document.getElementById('preview-display-name');
+    const previewSuggestedFormat = document.getElementById('preview-suggested-format');
     const previewShortName = document.getElementById('preview-short-name');
     const previewEmail = document.getElementById('preview-email');
-    const form = document.querySelector('form.needs-validation') ?? document.querySelector('form.simple-form');
-
-    if (form) {
-        // Add debug logging
-        form.addEventListener('submit', function(e) {
-            console.log('Form submit event triggered');
-            console.log('Default prevented:', e.defaultPrevented);
-            console.log('Form action:', this.action);
-            console.log('Form method:', this.method);
-
-            // Check if any scripts are preventing submission
-            console.log('Default prevented:', e.defaultPrevented);
+    const previewRegistration = document.getElementById('preview-registration');
+    const suggestedFormatSpan = document.getElementById('suggested-format');
+    
+    function updateNameFromParts() {
+        const firstName = firstNameInput.value.trim();
+        const lastName = lastNameInput.value.trim();
+        
+        if (firstName || lastName) {
+            const fullName = [firstName, lastName].filter(Boolean).join(' ');
+            nameInput.value = fullName;
             
-            // Get CSRF token value
-            const csrfToken = this.querySelector('input[name="csrf_token"]');
-            console.log('CSRF token present:', !!csrfToken);
-            console.log('CSRF token value:', csrfToken ? csrfToken.value : 'MISSING');
-
-            // Check form data
-            const formData = new FormData(this);
-            console.log('Form data entries:');
-            for (let [key, value] of formData.entries()) {
-                console.log(`  ${key}: ${value}`);
+            // Update suggested format (Requirement 2.1)
+            if (firstName && lastName) {
+                const suggestedFormat = `${lastName}, ${firstName}`;
+                suggestedFormatSpan.textContent = suggestedFormat;
+            } else {
+                suggestedFormatSpan.textContent = fullName || 'Cognome, Nome';
             }
-
-            // Let's see what happens if we don't prevent default
-            e.preventDefault(); // ← Comment this out temporarily
-        });
+        } else {
+            nameInput.value = '';
+            suggestedFormatSpan.textContent = 'Cognome, Nome';
+        }
+        
+        updatePreview();
     }
     
     function updatePreview() {
-        const name = nameInput.value.trim();
+        const firstName = firstNameInput.value.trim();
+        const lastName = lastNameInput.value.trim();
+        const fullName = nameInput.value.trim();
         const shortName = shortNameInput.value.trim();
         const email = emailInput.value.trim();
+        const registration = registrationInput.value.trim();
+        const profileImage = profileImageInput.value.trim();
         
-        // Update name
-        if (name) {
-            previewName.textContent = name;
-            
-            // Update avatar with initials
-            const initials = name.split(' ')
+        // Update display name
+        const displayName = fullName || 'Nome Completo';
+        previewDisplayName.textContent = displayName;
+        
+        // Update suggested format
+        if (firstName && lastName) {
+            const suggestedFormat = `${lastName}, ${firstName}`;
+            previewSuggestedFormat.textContent = `Formato: ${suggestedFormat}`;
+            previewSuggestedFormat.style.display = 'block';
+        } else {
+            previewSuggestedFormat.style.display = 'none';
+        }
+        
+        // Update avatar with initials
+        let initials = '--';
+        if (firstName || lastName) {
+            initials = '';
+            if (firstName) initials += firstName.charAt(0).toUpperCase();
+            if (lastName) initials += lastName.charAt(0).toUpperCase();
+        } else if (fullName) {
+            initials = fullName.split(' ')
                 .map(word => word.charAt(0).toUpperCase())
                 .join('')
                 .substring(0, 2);
-            previewAvatar.textContent = initials || '--';
+        }
+        previewAvatar.textContent = initials;
+        
+        // Update profile image
+        if (profileImage && isValidImagePath(profileImage)) {
+            previewProfileImage.src = `/static/profiles/${profileImage}`;
+            previewProfileImage.style.display = 'block';
+            previewAvatar.style.opacity = '0.3';
         } else {
-            previewName.textContent = 'Nome Completo';
-            previewAvatar.textContent = '--';
+            previewProfileImage.style.display = 'none';
+            previewAvatar.style.opacity = '1';
         }
         
-        // Update short name
+        // Update other fields
         if (shortName) {
-            previewShortName.textContent = shortName;
+            previewShortName.textContent = `Nome breve: ${shortName}`;
             previewShortName.style.display = 'block';
         } else {
             previewShortName.style.display = 'none';
         }
         
-        // Update email
         if (email) {
             previewEmail.textContent = email;
             previewEmail.style.display = 'block';
         } else {
             previewEmail.style.display = 'none';
         }
+        
+        if (registration) {
+            previewRegistration.textContent = `Matricola: ${registration}`;
+            previewRegistration.style.display = 'block';
+        } else {
+            previewRegistration.style.display = 'none';
+        }
     }
     
-    // Update preview on input
-    nameInput.addEventListener('input', updatePreview);
+    function isValidImagePath(path) {
+        const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
+        return validExtensions.some(ext => path.toLowerCase().endsWith(ext));
+    }
+    
+    // Event listeners for name fields
+    firstNameInput.addEventListener('input', updateNameFromParts);
+    lastNameInput.addEventListener('input', updateNameFromParts);
+    
+    // Event listeners for preview updates
     shortNameInput.addEventListener('input', updatePreview);
     emailInput.addEventListener('input', updatePreview);
+    registrationInput.addEventListener('input', updatePreview);
+    profileImageInput.addEventListener('input', updatePreview);
     
-    // Email validation
+    // Validation
+    firstNameInput.addEventListener('blur', function() {
+        const firstName = this.value.trim();
+        if (firstName && firstName.length < 2) {
+            this.setCustomValidity('Il nome deve contenere almeno 2 caratteri');
+        } else if (firstName && !/^[a-zA-ZÀ-ÿ\s'-]+$/.test(firstName)) {
+            this.setCustomValidity('Il nome può contenere solo lettere, spazi, apostrofi e trattini');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+    
+    lastNameInput.addEventListener('blur', function() {
+        const lastName = this.value.trim();
+        if (lastName && lastName.length < 2) {
+            this.setCustomValidity('Il cognome deve contenere almeno 2 caratteri');
+        } else if (lastName && !/^[a-zA-ZÀ-ÿ\s'-]+$/.test(lastName)) {
+            this.setCustomValidity('Il cognome può contenere solo lettere, spazi, apostrofi e trattini');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+    
     emailInput.addEventListener('blur', function() {
         const email = this.value.trim();
-        if (email && !OrgApp.isValidEmail(email)) {
+        if (email && !isValidEmail(email)) {
             this.setCustomValidity('Inserisci un indirizzo email valido');
         } else {
             this.setCustomValidity('');
         }
     });
     
-    // Auto-generate short name suggestion
-    nameInput.addEventListener('blur', function() {
-        const name = this.value.trim();
-        if (name && !shortNameInput.value.trim()) {
-            const parts = name.split(' ');
-            if (parts.length >= 2) {
-                const suggestion = parts[parts.length - 1].toUpperCase() + '. ' + parts[0].charAt(0).toUpperCase();
-                shortNameInput.placeholder = `Suggerimento: ${suggestion}`;
-                
-                // Show suggestion with animation
-                shortNameInput.style.backgroundColor = '#fff3cd';
-                setTimeout(() => {
-                    shortNameInput.style.backgroundColor = '';
-                }, 2000);
-            }
-        }
-    });
-    
-    // Name validation
-    nameInput.addEventListener('input', function() {
-        const name = this.value.trim();
-        if (name.length < 2) {
-            this.setCustomValidity('Il nome deve contenere almeno 2 caratteri');
-        } else if (!/^[a-zA-ZÀ-ÿ\s'-]+$/.test(name)) {
-            this.setCustomValidity('Il nome può contenere solo lettere, spazi, apostrofi e trattini');
+    registrationInput.addEventListener('blur', function() {
+        const registration = this.value.trim();
+        if (registration && registration.length > 25) {
+            this.setCustomValidity('Il numero di matricola non può superare i 25 caratteri');
         } else {
             this.setCustomValidity('');
         }
     });
+    
+    profileImageInput.addEventListener('blur', function() {
+        const profileImage = this.value.trim();
+        if (profileImage && !isValidImagePath(profileImage)) {
+            this.setCustomValidity('Inserisci un percorso di immagine valido (.jpg, .png, .gif, etc.)');
+        } else if (profileImage && profileImage.length > 1024) {
+            this.setCustomValidity('Il percorso dell\'immagine non può superare i 1024 caratteri');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+    
+    function isValidEmail(email) {
+        const pattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        return pattern.test(email);
+    }
     
     // Initialize preview
     updatePreview();

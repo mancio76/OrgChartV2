@@ -54,20 +54,45 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-2 text-center">
-                        <div class="avatar-circle-large mb-3">
-                            {{ person.initials }}
+                        <div class="position-relative d-inline-block">
+                            <div class="avatar-circle-large mb-3">
+                                {{ person.initials }}
+                            </div>
+                            {% if person.has_profile_image %}
+                            <img src="{{ person.profile_image_url }}" class="avatar-image-large" alt="Profile">
+                            {% endif %}
                         </div>
                     </div>
                     <div class="col-md-10">
                         <div class="row">
                             <div class="col-md-6">
                                 <dl class="row">
+                                    <dt class="col-sm-4">Nome Completo:</dt>
+                                    <dd class="col-sm-8">{{ person.full_name }}</dd>
+                                    
+                                    {% if person.first_name or person.last_name %}
                                     <dt class="col-sm-4">Nome:</dt>
-                                    <dd class="col-sm-8">{{ person.name }}</dd>
+                                    <dd class="col-sm-8">{{ person.first_name or '' }}</dd>
+                                    
+                                    <dt class="col-sm-4">Cognome:</dt>
+                                    <dd class="col-sm-8">{{ person.last_name or '' }}</dd>
+                                    
+                                    <dt class="col-sm-4">Formato Suggerito:</dt>
+                                    <dd class="col-sm-8">
+                                        <span class="text-primary fw-bold">{{ person.suggested_name_format }}</span>
+                                    </dd>
+                                    {% endif %}
                                     
                                     {% if person.short_name %}
                                     <dt class="col-sm-4">Nome Breve:</dt>
                                     <dd class="col-sm-8">{{ person.short_name }}</dd>
+                                    {% endif %}
+                                    
+                                    {% if person.registration_no %}
+                                    <dt class="col-sm-4">Matricola:</dt>
+                                    <dd class="col-sm-8">
+                                        <span class="badge bg-light text-dark">{{ person.registration_no }}</span>
+                                    </dd>
                                     {% endif %}
                                     
                                     {% if person.email %}

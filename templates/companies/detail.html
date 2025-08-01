@@ -1,0 +1,442 @@
+{% extends "base/layout.html" %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="/companies/{{ company.id }}/edit" class="btn btn-primary">
+        <i class="bi bi-pencil me-1"></i>Modifica
+    </a>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" 
+            data-bs-toggle="dropdown" aria-expanded="false" title="Altre azioni">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="/companies/{{ company.id }}/edit">
+            <i class="bi bi-pencil me-2"></i>Modifica Azienda
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li>
+            <form method="post" action="/companies/{{ company.id }}/delete" class="d-inline">
+                <button type="submit" class="dropdown-item text-danger btn-delete"
+                        data-item-name="{{ company.name }}" 
+                        data-item-type="azienda">
+                    <i class="bi bi-trash me-2"></i>Elimina Azienda
+                </button>
+            </form>
+        </li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <div class="company-icon me-3">
+                        <i class="bi bi-building"></i>
+                    </div>
+                    <div>
+                        <h5 class="card-title mb-0">{{ company.name }}</h5>
+                        {% if company.short_name %}
+                        <small class="text-muted">{{ company.short_name }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="/companies/{{ company.id }}/edit" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil me-1"></i>Modifica
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/companies/{{ company.id }}/edit">
+                                <i class="bi bi-pencil me-2"></i>Modifica
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" 
+                                   onclick="confirmDelete('{{ company.name }}', '/companies/{{ company.id }}/delete')">
+                                <i class="bi bi-trash me-2"></i>Elimina
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <!-- Status Badge -->
+                <div class="mb-4">
+                    {% if company.is_active %}
+                    <span class="badge bg-success fs-6">
+                        <i class="bi bi-check-circle me-1"></i>Azienda Attiva
+                    </span>
+                    {% else %}
+                    <span class="badge bg-secondary fs-6">
+                        <i class="bi bi-pause-circle me-1"></i>Azienda Non Attiva
+                    </span>
+                    {% endif %}
+                    
+                    {% if company.registration_no %}
+                    <span class="badge bg-light text-dark ms-2">
+                        <i class="bi bi-card-text me-1"></i>{{ company.registration_no }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Basic Information -->
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-info-circle me-2"></i>Informazioni Generali
+                        </h6>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nome Completo:</label>
+                            <div>{{ company.name }}</div>
+                        </div>
+                        
+                        {% if company.short_name %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nome Breve:</label>
+                            <div>{{ company.short_name }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if company.registration_no %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Numero Registrazione:</label>
+                            <div>{{ company.registration_no }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Paese:</label>
+                            <div>
+                                <i class="bi bi-flag me-1"></i>{{ company.country }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-geo-alt me-2"></i>Indirizzo
+                        </h6>
+                        
+                        {% if company.address or company.city or company.postal_code %}
+                        <div class="mb-3">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-geo-alt text-muted me-2 mt-1"></i>
+                                <div>
+                                    {% if company.address %}
+                                    <div>{{ company.address }}</div>
+                                    {% endif %}
+                                    {% if company.city or company.postal_code %}
+                                    <div>
+                                        {% if company.postal_code %}{{ company.postal_code }}{% endif %}
+                                        {% if company.city %}{{ company.city }}{% endif %}
+                                    </div>
+                                    {% endif %}
+                                    {% if company.country and company.country != 'Italy' %}
+                                    <div>{{ company.country }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="text-muted">
+                            <i class="bi bi-geo-alt me-1"></i>Nessun indirizzo specificato
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="row g-4 mt-2">
+                    <div class="col-md-6">
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-telephone me-2"></i>Contatti
+                        </h6>
+                        
+                        {% if company.phone %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Telefono:</label>
+                            <div>
+                                <i class="bi bi-telephone me-1"></i>
+                                <a href="tel:{{ company.phone }}" class="text-decoration-none">{{ company.phone }}</a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if company.email %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Email:</label>
+                            <div>
+                                <i class="bi bi-envelope me-1"></i>
+                                <a href="mailto:{{ company.email }}" class="text-decoration-none">{{ company.email }}</a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if company.website %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Sito Web:</label>
+                            <div>
+                                <i class="bi bi-globe me-1"></i>
+                                <a href="{{ company.website }}" target="_blank" class="text-decoration-none">
+                                    {{ company.website }}
+                                    <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if not company.phone and not company.email and not company.website %}
+                        <div class="text-muted">
+                            <i class="bi bi-telephone me-1"></i>Nessun contatto specificato
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-people me-2"></i>Persone di Contatto
+                        </h6>
+                        
+                        {% if company.main_contact_name %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Contatto Principale:</label>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-person-circle text-primary me-2"></i>
+                                <span>{{ company.main_contact_name }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if company.financial_contact_name %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Contatto Finanziario:</label>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-calculator text-success me-2"></i>
+                                <span>{{ company.financial_contact_name }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if not company.main_contact_name and not company.financial_contact_name %}
+                        <div class="text-muted">
+                            <i class="bi bi-people me-1"></i>Nessuna persona di contatto assegnata
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Validity Period -->
+                {% if company.valid_from or company.valid_to %}
+                <div class="mt-4">
+                    <h6 class="text-primary border-bottom pb-2 mb-3">
+                        <i class="bi bi-calendar-range me-2"></i>Periodo di Validità
+                    </h6>
+                    
+                    <div class="row">
+                        {% if company.valid_from %}
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Valido Da:</label>
+                            <div>
+                                <i class="bi bi-calendar-check text-success me-1"></i>
+                                {{ company.valid_from.strftime('%d/%m/%Y') }}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if company.valid_to %}
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Valido Fino:</label>
+                            <div>
+                                <i class="bi bi-calendar-x text-warning me-1"></i>
+                                {{ company.valid_to.strftime('%d/%m/%Y') }}
+                                {% if company.valid_to < today %}
+                                <span class="badge bg-danger ms-2">Scaduto</span>
+                                {% elif (company.valid_to - today).days <= 30 %}
+                                <span class="badge bg-warning ms-2">In Scadenza</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Notes -->
+                {% if company.notes %}
+                <div class="mt-4">
+                    <h6 class="text-primary border-bottom pb-2 mb-3">
+                        <i class="bi bi-journal-text me-2"></i>Note
+                    </h6>
+                    <div class="bg-light p-3 rounded">
+                        {{ company.notes|nl2br }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Azioni Rapide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/companies/{{ company.id }}/edit" class="btn btn-primary">
+                        <i class="bi bi-pencil me-1"></i>Modifica Azienda
+                    </a>
+                    {% if company.email %}
+                    <a href="mailto:{{ company.email }}" class="btn btn-outline-primary">
+                        <i class="bi bi-envelope me-1"></i>Invia Email
+                    </a>
+                    {% endif %}
+                    {% if company.website %}
+                    <a href="{{ company.website }}" target="_blank" class="btn btn-outline-secondary">
+                        <i class="bi bi-globe me-1"></i>Visita Sito
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Company Status -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Stato Azienda
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Stato:</span>
+                    {% if company.is_active %}
+                    <span class="badge bg-success">Attiva</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Non Attiva</span>
+                    {% endif %}
+                </div>
+                
+                {% if company.valid_from %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Inizio:</span>
+                    <span>{{ company.valid_from.strftime('%d/%m/%Y') }}</span>
+                </div>
+                {% endif %}
+                
+                {% if company.valid_to %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Scadenza:</span>
+                    <span>{{ company.valid_to.strftime('%d/%m/%Y') }}</span>
+                </div>
+                {% endif %}
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Contatti:</span>
+                    <span>{{ company.get_contact_summary().total_contacts }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- System Information -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-gear me-2"></i>Informazioni Sistema
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="small text-muted">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>ID:</span>
+                        <span>{{ company.id }}</span>
+                    </div>
+                    {% if company.datetime_created %}
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Creata:</span>
+                        <span>{{ company.datetime_created.strftime('%d/%m/%Y %H:%M') }}</span>
+                    </div>
+                    {% endif %}
+                    {% if company.datetime_updated %}
+                    <div class="d-flex justify-content-between">
+                        <span>Modificata:</span>
+                        <span>{{ company.datetime_updated.strftime('%d/%m/%Y %H:%M') }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.company-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    background: var(--bs-primary-bg-subtle);
+    color: var(--bs-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    flex-shrink: 0;
+}
+
+.form-label.fw-bold {
+    color: var(--bs-gray-700);
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.card-body > div:last-child {
+    margin-bottom: 0;
+}
+
+.bg-light {
+    background-color: var(--bs-gray-100) !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(companyName, deleteUrl) {
+    if (confirm(`Sei sicuro di voler eliminare l'azienda "${companyName}"?\n\nQuesta azione non può essere annullata.`)) {
+        // Create a form and submit it
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = deleteUrl;
+        
+        // Add CSRF token if available
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (csrfToken) {
+            const tokenInput = document.createElement('input');
+            tokenInput.type = 'hidden';
+            tokenInput.name = 'csrf_token';
+            tokenInput.value = csrfToken.getAttribute('content');
+            form.appendChild(tokenInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Add today's date for template comparison
+const today = new Date();
+</script>
+{% endblock %}
