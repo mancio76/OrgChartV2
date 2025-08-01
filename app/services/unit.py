@@ -191,7 +191,7 @@ class UnitService(BaseService):
             FROM unit_tree
             ORDER BY path
             """
-            tree_query = """
+            query = """
             SELECT *
             FROM get_complete_tree
             ORDER BY path

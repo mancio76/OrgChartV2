@@ -77,6 +77,8 @@ async def list_units(
                 unit.parent_unit_id = parent_unit_id
                 unit.path = path
 
+        units = sorted(units, key=lambda x: x.path)
+
         return templates.TemplateResponse(
             "units/list.html",
             {
