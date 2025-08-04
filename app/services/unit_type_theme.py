@@ -355,7 +355,7 @@ class UnitTypeThemeService(BaseService):
                 raise ServiceValidationException("Il nome del nuovo tema è obbligatorio")
             
             # Check if name already exists
-            existing = self.get_by_field("name", new_name.strip())
+            existing = self.get_by_field("utt.name", new_name.strip())
             if existing:
                 raise ServiceValidationException(f"Un tema con il nome '{new_name}' esiste già")
             

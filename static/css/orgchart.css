@@ -805,7 +805,7 @@
 @keyframes unitAppear {
     from {
         opacity: 0;
-        transform: translateY(20px) scale(0.95);
+        transform: translateY(30px) scale(0.80);
     }
     to {
         opacity: 1;
@@ -827,6 +827,14 @@
 .unit-box,
 .unit-themed {
     animation: unitAppear 0.5s ease-out;
+}
+
+.unit-box-rendered {
+    /* opacity: 1 !important;
+    transform: translateY(0px) !important; */
+    opacity: 1 !important;
+    transform: translateY(0px) !important;
+    /* animation: unitAppear 0.5s ease-in !important; */
 }
 
 /* Theme loading animation */

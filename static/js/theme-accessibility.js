@@ -78,7 +78,7 @@ class ThemeAccessibility {
         const toggleButton = document.createElement('button');
         toggleButton.id = 'high-contrast-toggle';
         toggleButton.className = 'btn btn-outline-secondary btn-sm position-fixed';
-        toggleButton.style.cssText = 'top: 10px; right: 10px; z-index: 1050;';
+        toggleButton.style.cssText = 'bottom: 1rem; right: 1rem; z-index: 1050;';
         toggleButton.innerHTML = '<i class="bi bi-circle-half"></i> <span class="sr-only">Attiva/Disattiva Alto Contrasto</span>';
         toggleButton.setAttribute('aria-label', 'Attiva o disattiva modalità alto contrasto');
         toggleButton.setAttribute('title', 'Modalità Alto Contrasto');
@@ -338,6 +338,7 @@ class ThemeAccessibility {
      * Add skip links for accessibility
      */
     addSkipLinks() {
+        const pageHeader = document.querySelector('page-header');
         const skipLinksContainer = document.createElement('div');
         skipLinksContainer.className = 'skip-links';
         skipLinksContainer.innerHTML = `
@@ -346,7 +347,7 @@ class ThemeAccessibility {
             <a href="#orgchart" class="skip-link">Salta all'organigramma</a>
         `;
         
-        document.body.insertBefore(skipLinksContainer, document.body.firstChild);
+        document.body.insertBefore(skipLinksContainer, pageHeader ?? document.body.firstChild);
     }
     
     /**

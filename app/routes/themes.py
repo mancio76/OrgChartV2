@@ -33,6 +33,7 @@ def get_unit_type_service():
 async def list_themes(
     request: Request,
     search: Optional[str] = None,
+    csrf_token: str = Depends(generate_csrf_token),
     theme_service: UnitTypeThemeService = Depends(get_theme_service)
 ):
     """List all themes with usage statistics and preview"""
@@ -53,7 +54,8 @@ async def list_themes(
                 "usage_stats": usage_stats,
                 "search": search or "",
                 "page_title": "Gestione Temi",
-                "page_subtitle": "Personalizza l'aspetto dei tipi di unità"
+                "page_subtitle": "Personalizza l'aspetto dei tipi di unità",
+                "csrf_token" : csrf_token
             }
         )
     except Exception as e:
@@ -187,6 +189,498 @@ async def create_theme(
     except Exception as e:
         logger.error(f"Error creating theme: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/assign/unit-types", response_class=HTMLResponse)
+async def theme_assignment_interface(
+    request: Request,
+    csrf_token: str = Depends(generate_csrf_token),
+    theme_service: UnitTypeThemeService = Depends(get_theme_service),
+    unit_type_service: UnitTypeService = Depends(get_unit_type_service)
+):
+    """Show theme assignment interface for unit types"""
+    try:
+        # Get all themes and unit types
+        themes = theme_service.get_all()
+        unit_types = unit_type_service.get_all()
+        
+        # Get current assignments
+        assignments = {}
+        for unit_type in unit_types:
+            if unit_type.theme_id:
+                assignments[unit_type.id] = unit_type.theme_id
+        
+        return templates.TemplateResponse(
+            "themes/assign.html",
+            {
+                "request": request,
+                "themes": themes,
+                "unit_types": unit_types,
+                "assignments": assignments,
+                "page_title": "Assegnazione Temi",
+                "page_subtitle": "Assegna temi ai tipi di unità",
+                "breadcrumb": [
+                    {"name": "Temi", "url": "/themes"},
+                    {"name": "Assegnazione"}
+                ],
+                "csrf_token": csrf_token
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error loading theme assignment interface: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/assign/unit-types")
+async def update_theme_assignments(
+    request: Request,
+    csrf_protection: bool = Depends(validate_csrf_token_flexible),
+    unit_type_service: UnitTypeService = Depends(get_unit_type_service),
+    theme_service: UnitTypeThemeService = Depends(get_theme_service)
+):
+    """Update theme assignments for unit types with validation"""
+    try:
+        form_data = await request.form()
+        
+        # Process assignments with validation
+        updated_count = 0
+        validation_errors = []
+        
+        for key, value in form_data.items():
+            if key.startswith("unit_type_") and key != "csrf_token":
+                unit_type_id = int(key.replace("unit_type_", ""))
+                theme_id = int(value) if value and value != "0" else None
+                
+                # Validate theme reference
+                is_valid, theme, error_message = theme_service.validate_theme_reference(theme_id)
+                if not is_valid:
+                    validation_errors.append(f"Tipo unità {unit_type_id}: {error_message}")
+                    continue
+                
+                # Get and update unit type
+                unit_type = unit_type_service.get_by_id(unit_type_id)
+                if unit_type:
+                    unit_type.theme_id = theme_id
+                    unit_type_service.update(unit_type)
+                    updated_count += 1
+        
+        if validation_errors:
+            # Return to form with errors
+            themes = theme_service.get_all()
+            unit_types = unit_type_service.get_all()
+            assignments = {}
+            for unit_type in unit_types:
+                if unit_type.theme_id:
+                    assignments[unit_type.id] = unit_type.theme_id
+            
+            return templates.TemplateResponse(
+                "themes/assign.html",
+                {
+                    "request": request,
+                    "themes": themes,
+                    "unit_types": unit_types,
+                    "assignments": assignments,
+                    "errors": validation_errors,
+                    "page_title": "Assegnazione Temi",
+                    "page_subtitle": "Assegna temi ai tipi di unità",
+                    "breadcrumb": [
+                        {"name": "Temi", "url": "/themes"},
+                        {"name": "Assegnazione"}
+                    ]
+                },
+                status_code=400
+            )
+        
+        # Log successful assignment update
+        log_security_event('THEME_ASSIGNMENTS_UPDATED', {
+            'updated_count': updated_count,
+            'client_ip': get_client_ip(request)
+        }, request)
+        
+        return RedirectResponse(url="/themes/assign/unit-types", status_code=303)
+        
+    except Exception as e:
+        logger.error(f"Error updating theme assignments: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/api/validate", response_class=JSONResponse)
+async def validate_theme_data(
+    request: Request,
+    name: Optional[str] = None,
+    css_class_suffix: Optional[str] = None,
+    primary_color: Optional[str] = None,
+    secondary_color: Optional[str] = None,
+    text_color: Optional[str] = None,
+    icon_class: Optional[str] = None,
+    theme_service: UnitTypeThemeService = Depends(get_theme_service)
+):
+    """API endpoint for real-time theme validation"""
+    try:
+        validation_results = {}
+        
+        # Create a temporary theme for validation
+        temp_theme = UnitTypeTheme(
+            name=name or "",
+            css_class_suffix=css_class_suffix or "",
+            primary_color=primary_color or "#0dcaf0",
+            secondary_color=secondary_color or "#f0fdff",
+            text_color=text_color or "#0dcaf0",
+            icon_class=icon_class or "diagram-2",
+            display_label="Test"
+        )
+        
+        # Validate individual fields
+        if name:
+            validation_results['name'] = {
+                'valid': bool(name.strip() and len(name.strip()) <= 100),
+                'message': 'Nome valido' if name.strip() and len(name.strip()) <= 100 else 'Nome non valido'
+            }
+            
+            # Check uniqueness
+            existing = theme_service.get_by_field("name", name.strip())
+            if existing:
+                validation_results['name']['valid'] = False
+                validation_results['name']['message'] = 'Nome già esistente'
+        
+        if css_class_suffix:
+            validation_results['css_class_suffix'] = {
+                'valid': temp_theme._is_valid_css_class_suffix(css_class_suffix),
+                'message': 'Suffisso CSS valido' if temp_theme._is_valid_css_class_suffix(css_class_suffix) else 'Suffisso CSS non valido'
+            }
+            
+            # Check uniqueness
+            existing = theme_service.get_by_field("css_class_suffix", css_class_suffix.strip())
+            if existing:
+                validation_results['css_class_suffix']['valid'] = False
+                validation_results['css_class_suffix']['message'] = 'Suffisso CSS già esistente'
+        
+        if primary_color:
+            validation_results['primary_color'] = {
+                'valid': temp_theme._is_valid_color(primary_color),
+                'message': 'Colore primario valido' if temp_theme._is_valid_color(primary_color) else 'Colore primario non valido'
+            }
+        
+        if secondary_color:
+            validation_results['secondary_color'] = {
+                'valid': temp_theme._is_valid_color(secondary_color),
+                'message': 'Colore secondario valido' if temp_theme._is_valid_color(secondary_color) else 'Colore secondario non valido'
+            }
+        
+        if text_color:
+            validation_results['text_color'] = {
+                'valid': temp_theme._is_valid_color(text_color),
+                'message': 'Colore testo valido' if temp_theme._is_valid_color(text_color) else 'Colore testo non valido'
+            }
+        
+        if icon_class:
+            validation_results['icon_class'] = {
+                'valid': temp_theme._is_valid_icon_class(icon_class),
+                'message': 'Classe icona valida' if temp_theme._is_valid_icon_class(icon_class) else 'Classe icona non valida'
+            }
+        
+        # Color contrast validation
+        if primary_color and text_color:
+            try:
+                primary_rgb = temp_theme._hex_to_rgb(primary_color)
+                text_rgb = temp_theme._hex_to_rgb(text_color)
+                
+                if primary_rgb and text_rgb:
+                    contrast_ratio = temp_theme._calculate_contrast_ratio(primary_rgb, text_rgb)
+                    validation_results['color_contrast'] = {
+                        'valid': contrast_ratio >= 3.0,
+                        'ratio': round(contrast_ratio, 2),
+                        'message': f'Contrasto {contrast_ratio:.2f}:1 {"(sufficiente)" if contrast_ratio >= 3.0 else "(insufficiente)"}'
+                    }
+            except Exception:
+                validation_results['color_contrast'] = {
+                    'valid': False,
+                    'message': 'Impossibile calcolare il contrasto'
+                }
+        
+        return JSONResponse(content={
+            'success': True,
+            'validation_results': validation_results
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in theme validation API: {e}")
+        return JSONResponse(
+            content={
+                'success': False,
+                'error': str(e)
+            },
+            status_code=500
+        )
+
+
+@router.get("/analytics/dashboard", response_class=HTMLResponse)
+async def theme_analytics_dashboard(
+    request: Request,
+    theme_service: UnitTypeThemeService = Depends(get_theme_service)
+):
+    """Show comprehensive theme analytics dashboard"""
+    try:
+        # Get analytics data
+        dashboard_data = theme_service.get_theme_analytics_dashboard()
+        
+        return templates.TemplateResponse(
+            "themes/analytics_dashboard.html",
+            {
+                "request": request,
+                "dashboard_data": dashboard_data,
+                "page_title": "Dashboard Analisi Temi",
+                "page_subtitle": "Panoramica completa dell'utilizzo e delle performance dei temi",
+                "breadcrumb": [
+                    {"name": "Temi", "url": "/themes"},
+                    {"name": "Dashboard Analisi"}
+                ]
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error loading theme analytics dashboard: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/analytics/usage-report", response_class=HTMLResponse)
+async def theme_usage_report(
+    request: Request,
+    theme_service: UnitTypeThemeService = Depends(get_theme_service)
+):
+    """Show detailed theme usage report"""
+    try:
+        # Get usage report data
+        usage_report = theme_service.get_most_least_used_themes_report()
+        
+        return templates.TemplateResponse(
+            "themes/usage_report.html",
+            {
+                "request": request,
+                "usage_report": usage_report,
+                "page_title": "Report Utilizzo Temi",
+                "page_subtitle": "Analisi dettagliata dell'utilizzo dei temi più e meno utilizzati",
+                "breadcrumb": [
+                    {"name": "Temi", "url": "/themes"},
+                    {"name": "Report Utilizzo"}
+                ]
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error loading theme usage report: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/api/analytics/dashboard-data", response_class=JSONResponse)
+async def get_dashboard_analytics_api(
+    request: Request,
+    theme_service: UnitTypeThemeService = Depends(get_theme_service)
+):
+    """API endpoint for dashboard analytics data (for AJAX updates)"""
+    try:
+        dashboard_data = theme_service.get_theme_analytics_dashboard()
+        
+        return JSONResponse(content={
+            'success': True,
+            'data': dashboard_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting dashboard analytics API data: {e}")
+        return JSONResponse(
+            content={
+                'success': False,
+                'error': str(e)
+            },
+            status_code=500
+        )
+
+
+@router.get("/api/analytics/usage-stats", response_class=JSONResponse)
+async def get_usage_statistics_api(
+    request: Request,
+    theme_service: UnitTypeThemeService = Depends(get_theme_service)
+):
+    """API endpoint for theme usage statistics"""
+    try:
+        usage_stats = theme_service.get_theme_usage_statistics()
+        
+        return JSONResponse(content={
+            'success': True,
+            'data': usage_stats
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting usage statistics API data: {e}")
+        return JSONResponse(
+            content={
+                'success': False,
+                'error': str(e)
+            },
+            status_code=500
+        )
+
+
+@router.get("/api/analytics/{theme_id}/impact", response_class=JSONResponse)
+async def get_theme_impact_api(
+    request: Request,
+    theme_id: int,
+    theme_service: UnitTypeThemeService = Depends(get_theme_service)
+):
+    """API endpoint for theme impact analysis"""
+    try:
+        impact_analysis = theme_service.get_theme_impact_analysis(theme_id)
+        
+        return JSONResponse(content={
+            'success': True,
+            'data': impact_analysis
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting theme impact API data for theme {theme_id}: {e}")
+        return JSONResponse(
+            content={
+                'success': False,
+                'error': str(e)
+            },
+            status_code=500
+        )
+
+
+@router.post("/api/performance-metrics", response_class=JSONResponse)
+async def record_performance_metrics(
+    request: Request,
+    theme_service: UnitTypeThemeService = Depends(get_theme_service)
+):
+    """API endpoint for recording client-side performance metrics"""
+    try:
+        # Get metrics from request body
+        metrics_data = await request.json()
+        
+        # Log performance metrics for monitoring
+        logger.info(f"Theme performance metrics: {json.dumps(metrics_data, indent=2)}")
+        
+        # You could store these metrics in a database for analysis
+        # For now, we just acknowledge receipt
+        
+        return JSONResponse(content={
+            'success': True,
+            'message': 'Performance metrics recorded'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error recording performance metrics: {e}")
+        return JSONResponse(
+            content={
+                'success': False,
+                'error': 'Failed to record performance metrics'
+            },
+            status_code=500
+        )
+
+
+@router.get("/api/performance/metrics", response_class=JSONResponse)
+async def get_performance_metrics(
+    request: Request,
+    theme_service: UnitTypeThemeService = Depends(get_theme_service)
+):
+    """API endpoint for getting server-side performance metrics"""
+    try:
+        metrics = theme_service.get_performance_metrics()
+        
+        return JSONResponse(content={
+            'success': True,
+            'data': metrics
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting performance metrics: {e}")
+        return JSONResponse(
+            content={
+                'success': False,
+                'error': 'Failed to get performance metrics'
+            },
+            status_code=500
+        )
+
+
+@router.get("/api/accessibility/validate-contrast", response_class=JSONResponse)
+async def validate_color_contrast(
+    request: Request,
+    primary_color: str,
+    text_color: str,
+    theme_service: UnitTypeThemeService = Depends(get_theme_service)
+):
+    """API endpoint for validating color contrast ratios"""
+    try:
+        # Create a temporary theme object for validation
+        temp_theme = UnitTypeTheme(
+            name="temp",
+            primary_color=primary_color,
+            text_color=text_color,
+            display_label="temp"
+        )
+        
+        # Get accessibility info which includes contrast validation
+        accessibility_info = temp_theme.get_accessibility_info()
+        
+        return JSONResponse(content={
+            'success': True,
+            'data': {
+                'contrast_ratios': accessibility_info.get('contrast_ratios', {}),
+                'accessibility_score': accessibility_info.get('accessibility_score', 0),
+                'recommendations': accessibility_info.get('recommendations', [])
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error validating color contrast: {e}")
+        return JSONResponse(
+            content={
+                'success': False,
+                'error': 'Failed to validate color contrast'
+            },
+            status_code=500
+        )
+
+
+@router.post("/api/cache/invalidate", response_class=JSONResponse)
+async def invalidate_css_cache(
+    request: Request,
+    theme_service: UnitTypeThemeService = Depends(get_theme_service)
+):
+    """API endpoint for manually invalidating CSS cache"""
+    try:
+        # Validate CSRF token for security
+        form_data = await request.form()
+        csrf_token = form_data.get('csrf_token')
+        
+        if not validate_csrf_token_flexible(csrf_token, request):
+            raise HTTPException(status_code=403, detail="Invalid CSRF token")
+        
+        # Invalidate CSS cache
+        theme_service.invalidate_css_cache()
+        
+        logger.info("CSS cache manually invalidated")
+        
+        return JSONResponse(content={
+            'success': True,
+            'message': 'CSS cache invalidated successfully'
+        })
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error invalidating CSS cache: {e}")
+        return JSONResponse(
+            content={
+                'success': False,
+                'error': 'Failed to invalidate CSS cache'
+            },
+            status_code=500
+        )
 
 
 @router.get("/{theme_id}/edit", response_class=HTMLResponse)
@@ -485,228 +979,6 @@ async def theme_preview(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/assign/unit-types", response_class=HTMLResponse)
-async def theme_assignment_interface(
-    request: Request,
-    theme_service: UnitTypeThemeService = Depends(get_theme_service),
-    unit_type_service: UnitTypeService = Depends(get_unit_type_service)
-):
-    """Show theme assignment interface for unit types"""
-    try:
-        # Get all themes and unit types
-        themes = theme_service.get_all()
-        unit_types = unit_type_service.get_all()
-        
-        # Get current assignments
-        assignments = {}
-        for unit_type in unit_types:
-            if unit_type.theme_id:
-                assignments[unit_type.id] = unit_type.theme_id
-        
-        return templates.TemplateResponse(
-            "themes/assign.html",
-            {
-                "request": request,
-                "themes": themes,
-                "unit_types": unit_types,
-                "assignments": assignments,
-                "page_title": "Assegnazione Temi",
-                "page_subtitle": "Assegna temi ai tipi di unità",
-                "breadcrumb": [
-                    {"name": "Temi", "url": "/themes"},
-                    {"name": "Assegnazione"}
-                ]
-            }
-        )
-        
-    except Exception as e:
-        logger.error(f"Error loading theme assignment interface: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/assign/unit-types")
-async def update_theme_assignments(
-    request: Request,
-    csrf_protection: bool = Depends(validate_csrf_token_flexible),
-    unit_type_service: UnitTypeService = Depends(get_unit_type_service),
-    theme_service: UnitTypeThemeService = Depends(get_theme_service)
-):
-    """Update theme assignments for unit types with validation"""
-    try:
-        form_data = await request.form()
-        
-        # Process assignments with validation
-        updated_count = 0
-        validation_errors = []
-        
-        for key, value in form_data.items():
-            if key.startswith("unit_type_") and key != "csrf_token":
-                unit_type_id = int(key.replace("unit_type_", ""))
-                theme_id = int(value) if value and value != "0" else None
-                
-                # Validate theme reference
-                is_valid, theme, error_message = theme_service.validate_theme_reference(theme_id)
-                if not is_valid:
-                    validation_errors.append(f"Tipo unità {unit_type_id}: {error_message}")
-                    continue
-                
-                # Get and update unit type
-                unit_type = unit_type_service.get_by_id(unit_type_id)
-                if unit_type:
-                    unit_type.theme_id = theme_id
-                    unit_type_service.update(unit_type)
-                    updated_count += 1
-        
-        if validation_errors:
-            # Return to form with errors
-            themes = theme_service.get_all()
-            unit_types = unit_type_service.get_all()
-            assignments = {}
-            for unit_type in unit_types:
-                if unit_type.theme_id:
-                    assignments[unit_type.id] = unit_type.theme_id
-            
-            return templates.TemplateResponse(
-                "themes/assign.html",
-                {
-                    "request": request,
-                    "themes": themes,
-                    "unit_types": unit_types,
-                    "assignments": assignments,
-                    "errors": validation_errors,
-                    "page_title": "Assegnazione Temi",
-                    "page_subtitle": "Assegna temi ai tipi di unità",
-                    "breadcrumb": [
-                        {"name": "Temi", "url": "/themes"},
-                        {"name": "Assegnazione"}
-                    ]
-                },
-                status_code=400
-            )
-        
-        # Log successful assignment update
-        log_security_event('THEME_ASSIGNMENTS_UPDATED', {
-            'updated_count': updated_count,
-            'client_ip': get_client_ip(request)
-        }, request)
-        
-        return RedirectResponse(url="/themes/assign/unit-types", status_code=303)
-        
-    except Exception as e:
-        logger.error(f"Error updating theme assignments: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/api/validate", response_class=JSONResponse)
-async def validate_theme_data(
-    request: Request,
-    name: Optional[str] = None,
-    css_class_suffix: Optional[str] = None,
-    primary_color: Optional[str] = None,
-    secondary_color: Optional[str] = None,
-    text_color: Optional[str] = None,
-    icon_class: Optional[str] = None,
-    theme_service: UnitTypeThemeService = Depends(get_theme_service)
-):
-    """API endpoint for real-time theme validation"""
-    try:
-        validation_results = {}
-        
-        # Create a temporary theme for validation
-        temp_theme = UnitTypeTheme(
-            name=name or "",
-            css_class_suffix=css_class_suffix or "",
-            primary_color=primary_color or "#0dcaf0",
-            secondary_color=secondary_color or "#f0fdff",
-            text_color=text_color or "#0dcaf0",
-            icon_class=icon_class or "diagram-2",
-            display_label="Test"
-        )
-        
-        # Validate individual fields
-        if name:
-            validation_results['name'] = {
-                'valid': bool(name.strip() and len(name.strip()) <= 100),
-                'message': 'Nome valido' if name.strip() and len(name.strip()) <= 100 else 'Nome non valido'
-            }
-            
-            # Check uniqueness
-            existing = theme_service.get_by_field("name", name.strip())
-            if existing:
-                validation_results['name']['valid'] = False
-                validation_results['name']['message'] = 'Nome già esistente'
-        
-        if css_class_suffix:
-            validation_results['css_class_suffix'] = {
-                'valid': temp_theme._is_valid_css_class_suffix(css_class_suffix),
-                'message': 'Suffisso CSS valido' if temp_theme._is_valid_css_class_suffix(css_class_suffix) else 'Suffisso CSS non valido'
-            }
-            
-            # Check uniqueness
-            existing = theme_service.get_by_field("css_class_suffix", css_class_suffix.strip())
-            if existing:
-                validation_results['css_class_suffix']['valid'] = False
-                validation_results['css_class_suffix']['message'] = 'Suffisso CSS già esistente'
-        
-        if primary_color:
-            validation_results['primary_color'] = {
-                'valid': temp_theme._is_valid_color(primary_color),
-                'message': 'Colore primario valido' if temp_theme._is_valid_color(primary_color) else 'Colore primario non valido'
-            }
-        
-        if secondary_color:
-            validation_results['secondary_color'] = {
-                'valid': temp_theme._is_valid_color(secondary_color),
-                'message': 'Colore secondario valido' if temp_theme._is_valid_color(secondary_color) else 'Colore secondario non valido'
-            }
-        
-        if text_color:
-            validation_results['text_color'] = {
-                'valid': temp_theme._is_valid_color(text_color),
-                'message': 'Colore testo valido' if temp_theme._is_valid_color(text_color) else 'Colore testo non valido'
-            }
-        
-        if icon_class:
-            validation_results['icon_class'] = {
-                'valid': temp_theme._is_valid_icon_class(icon_class),
-                'message': 'Classe icona valida' if temp_theme._is_valid_icon_class(icon_class) else 'Classe icona non valida'
-            }
-        
-        # Color contrast validation
-        if primary_color and text_color:
-            try:
-                primary_rgb = temp_theme._hex_to_rgb(primary_color)
-                text_rgb = temp_theme._hex_to_rgb(text_color)
-                
-                if primary_rgb and text_rgb:
-                    contrast_ratio = temp_theme._calculate_contrast_ratio(primary_rgb, text_rgb)
-                    validation_results['color_contrast'] = {
-                        'valid': contrast_ratio >= 3.0,
-                        'ratio': round(contrast_ratio, 2),
-                        'message': f'Contrasto {contrast_ratio:.2f}:1 {"(sufficiente)" if contrast_ratio >= 3.0 else "(insufficiente)"}'
-                    }
-            except Exception:
-                validation_results['color_contrast'] = {
-                    'valid': False,
-                    'message': 'Impossibile calcolare il contrasto'
-                }
-        
-        return JSONResponse(content={
-            'success': True,
-            'validation_results': validation_results
-        })
-        
-    except Exception as e:
-        logger.error(f"Error in theme validation API: {e}")
-        return JSONResponse(
-            content={
-                'success': False,
-                'error': str(e)
-            },
-            status_code=500
-        )
-
-
 @router.post("/{theme_id}/repair")
 async def repair_theme_data(
     request: Request,
@@ -743,64 +1015,6 @@ async def repair_theme_data(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/analytics/dashboard", response_class=HTMLResponse)
-async def theme_analytics_dashboard(
-    request: Request,
-    theme_service: UnitTypeThemeService = Depends(get_theme_service)
-):
-    """Show comprehensive theme analytics dashboard"""
-    try:
-        # Get analytics data
-        dashboard_data = theme_service.get_theme_analytics_dashboard()
-        
-        return templates.TemplateResponse(
-            "themes/analytics_dashboard.html",
-            {
-                "request": request,
-                "dashboard_data": dashboard_data,
-                "page_title": "Dashboard Analisi Temi",
-                "page_subtitle": "Panoramica completa dell'utilizzo e delle performance dei temi",
-                "breadcrumb": [
-                    {"name": "Temi", "url": "/themes"},
-                    {"name": "Dashboard Analisi"}
-                ]
-            }
-        )
-        
-    except Exception as e:
-        logger.error(f"Error loading theme analytics dashboard: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/analytics/usage-report", response_class=HTMLResponse)
-async def theme_usage_report(
-    request: Request,
-    theme_service: UnitTypeThemeService = Depends(get_theme_service)
-):
-    """Show detailed theme usage report"""
-    try:
-        # Get usage report data
-        usage_report = theme_service.get_most_least_used_themes_report()
-        
-        return templates.TemplateResponse(
-            "themes/usage_report.html",
-            {
-                "request": request,
-                "usage_report": usage_report,
-                "page_title": "Report Utilizzo Temi",
-                "page_subtitle": "Analisi dettagliata dell'utilizzo dei temi più e meno utilizzati",
-                "breadcrumb": [
-                    {"name": "Temi", "url": "/themes"},
-                    {"name": "Report Utilizzo"}
-                ]
-            }
-        )
-        
-    except Exception as e:
-        logger.error(f"Error loading theme usage report: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @router.get("/{theme_id}/impact-analysis", response_class=HTMLResponse)
 async def theme_impact_analysis(
     request: Request,
@@ -832,82 +1046,6 @@ async def theme_impact_analysis(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/api/analytics/dashboard-data", response_class=JSONResponse)
-async def get_dashboard_analytics_api(
-    request: Request,
-    theme_service: UnitTypeThemeService = Depends(get_theme_service)
-):
-    """API endpoint for dashboard analytics data (for AJAX updates)"""
-    try:
-        dashboard_data = theme_service.get_theme_analytics_dashboard()
-        
-        return JSONResponse(content={
-            'success': True,
-            'data': dashboard_data
-        })
-        
-    except Exception as e:
-        logger.error(f"Error getting dashboard analytics API data: {e}")
-        return JSONResponse(
-            content={
-                'success': False,
-                'error': str(e)
-            },
-            status_code=500
-        )
-
-
-@router.get("/api/analytics/usage-stats", response_class=JSONResponse)
-async def get_usage_statistics_api(
-    request: Request,
-    theme_service: UnitTypeThemeService = Depends(get_theme_service)
-):
-    """API endpoint for theme usage statistics"""
-    try:
-        usage_stats = theme_service.get_theme_usage_statistics()
-        
-        return JSONResponse(content={
-            'success': True,
-            'data': usage_stats
-        })
-        
-    except Exception as e:
-        logger.error(f"Error getting usage statistics API data: {e}")
-        return JSONResponse(
-            content={
-                'success': False,
-                'error': str(e)
-            },
-            status_code=500
-        )
-
-
-@router.get("/api/analytics/{theme_id}/impact", response_class=JSONResponse)
-async def get_theme_impact_api(
-    request: Request,
-    theme_id: int,
-    theme_service: UnitTypeThemeService = Depends(get_theme_service)
-):
-    """API endpoint for theme impact analysis"""
-    try:
-        impact_analysis = theme_service.get_theme_impact_analysis(theme_id)
-        
-        return JSONResponse(content={
-            'success': True,
-            'data': impact_analysis
-        })
-        
-    except Exception as e:
-        logger.error(f"Error getting theme impact API data for theme {theme_id}: {e}")
-        return JSONResponse(
-            content={
-                'success': False,
-                'error': str(e)
-            },
-            status_code=500
-        )
-
-
 @router.get("/{theme_id}/lazy", response_class=JSONResponse)
 async def get_lazy_theme_data(
     request: Request,
@@ -935,140 +1073,6 @@ async def get_lazy_theme_data(
             content={
                 'success': False,
                 'error': 'Failed to load theme data'
-            },
-            status_code=500
-        )
-
-
-@router.post("/api/performance-metrics", response_class=JSONResponse)
-async def record_performance_metrics(
-    request: Request,
-    theme_service: UnitTypeThemeService = Depends(get_theme_service)
-):
-    """API endpoint for recording client-side performance metrics"""
-    try:
-        # Get metrics from request body
-        metrics_data = await request.json()
-        
-        # Log performance metrics for monitoring
-        logger.info(f"Theme performance metrics: {json.dumps(metrics_data, indent=2)}")
-        
-        # You could store these metrics in a database for analysis
-        # For now, we just acknowledge receipt
-        
-        return JSONResponse(content={
-            'success': True,
-            'message': 'Performance metrics recorded'
-        })
-        
-    except Exception as e:
-        logger.error(f"Error recording performance metrics: {e}")
-        return JSONResponse(
-            content={
-                'success': False,
-                'error': 'Failed to record performance metrics'
-            },
-            status_code=500
-        )
-
-
-@router.get("/api/performance/metrics", response_class=JSONResponse)
-async def get_performance_metrics(
-    request: Request,
-    theme_service: UnitTypeThemeService = Depends(get_theme_service)
-):
-    """API endpoint for getting server-side performance metrics"""
-    try:
-        metrics = theme_service.get_performance_metrics()
-        
-        return JSONResponse(content={
-            'success': True,
-            'data': metrics
-        })
-        
-    except Exception as e:
-        logger.error(f"Error getting performance metrics: {e}")
-        return JSONResponse(
-            content={
-                'success': False,
-                'error': 'Failed to get performance metrics'
-            },
-            status_code=500
-        )
-
-
-@router.get("/api/accessibility/validate-contrast", response_class=JSONResponse)
-async def validate_color_contrast(
-    request: Request,
-    primary_color: str,
-    text_color: str,
-    theme_service: UnitTypeThemeService = Depends(get_theme_service)
-):
-    """API endpoint for validating color contrast ratios"""
-    try:
-        # Create a temporary theme object for validation
-        temp_theme = UnitTypeTheme(
-            name="temp",
-            primary_color=primary_color,
-            text_color=text_color,
-            display_label="temp"
-        )
-        
-        # Get accessibility info which includes contrast validation
-        accessibility_info = temp_theme.get_accessibility_info()
-        
-        return JSONResponse(content={
-            'success': True,
-            'data': {
-                'contrast_ratios': accessibility_info.get('contrast_ratios', {}),
-                'accessibility_score': accessibility_info.get('accessibility_score', 0),
-                'recommendations': accessibility_info.get('recommendations', [])
-            }
-        })
-        
-    except Exception as e:
-        logger.error(f"Error validating color contrast: {e}")
-        return JSONResponse(
-            content={
-                'success': False,
-                'error': 'Failed to validate color contrast'
-            },
-            status_code=500
-        )
-
-
-@router.post("/api/cache/invalidate", response_class=JSONResponse)
-async def invalidate_css_cache(
-    request: Request,
-    theme_service: UnitTypeThemeService = Depends(get_theme_service)
-):
-    """API endpoint for manually invalidating CSS cache"""
-    try:
-        # Validate CSRF token for security
-        form_data = await request.form()
-        csrf_token = form_data.get('csrf_token')
-        
-        if not validate_csrf_token_flexible(csrf_token, request):
-            raise HTTPException(status_code=403, detail="Invalid CSRF token")
-        
-        # Invalidate CSS cache
-        theme_service.invalidate_css_cache()
-        
-        logger.info("CSS cache manually invalidated")
-        
-        return JSONResponse(content={
-            'success': True,
-            'message': 'CSS cache invalidated successfully'
-        })
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error invalidating CSS cache: {e}")
-        return JSONResponse(
-            content={
-                'success': False,
-                'error': 'Failed to invalidate CSS cache'
             },
             status_code=500
         )

@@ -640,7 +640,10 @@ class BaseService(ABC):
             ServiceException: If database operation fails
         """
         try:
-            query = f"{self.get_list_query()} WHERE {field_name} = ?"
+            #query = f"{self.get_list_query()} WHERE {field_name} = ?"
+            query = self.get_list_query()
+            query = self._inject_where_clause(query, f"{field_name} = ?")
+
             row = self.db_manager.fetch_one(query, (value,))
             return self.model_class.from_sqlite_row(row)
         except Exception as e:

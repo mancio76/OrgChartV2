@@ -26,34 +26,67 @@ def get_unit_theme_data(unit: Unit) -> UnitTypeTheme:
             logger.debug("No unit provided, returning default theme")
             return _get_safe_default_theme()
         
-        # Check if unit has unit_type with theme
-        if hasattr(unit, 'unit_type') and unit.unit_type:
-            if hasattr(unit.unit_type, 'effective_theme'):
-                theme = unit.unit_type.effective_theme
-                if theme and _is_theme_valid(theme):
-                    return theme
-                else:
-                    logger.warning(f"Unit {unit.id} has invalid effective_theme, using fallback")
-            
-            # Try to get theme via theme_id
-            if hasattr(unit.unit_type, 'theme_id') and unit.unit_type.theme_id:
-                theme_service = UnitTypeThemeService()
-                theme = theme_service.get_theme_with_fallback(unit.unit_type.theme_id)
-                if theme:
-                    return theme
-        
-        # Fallback: get theme by unit_type_id if available
-        if hasattr(unit, 'unit_type_id') and unit.unit_type_id:
-            try:
-                from app.services.unit_type import UnitTypeService
-                unit_type_service = UnitTypeService()
-                unit_type = unit_type_service.get_by_id(unit.unit_type_id)
-                if unit_type and hasattr(unit_type, 'effective_theme'):
-                    theme = unit_type.effective_theme
+        is_dict = type(unit) is dict
+        from app.services.unit_type import UnitTypeService
+
+        if is_dict:
+            # Check if unit has unit_type with theme
+            if 'unit_type' in unit.keys():
+                unit_type = unit['unit_type']
+                if 'effective_theme' in unit_type.keys():
+                    theme = unit_type['effective_theme']
                     if theme and _is_theme_valid(theme):
                         return theme
-            except Exception as e:
-                logger.warning(f"Error getting unit_type for unit {unit.id}: {e}")
+                    else:
+                        logger.warning(f"Unit {unit.id} has invalid effective_theme, using fallback")
+                
+                # Try to get theme via theme_id
+                if 'theme_id' in unit_type.keys():
+                    theme_service = UnitTypeThemeService()
+                    theme = theme_service.get_theme_with_fallback(unit_type['theme_id'])
+                    if theme:
+                        return theme
+            
+            # Fallback: get theme by unit_type_id if available
+            if 'unit_type_id' in unit.keys():
+                try:
+                    unit_type_service = UnitTypeService()
+                    unit_type = unit_type_service.get_by_id(unit['unit_type_id'])
+                    if unit_type and hasattr(unit_type, 'effective_theme'):
+                        theme = unit_type.effective_theme
+                        if theme and _is_theme_valid(theme):
+                            return theme
+                except Exception as e:
+                    logger.warning(f"Error getting unit_type for unit {unit.id}: {e}")
+        else:
+            # Check if unit has unit_type with theme
+            if hasattr(unit, 'unit_type') and unit.unit_type:
+                if hasattr(unit.unit_type, 'effective_theme'):
+                    theme = unit.unit_type.effective_theme
+                    if theme and _is_theme_valid(theme):
+                        return theme
+                    else:
+                        logger.warning(f"Unit {unit.id} has invalid effective_theme, using fallback")
+                
+                # Try to get theme via theme_id
+                if hasattr(unit.unit_type, 'theme_id') and unit.unit_type.theme_id:
+                    theme_service = UnitTypeThemeService()
+                    theme = theme_service.get_theme_with_fallback(unit.unit_type.theme_id)
+                    if theme:
+                        return theme
+            
+            # Fallback: get theme by unit_type_id if available
+            if hasattr(unit, 'unit_type_id') and unit.unit_type_id:
+                try:
+                    from app.services.unit_type import UnitTypeService
+                    unit_type_service = UnitTypeService()
+                    unit_type = unit_type_service.get_by_id(unit.unit_type_id)
+                    if unit_type and hasattr(unit_type, 'effective_theme'):
+                        theme = unit_type.effective_theme
+                        if theme and _is_theme_valid(theme):
+                            return theme
+                except Exception as e:
+                    logger.warning(f"Error getting unit_type for unit {unit.id}: {e}")
         
         # Final fallback: return default theme
         logger.debug(f"Using default theme fallback for unit {getattr(unit, 'id', 'unknown')}")

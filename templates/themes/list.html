@@ -117,7 +117,7 @@
                                     type="button" data-bs-toggle="dropdown">
                                 <i class="bi bi-three-dots"></i>
                             </button>
-                            <ul class="dropdown-menu">
+                            <ul class="dropdown-menu" style="z-index: 100">
                                 <li><a class="dropdown-item" href="/themes/{{ theme.id }}">
                                     <i class="bi bi-eye me-2"></i>Visualizza
                                 </a></li>
@@ -146,7 +146,7 @@
                     <div class="card-body">
                         <!-- Theme Preview -->
                         <div class="theme-preview mb-3">
-                            <div class="unit-box {{ theme.generate_css_class_name() }}" 
+                            <div class="unit-box unit-box-rendered {{ theme.generate_css_class_name() }}" 
                                  style="--unit-primary: {{ theme.primary_color }}; 
                                         --unit-secondary: {{ theme.secondary_color }}; 
                                         --unit-text: {{ theme.text_color }}; 
@@ -231,6 +231,9 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="cloneThemeForm" method="post">
+                <!-- CSRF Token -->
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="newThemeName" class="form-label">Nome del nuovo tema</label>
@@ -262,6 +265,9 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
                 <form id="deleteThemeForm" method="post" style="display: inline;">
+                    <!-- CSRF Token -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
                     <button type="submit" class="btn btn-danger">Elimina</button>
                 </form>
             </div>

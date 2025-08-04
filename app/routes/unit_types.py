@@ -185,6 +185,7 @@ async def create_unit_type(
 async def edit_unit_type_form(
     request: Request,
     unit_type_id: int,
+    csrf_token: str = Depends(generate_csrf_token),
     unit_type_service: UnitTypeService = Depends(get_unit_type_service),
     theme_service: UnitTypeThemeService = Depends(get_unit_type_theme_service)
 ):
@@ -203,7 +204,8 @@ async def edit_unit_type_form(
                 "request": request,
                 "unit_type": unit_type,
                 "themes": themes,
-                "page_title": f"Modifica Tipo di Unità: {unit_type.name}"
+                "page_title": f"Modifica Tipo di Unità: {unit_type.name}",
+                "csrf_token": csrf_token
             }
         )
     except HTTPException:
@@ -222,6 +224,8 @@ async def update_unit_type(
     theme_id: Optional[int] = Form(None),
     level: Optional[int] = Form(None),
     aliases: Optional[str] = Form(None),
+    csrf_protection: bool = Depends(validate_csrf_token_flexible),
+    csrf_token: Optional[str] = Form(None),
     unit_type_service: UnitTypeService = Depends(get_unit_type_service),
     theme_service: UnitTypeThemeService = Depends(get_unit_type_theme_service)
 ):
