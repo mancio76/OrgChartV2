@@ -43,7 +43,7 @@
      aria-expanded="{{ 'true' if node.children else 'false' }}"
      aria-level="{{ level + 1 }}">
     
-    <div class="unit-box {{ 'unit-function' if node.unit_type_id == 1 else 'unit-organizational' }} {{ 'unit-vacant' if show_vacant and node.person_count == 0 else '' }}" style="{{ 'display: none;' if not priority_load else '' }}">
+    <div class="{{ get_unit_css_classes(node) }} {{ 'unit-vacant' if show_vacant and node.person_count == 0 else '' }}" style="{{ render_unit_css_variables(node) }}{{ '; display: none;' if not priority_load else '' }}">
         
         <!-- Unit Type Indicator -->
         <div class="unit-type-indicator"></div>
@@ -58,7 +58,7 @@
                 <img src="{{ node.image_url }}" alt="Immagine {{ node.name }}" class="unit-image" title="Immagine unità" loading="lazy">
                 {% else %}
                 <div class="unit-emoji" title="Icona predefinita">
-                    {% if node.unit_type_id == 1 %}🏢{% else %}🏛️{% endif %}
+                    {{ get_unit_theme_emoji(node) }}
                 </div>
                 {% endif %}
                 
@@ -178,7 +178,7 @@
 <!-- Original Tree Node Template Macro (for backward compatibility) -->
 {% macro render_tree_node(node, level, show_persons, show_vacant) -%}
 <div class="tree-node" data-unit-id="{{ node.id }}" data-level="{{ level }}">
-    <div class="unit-box {{ 'unit-function' if node.unit_type_id == 1 else 'unit-organizational' }} {{ 'unit-vacant' if show_vacant and node.person_count == 0 else '' }}">
+    <div class="{{ get_unit_css_classes(node) }} {{ 'unit-vacant' if show_vacant and node.person_count == 0 else '' }}" style="{{ render_unit_css_variables(node) }}">
         <!-- Unit Type Indicator -->
         <div class="unit-type-indicator"></div>
         
@@ -192,7 +192,7 @@
                 <img src="{{ node.image_url }}" alt="Immagine {{ node.name }}" class="unit-image" title="Immagine unità">
                 {% else %}
                 <div class="unit-emoji" title="Icona predefinita">
-                    {% if node.unit_type_id == 1 %}🏢{% else %}🏛️{% endif %}
+                    {{ get_unit_theme_emoji(node) }}
                 </div>
                 {% endif %}
                 
@@ -475,7 +475,7 @@
         <div class="row">
             {% for vacant in vacant_positions %}
             <div class="col-md-6 col-lg-4 mb-3">
-                <div class="card {{ 'border-primary' if vacant.unit_type_id == 1 else 'border-info' }} h-100">
+                <div class="card h-100" style="border-color: {{ get_unit_theme_colors(vacant).primary }}">
                     <div class="card-body">
                         <div class="d-flex align-items-start">
                             <!-- Unit Type Icon with Emoji Support -->
@@ -486,13 +486,13 @@
                                 <img src="{{ vacant.image_url }}" alt="Immagine {{ vacant.name }}" class="unit-image" style="width: 40px; height: 40px;">
                                 {% else %}
                                 <div class="unit-emoji" style="font-size: 1.5rem; width: 40px; height: 40px;">
-                                    {% if vacant.unit_type_id == 1 %}🏢{% else %}🏛️{% endif %}
+                                    {{ get_unit_theme_emoji(vacant) }}
                                 </div>
                                 {% endif %}
                             </div>
                             
                             <div class="flex-grow-1">
-                                <h6 class="mb-1 {{ 'text-primary' if vacant.unit_type_id == 1 else 'text-info' }}">
+                                <h6 class="mb-1" style="color: {{ get_unit_theme_colors(vacant).primary }}">
                                     {{ vacant.name }}
                                 </h6>
                                 {% if vacant.short_name %}
@@ -506,8 +506,8 @@
                                 
                                 <!-- Unit Type Badge -->
                                 <div class="mt-2">
-                                    <span class="badge {{ 'bg-primary' if vacant.unit_type_id == 1 else 'bg-info' }} bg-opacity-10 {{ 'text-primary' if vacant.unit_type_id == 1 else 'text-info' }}">
-                                        {{ 'Funzione' if vacant.unit_type_id == 1 else 'Unità Org.' }}
+                                    <span class="badge bg-opacity-10" style="background-color: {{ get_unit_theme_colors(vacant).secondary }}; color: {{ get_unit_theme_colors(vacant).text }}">
+                                        {{ get_unit_theme_badge_text(vacant) }}
                                     </span>
                                 </div>
                             </div>
@@ -536,6 +536,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', path='/js/theme-accessibility.js') }}"></script>
 <script src="{{ url_for('static', path='/js/orgchart-enhancements.js') }}"></script>
 <script src="{{ url_for('static', path='/js/orgchart-responsive.js') }}"></script>
 <script>

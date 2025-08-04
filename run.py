@@ -21,17 +21,24 @@ def main():
         settings = get_settings()
         
         if settings.is_development:
-            settings.logging.level = "DEBUG".lower()
+            settings.logging.level = "DEBUG"
+
+        host = settings.server.host
+        port = settings.server.port
+        must_reload = settings.server.reload
+        log_level = settings.logging.level.lower() if settings.logging.level else 'trace'
+        access_log = settings.server.access_log
+        workers = settings.server.workers if not settings.server.reload else 1
 
         # Use new configuration system
         config = {
             "app": "app.main:app",
-            "host": settings.server.host,
-            "port": settings.server.port,
-            "reload": settings.server.reload,
-            "log_level": settings.logging.level.lower(),
-            "access_log": settings.server.access_log,
-            "workers": settings.server.workers if not settings.server.reload else 1,
+            "host": host,
+            "port": port,
+            "reload": must_reload,
+            "log_level": log_level,
+            "access_log": access_log,
+            "workers": workers,
             "reload_dirs": ['/app']
         }
         

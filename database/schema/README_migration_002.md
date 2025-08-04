@@ -117,10 +117,31 @@ python scripts/migrate_002_unit_type_themes.py
 python scripts/migrate_002_unit_type_themes.py --rollback
 ```
 
-### Direct SQL Execution
+### Validate Migration
 ```bash
-sqlite3 database/orgchart.db < database/schema/migration_002_unit_type_themes.sql
+python scripts/validate_migration_002.py
 ```
+
+### Direct SQL Execution (Idempotent)
+```bash
+sqlite3 database/orgchart.db < database/schema/migration_002_unit_type_themes_idempotent.sql
+```
+
+## Migration Safety Features
+
+### Idempotent Execution
+The migration script is fully idempotent and can be run multiple times safely:
+- Detects if migration has already been completed
+- Handles partial migration states gracefully
+- Uses `INSERT OR IGNORE` for theme data
+- Conditional updates for theme assignments
+
+### Rollback Safety
+Complete rollback capability with data preservation:
+- Removes `unit_type_themes` table
+- Recreates `unit_types` table without `theme_id` column
+- Preserves all existing unit type data
+- Tested and verified rollback process
 
 ## Verification
 
@@ -133,6 +154,22 @@ The migration includes comprehensive verification checks:
 5. ✅ Foreign key constraints properly configured
 6. ✅ Indexes created for performance optimization
 7. ✅ Data integrity constraints enforced
+
+### Automated Validation
+
+A comprehensive validation script (`scripts/validate_migration_002.py`) performs:
+
+- **Table Structure Validation**: Verifies all required columns exist
+- **Foreign Key Validation**: Confirms proper relationships
+- **Theme Data Validation**: Checks default themes and properties
+- **Assignment Validation**: Verifies unit types are correctly themed
+- **Index Validation**: Ensures performance indexes are created
+- **Data Integrity Validation**: Validates constraints and data quality
+
+Run validation with:
+```bash
+python scripts/validate_migration_002.py
+```
 
 ## Impact
 

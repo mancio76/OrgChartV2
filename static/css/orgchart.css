@@ -1,6 +1,16 @@
 /**
- * Organizational Chart Styles - Task 7.2 Implementation
- * Unit type-specific rendering with enhanced visual differentiation
+ * Organizational Chart Styles - Enhanced Theme System
+ * 
+ * Task 7.2: Unit type-specific rendering with enhanced visual differentiation
+ * Task 12: Dynamic theme system with CSS custom properties support
+ * 
+ * Features:
+ * - Dynamic theme support via CSS custom properties
+ * - Legacy support for hardcoded unit-function and unit-organizational classes
+ * - High contrast mode for accessibility
+ * - Responsive design with theme awareness
+ * - Print optimization with theme support
+ * - Keyboard navigation with theme-aware focus indicators
  */
 
 /* Base orgchart styles */
@@ -45,16 +55,78 @@
     transform: translateY(-3px);
 }
 
-/* Function Units (unit_type_id=1) - Bold-framed boxes */
+/* Base Theme Class - Dynamic theme support with CSS custom properties */
+.unit-themed {
+    --unit-primary: #0dcaf0;
+    --unit-secondary: #f0fdff;
+    --unit-text: #0dcaf0;
+    --unit-border: var(--unit-primary);
+    --unit-border-width: 2px;
+    --unit-hover-shadow: var(--unit-primary);
+    --unit-hover-shadow-opacity: 0.25;
+    
+    border: var(--unit-border-width) solid var(--unit-border);
+    background: linear-gradient(135deg, #ffffff 0%, var(--unit-secondary) 100%);
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.075);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.unit-themed:hover {
+    box-shadow: 0 1rem 2rem var(--unit-hover-shadow-rgba);
+    border-color: var(--unit-primary);
+    transform: translateY(-2px);
+}
+
+.unit-themed .unit-name {
+    color: var(--unit-text);
+    font-weight: 600;
+}
+
+.unit-themed .badge {
+    background-color: var(--unit-primary) !important;
+    color: white;
+    border: none;
+}
+
+.unit-themed .bi {
+    color: var(--unit-primary);
+}
+
+.unit-themed .unit-type-indicator {
+    background: var(--unit-primary);
+    color: white;
+    font-weight: 600;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    position: absolute;
+    top: 5.1rem;
+    left: 2.2rem;
+}
+
+/* Legacy support - Function Units (unit_type_id=1) */
 .unit-function {
-    border: 4px solid var(--primary-color);
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+    --unit-primary: #0d6efd;
+    --unit-secondary: #f8f9ff;
+    --unit-text: #0d6efd;
+    --unit-border: var(--unit-primary);
+    --unit-border-width: 4px;
+    --unit-hover-shadow: var(--unit-primary);
+    --unit-hover-shadow-opacity: 0.3;
+    --unit-hover-shadow-rgba: rgba(13, 110, 253, var(--unit-hover-shadow-opacity));
+    
+    border: var(--unit-border-width) solid var(--unit-border);
+    background: linear-gradient(135deg, #ffffff 0%, var(--unit-secondary) 100%);
     box-shadow: 0 0.25rem 0.5rem rgba(13, 110, 253, 0.2);
+    transition: all 0.3s ease;
+    position: relative;
 }
 
 .unit-function:hover {
-    box-shadow: 0 1rem 2rem rgba(13, 110, 253, 0.3);
-    border-color: #0056b3;
+    box-shadow: 0 1rem 2rem var(--unit-hover-shadow-rgba);
+    border-color: var(--unit-primary);
+    transform: translateY(-2px);
 }
 
 .unit-function::before {
@@ -64,12 +136,26 @@
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, var(--primary-color), #0056b3);
+    background: linear-gradient(90deg, var(--unit-primary), #0056b3);
     border-radius: 0.75rem 0.75rem 0 0;
 }
 
+.unit-function .unit-name {
+    color: var(--unit-text);
+    font-weight: 700;
+}
+
+.unit-function .badge {
+    background-color: var(--unit-primary) !important;
+    color: white;
+}
+
+.unit-function .bi {
+    color: var(--unit-primary);
+}
+
 .unit-function .unit-type-indicator {
-    background: var(--primary-color);
+    background: var(--unit-primary);
     color: white;
     font-weight: 700;
     font-size: 0.7rem;
@@ -84,20 +170,46 @@
     content: 'FN';
 }
 
-/* Organizational Units (unit_type_id=2) - Normal-framed boxes */
+/* Legacy support - Organizational Units (unit_type_id=2) */
 .unit-organizational {
-    border: 2px solid var(--info-color);
-    background: linear-gradient(135deg, #ffffff 0%, #f0fdff 100%);
+    --unit-primary: #0dcaf0;
+    --unit-secondary: #f0fdff;
+    --unit-text: #0dcaf0;
+    --unit-border: var(--unit-primary);
+    --unit-border-width: 2px;
+    --unit-hover-shadow: var(--unit-primary);
+    --unit-hover-shadow-opacity: 0.25;
+    --unit-hover-shadow-rgba: rgba(13, 202, 240, var(--unit-hover-shadow-opacity));
+    
+    border: var(--unit-border-width) solid var(--unit-border);
+    background: linear-gradient(135deg, #ffffff 0%, var(--unit-secondary) 100%);
     box-shadow: 0 0.25rem 0.5rem rgba(13, 202, 240, 0.15);
+    transition: all 0.3s ease;
+    position: relative;
 }
 
 .unit-organizational:hover {
-    box-shadow: 0 0.75rem 1.5rem rgba(13, 202, 240, 0.25);
-    border-color: #0dcaf0;
+    box-shadow: 0 1rem 2rem var(--unit-hover-shadow-rgba);
+    border-color: var(--unit-primary);
+    transform: translateY(-2px);
+}
+
+.unit-organizational .unit-name {
+    color: var(--unit-text);
+    font-weight: 600;
+}
+
+.unit-organizational .badge {
+    background-color: var(--unit-primary) !important;
+    color: white;
+}
+
+.unit-organizational .bi {
+    color: var(--unit-primary);
 }
 
 .unit-organizational .unit-type-indicator {
-    background: var(--info-color);
+    background: var(--unit-primary);
     color: white;
     font-weight: 600;
     font-size: 0.7rem;
@@ -177,15 +289,21 @@
     flex-shrink: 0;
 }
 
+.unit-themed .unit-emoji,
+.unit-themed .unit-image {
+    border-color: var(--unit-primary);
+    background: color-mix(in srgb, var(--unit-primary) 10%, transparent);
+}
+
 .unit-function .unit-emoji,
 .unit-function .unit-image {
-    border-color: var(--primary-color);
+    border-color: var(--unit-primary);
     background: rgba(13, 110, 253, 0.1);
 }
 
 .unit-organizational .unit-emoji,
 .unit-organizational .unit-image {
-    border-color: var(--info-color);
+    border-color: var(--unit-primary);
     background: rgba(13, 202, 240, 0.1);
 }
 
@@ -270,6 +388,10 @@
     border-top: 2px solid rgba(0, 0, 0, 0.1);
     padding-top: 1rem;
     margin-top: 1rem;
+}
+
+.unit-themed .persons-list {
+    border-top-color: color-mix(in srgb, var(--unit-primary) 20%, transparent);
 }
 
 .unit-function .persons-list {
@@ -551,24 +673,53 @@
 /* Accessibility enhancements */
 @media (prefers-reduced-motion: reduce) {
     .unit-box,
+    .unit-themed,
     .person-item,
     .orgchart-tree {
         transition: none;
     }
     
     .unit-box:hover,
+    .unit-themed:hover,
     .person-item:hover {
         transform: none;
     }
 }
 
+/* High contrast mode support for accessibility */
 @media (prefers-contrast: high) {
+    .unit-themed {
+        border-width: calc(var(--unit-border-width) + 1px);
+        background: #ffffff !important;
+        color: #000000 !important;
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5);
+    }
+    
+    .unit-themed .unit-name {
+        color: #000000 !important;
+        font-weight: 700;
+    }
+    
+    .unit-themed .badge {
+        background-color: #000000 !important;
+        color: #ffffff !important;
+        border: 2px solid #000000 !important;
+    }
+    
+    .unit-themed .bi {
+        color: #000000 !important;
+    }
+    
     .unit-function {
         border-width: 5px;
+        background: #ffffff !important;
+        color: #000000 !important;
     }
     
     .unit-organizational {
         border-width: 3px;
+        background: #ffffff !important;
+        color: #000000 !important;
     }
     
     .unit-box {
@@ -576,15 +727,78 @@
     }
 }
 
+/* High contrast mode class for manual activation */
+.high-contrast .unit-themed {
+    border-width: calc(var(--unit-border-width) + 1px);
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+.high-contrast .unit-themed .unit-name {
+    color: #000000 !important;
+    font-weight: 700;
+}
+
+.high-contrast .unit-themed .badge {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    border: 2px solid #000000 !important;
+}
+
+.high-contrast .unit-themed .bi {
+    color: #000000 !important;
+}
+
 /* Focus states for accessibility */
-.unit-box:focus-within {
-    outline: 3px solid var(--primary-color);
+.unit-box:focus-within,
+.unit-themed:focus-within {
+    outline: 3px solid var(--unit-primary, var(--primary-color));
     outline-offset: 2px;
 }
 
 .person-item:focus-within {
-    outline: 2px solid var(--info-color);
+    outline: 2px solid var(--unit-primary, var(--info-color));
     outline-offset: 1px;
+}
+
+/* Theme utility classes */
+.theme-primary-bg {
+    background-color: var(--unit-primary) !important;
+    color: white !important;
+}
+
+.theme-secondary-bg {
+    background-color: var(--unit-secondary) !important;
+}
+
+.theme-primary-text {
+    color: var(--unit-primary) !important;
+}
+
+.theme-primary-border {
+    border-color: var(--unit-primary) !important;
+}
+
+/* Dynamic theme class generation support */
+.unit-themed[data-theme-id] {
+    /* CSS custom properties will be set dynamically via inline styles or generated CSS */
+}
+
+/* Fallback for browsers that don't support color-mix */
+@supports not (color: color-mix(in srgb, red 50%, blue)) {
+    .unit-themed .unit-emoji,
+    .unit-themed .unit-image {
+        background: rgba(13, 202, 240, 0.1);
+    }
+    
+    .unit-themed .persons-list {
+        border-top-color: rgba(13, 202, 240, 0.2);
+    }
+    
+    .unit-themed.unit-hover {
+        box-shadow: 0 1rem 2rem rgba(13, 202, 240, 0.4) !important;
+    }
 }
 
 /* Animation for loading states */
@@ -599,8 +813,30 @@
     }
 }
 
-.unit-box {
+@keyframes themeTransition {
+    from {
+        opacity: 0.7;
+        transform: scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.unit-box,
+.unit-themed {
     animation: unitAppear 0.5s ease-out;
+}
+
+/* Theme loading animation */
+.unit-themed.theme-loading {
+    animation: themeTransition 0.3s ease-in-out;
+}
+
+/* Dynamic theme application */
+.unit-themed.theme-applied {
+    animation: themeTransition 0.2s ease-out;
 }
 
 /* Stagger animation for multiple units */
@@ -718,6 +954,11 @@
 }
 
 /* Unit type specific enhancements */
+.unit-themed.unit-hover {
+    border-color: var(--unit-primary);
+    box-shadow: 0 1rem 2rem color-mix(in srgb, var(--unit-hover-shadow) 40%, transparent) !important;
+}
+
 .unit-function.unit-hover {
     border-color: #0056b3;
     box-shadow: 0 1rem 2rem rgba(13, 110, 253, 0.4) !important;
@@ -729,11 +970,13 @@
 }
 
 /* Keyboard navigation indicators */
-.unit-box[tabindex="0"] {
+.unit-box[tabindex="0"],
+.unit-themed[tabindex="0"] {
     position: relative;
 }
 
-.unit-box[tabindex="0"]::after {
+.unit-box[tabindex="0"]::after,
+.unit-themed[tabindex="0"]::after {
     content: '';
     position: absolute;
     top: -2px;
@@ -747,6 +990,17 @@
 
 .unit-box[tabindex="0"]:focus::after {
     border-color: var(--primary-color);
+}
+
+.unit-themed[tabindex="0"]:focus::after {
+    border-color: var(--unit-primary);
+}
+
+/* Enhanced focus management for theme system */
+.unit-themed:focus-visible {
+    outline: 2px solid var(--unit-primary);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--unit-primary) 20%, transparent);
 }
 
 /* Loading states for dynamic content */
@@ -788,7 +1042,26 @@
 
 .unit-hover .unit-box::before,
 .unit-selected .unit-box::before {
-    background: linear-gradient(to bottom, var(--primary-color), transparent) !important;
+    background: linear-gradient(to bottom, var(--unit-primary, var(--primary-color)), transparent) !important;
+}
+
+/* Enhanced theme-aware connection lines */
+.unit-themed::after {
+    content: '';
+    position: absolute;
+    top: -2rem;
+    left: 50%;
+    width: 3px;
+    height: 2rem;
+    background: linear-gradient(to bottom, var(--unit-primary), transparent);
+    transform: translateX(-50%);
+    border-radius: 0 0 2px 2px;
+    opacity: 0.6;
+    transition: opacity 0.3s ease;
+}
+
+.unit-themed:hover::after {
+    opacity: 1;
 }
 
 /* Enhanced Responsive Features - Task 7.3 */
@@ -1062,6 +1335,25 @@
         box-shadow: none !important;
     }
     
+    .unit-themed {
+        box-shadow: none !important;
+        transform: none !important;
+        transition: none !important;
+        background: white !important;
+        border: 1px solid var(--unit-primary) !important;
+    }
+    
+    .unit-themed::before,
+    .unit-themed::after {
+        display: none !important;
+    }
+    
+    .unit-themed .badge {
+        background: white !important;
+        color: var(--unit-primary) !important;
+        border: 1px solid var(--unit-primary) !important;
+    }
+    
     .person-tooltip {
         display: none !important;
     }
@@ -1082,6 +1374,12 @@
         opacity: 1 !important;
         background: none !important;
         animation: none !important;
+    }
+    
+    .theme-primary-bg {
+        background: white !important;
+        color: black !important;
+        border: 1px solid black !important;
     }
 }
 
@@ -1151,9 +1449,10 @@
     outline-offset: 2px;
 }
 
-/* Enhanced responsive breakpoints */
+/* Enhanced responsive breakpoints with theme support */
 @media (max-width: 1400px) {
-    .unit-box {
+    .unit-box,
+    .unit-themed {
         min-width: 260px;
         max-width: 300px;
     }
@@ -1162,6 +1461,10 @@
 @media (max-width: 1200px) {
     .complex-control {
         display: none;
+    }
+    
+    .unit-themed {
+        --unit-border-width: max(1px, calc(var(--unit-border-width) - 1px));
     }
 }
 
@@ -1173,6 +1476,17 @@
     .orgchart-tree {
         padding: 1rem;
     }
+    
+    .unit-themed:hover {
+        transform: translateY(-1px); /* Reduced hover effect on tablets */
+    }
+}
+
+@media (max-width: 768px) {
+    .unit-themed:hover {
+        transform: none; /* Disable hover transform on mobile */
+        box-shadow: 0 0.5rem 1rem color-mix(in srgb, var(--unit-hover-shadow) 20%, transparent);
+    }
 }
 
 @media (max-width: 576px) {
@@ -1180,10 +1494,15 @@
         padding: 0.5rem;
     }
     
-    .unit-box {
+    .unit-box,
+    .unit-themed {
         min-width: 200px;
         max-width: 240px;
         padding: 0.75rem;
+    }
+    
+    .unit-themed {
+        --unit-border-width: max(1px, calc(var(--unit-border-width) - 1px));
     }
     
     .unit-header {
@@ -1205,6 +1524,12 @@
     .person-actions {
         align-self: stretch;
         justify-content: flex-end;
+    }
+    
+    .unit-themed .unit-type-indicator {
+        position: static !important;
+        margin-top: 0.5rem;
+        align-self: flex-start;
     }
 }
 

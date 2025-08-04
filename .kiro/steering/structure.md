@@ -26,10 +26,13 @@ orgchart_webapp/
 │   ├── css/              # CSS stylesheets
 │   │   ├── base.css      # Global styles
 │   │   └── components.css # Component-specific styles
+│   │   └── ...           # Service implementations
 │   ├── js/               # JavaScript files
 │   │   ├── base.js       # Global JavaScript
 │   │   └── components.js # Component-specific JavaScript
+│   │   └── ...           # Service implementations
 │   └── images/           # Images and icons
+│   └── ...
 ├── templates/             # Jinja2 HTML templates
 │   ├── base/             # Base layout templates
 │   ├── components/       # Reusable UI components
@@ -40,17 +43,21 @@ orgchart_webapp/
 │   ├── persons/          # Person management templates
 │   ├── assignments/      # Assignment management templates
 │   └── orgchart/         # Orgchart visualization templates
+│   └── ...
 ├── database/              # Database files and schemas
 │   ├── schema/           # SQL schema definitions
 │   └── orgchart.db       # SQLite database file
+│   └── ...
 ├── scripts/               # Utility scripts
 │   ├── init_db.py        # Database initialization
 │   ├── seed_data.py      # Test data generation
 │   └── backup_db.py      # Database backup
+│   └── ...
 ├── tests/                 # Test suite
 │   ├── test_models.py    # Model tests
 │   ├── test_routes.py    # Route tests
 │   └── test_services.py  # Service tests
+│   └── ...
 ├── config/                # Configuration files
 ├── .env                   # Environment variables
 ├── requirements.txt       # Python dependencies

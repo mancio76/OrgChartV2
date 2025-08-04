@@ -1,0 +1,494 @@
+{% extends "base/layout.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">{{ page_title }}</h1>
+            <p class="text-muted mb-0">{{ page_subtitle }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="/themes/analytics/dashboard" class="btn btn-outline-primary">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+            <button type="button" class="btn btn-outline-secondary" onclick="exportReport()">
+                <i class="bi bi-download"></i> Esporta
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-primary">{{ usage_report.summary.total_themes }}</h4>
+                    <p class="card-text">Temi Totali</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-success">{{ usage_report.summary.used_themes }}</h4>
+                    <p class="card-text">Temi Utilizzati</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-warning">{{ usage_report.summary.unused_themes }}</h4>
+                    <p class="card-text">Temi Non Utilizzati</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-info">{{ usage_report.summary.total_usage }}</h4>
+                    <p class="card-text">Utilizzi Totali</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Most Used Themes -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-trophy text-warning"></i> Temi Più Utilizzati
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if usage_report.most_used_themes %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Posizione</th>
+                                        <th>Tema</th>
+                                        <th>Utilizzi</th>
+                                        <th>%</th>
+                                        <th>Azioni</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for theme in usage_report.most_used_themes %}
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-{{ 'warning' if loop.index == 1 else 'secondary' }}">
+                                                    #{{ loop.index }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="theme-preview-small me-2" style="
+                                                        background: {{ theme.primary_color if theme.primary_color else '#0dcaf0' }};
+                                                        width: 20px; height: 20px; border-radius: 4px;
+                                                    "></div>
+                                                    <div>
+                                                        <strong>{{ theme.name }}</strong>
+                                                        {% if theme.is_default %}
+                                                            <span class="badge bg-primary ms-1">Default</span>
+                                                        {% endif %}
+                                                        {% if theme.description %}
+                                                            <br><small class="text-muted">{{ theme.description[:50] }}{% if theme.description|length > 50 %}...{% endif %}</small>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <strong>{{ theme.usage_count }}</strong>
+                                                {% if theme.total_units_count > 0 %}
+                                                    <br><small class="text-muted">{{ theme.total_units_count }} unità</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-success">{{ theme.usage_percentage }}%</span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="/themes/{{ theme.id }}" class="btn btn-outline-primary btn-sm" title="Visualizza">
+                                                        <i class="bi bi-eye"></i>
+                                                    </a>
+                                                    <a href="/themes/{{ theme.id }}/impact-analysis" class="btn btn-outline-info btn-sm" title="Analisi Impatto">
+                                                        <i class="bi bi-graph-up"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-inbox fs-1"></i>
+                            <p>Nessun tema utilizzato trovato</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Least Used Themes -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-arrow-down-circle text-info"></i> Temi Meno Utilizzati
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if usage_report.least_used_themes %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Tema</th>
+                                        <th>Utilizzi</th>
+                                        <th>%</th>
+                                        <th>Azioni</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for theme in usage_report.least_used_themes %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="theme-preview-small me-2" style="
+                                                        background: {{ theme.primary_color if theme.primary_color else '#0dcaf0' }};
+                                                        width: 20px; height: 20px; border-radius: 4px;
+                                                    "></div>
+                                                    <div>
+                                                        <strong>{{ theme.name }}</strong>
+                                                        {% if theme.is_default %}
+                                                            <span class="badge bg-primary ms-1">Default</span>
+                                                        {% endif %}
+                                                        {% if theme.description %}
+                                                            <br><small class="text-muted">{{ theme.description[:40] }}{% if theme.description|length > 40 %}...{% endif %}</small>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <strong>{{ theme.usage_count }}</strong>
+                                                {% if theme.total_units_count > 0 %}
+                                                    <br><small class="text-muted">{{ theme.total_units_count }} unità</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{{ 'warning' if theme.usage_percentage < 5 else 'info' }}">{{ theme.usage_percentage }}%</span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="/themes/{{ theme.id }}" class="btn btn-outline-primary btn-sm" title="Visualizza">
+                                                        <i class="bi bi-eye"></i>
+                                                    </a>
+                                                    {% if theme.usage_count == 0 %}
+                                                        <button type="button" class="btn btn-outline-danger btn-sm" title="Elimina" onclick="confirmDelete({{ theme.id }}, '{{ theme.name }}')">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-check-circle fs-1"></i>
+                            <p>Tutti i temi sono ben utilizzati!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Unused Themes -->
+    {% if usage_report.unused_themes %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-exclamation-triangle text-warning"></i> Temi Non Utilizzati
+                        <span class="badge bg-warning ms-2">{{ usage_report.unused_themes|length }}</span>
+                    </h5>
+                    {% if usage_report.unused_themes|length > 0 %}
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmBulkDelete()">
+                            <i class="bi bi-trash"></i> Elimina Tutti Non Utilizzati
+                        </button>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for theme in usage_report.unused_themes %}
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="card border-warning">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <div class="theme-preview me-3" style="
+                                                background: linear-gradient(135deg, #ffffff 0%, {{ theme.secondary_color if theme.secondary_color else '#f0fdff' }} 100%);
+                                                border: 2px solid {{ theme.primary_color if theme.primary_color else '#0dcaf0' }};
+                                                width: 40px; height: 40px; border-radius: 8px;
+                                            "></div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="card-title mb-1">{{ theme.name }}</h6>
+                                                {% if theme.is_default %}
+                                                    <span class="badge bg-primary">Default</span>
+                                                {% endif %}
+                                                {% if not theme.is_active %}
+                                                    <span class="badge bg-secondary">Inattivo</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% if theme.description %}
+                                            <p class="card-text small text-muted">{{ theme.description[:80] }}{% if theme.description|length > 80 %}...{% endif %}</p>
+                                        {% endif %}
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">
+                                                Creato: {{ theme.created_date[:10] if theme.created_date else 'N/A' }}
+                                            </small>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="/themes/{{ theme.id }}" class="btn btn-outline-primary btn-sm">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <a href="/themes/{{ theme.id }}/edit" class="btn btn-outline-secondary btn-sm">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                {% if not theme.is_default %}
+                                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete({{ theme.id }}, '{{ theme.name }}')">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Complete Themes List -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-list-ul"></i> Tutti i Temi - Dettaglio Completo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="allThemesTable">
+                            <thead>
+                                <tr>
+                                    <th>Tema</th>
+                                    <th>Stato</th>
+                                    <th>Utilizzi</th>
+                                    <th>Tipi Unità</th>
+                                    <th>Unità Totali</th>
+                                    <th>%</th>
+                                    <th>Creato</th>
+                                    <th>Aggiornato</th>
+                                    <th>Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for theme in usage_report.all_themes_data %}
+                                    <tr class="{{ 'table-warning' if theme.usage_count == 0 else '' }}">
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="theme-preview-small me-2" style="
+                                                    background: {{ theme.primary_color if theme.primary_color else '#0dcaf0' }};
+                                                    width: 20px; height: 20px; border-radius: 4px;
+                                                "></div>
+                                                <div>
+                                                    <strong>{{ theme.name }}</strong>
+                                                    {% if theme.description %}
+                                                        <br><small class="text-muted">{{ theme.description[:60] }}{% if theme.description|length > 60 %}...{% endif %}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if theme.is_default %}
+                                                <span class="badge bg-primary">Default</span>
+                                            {% endif %}
+                                            {% if theme.is_active %}
+                                                <span class="badge bg-success">Attivo</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Inattivo</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <strong class="{{ 'text-warning' if theme.usage_count == 0 else 'text-success' }}">
+                                                {{ theme.usage_count }}
+                                            </strong>
+                                        </td>
+                                        <td>
+                                            {% if theme.unit_type_names %}
+                                                <div class="small">
+                                                    {% for unit_type in theme.unit_type_names[:2] %}
+                                                        <span class="badge bg-light text-dark me-1">{{ unit_type }}</span>
+                                                    {% endfor %}
+                                                    {% if theme.unit_type_names|length > 2 %}
+                                                        <span class="text-muted">+{{ theme.unit_type_names|length - 2 }}</span>
+                                                    {% endif %}
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ theme.total_units_count or 0 }}</td>
+                                        <td>
+                                            {% if theme.usage_percentage > 0 %}
+                                                <span class="badge bg-{{ 'success' if theme.usage_percentage > 20 else 'info' if theme.usage_percentage > 5 else 'warning' }}">
+                                                    {{ theme.usage_percentage }}%
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">0%</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small>{{ theme.created_date[:10] if theme.created_date else 'N/A' }}</small>
+                                        </td>
+                                        <td>
+                                            <small>{{ theme.updated_date[:10] if theme.updated_date else 'N/A' }}</small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="/themes/{{ theme.id }}" class="btn btn-outline-primary btn-sm" title="Visualizza">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <a href="/themes/{{ theme.id }}/impact-analysis" class="btn btn-outline-info btn-sm" title="Analisi Impatto">
+                                                    <i class="bi bi-graph-up"></i>
+                                                </a>
+                                                <a href="/themes/{{ theme.id }}/edit" class="btn btn-outline-secondary btn-sm" title="Modifica">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Conferma Eliminazione</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Sei sicuro di voler eliminare il tema <strong id="deleteThemeName"></strong>?</p>
+                <p class="text-muted small">Questa azione non può essere annullata.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Elimina</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Delete confirmation
+function confirmDelete(themeId, themeName) {
+    document.getElementById('deleteThemeName').textContent = themeName;
+    document.getElementById('deleteForm').action = `/themes/${themeId}/delete`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+// Bulk delete confirmation
+function confirmBulkDelete() {
+    if (confirm('Sei sicuro di voler eliminare tutti i temi non utilizzati? Questa azione non può essere annullata.')) {
+        // Implementation for bulk delete would go here
+        alert('Funzionalità di eliminazione in blocco non ancora implementata');
+    }
+}
+
+// Export report functionality
+function exportReport() {
+    // Simple CSV export
+    const data = {{ usage_report.all_themes_data | tojson }};
+    let csv = 'Nome,Descrizione,Utilizzi,Percentuale,Stato,Creato,Aggiornato\n';
+    
+    data.forEach(theme => {
+        csv += `"${theme.name}","${theme.description || ''}",${theme.usage_count},${theme.usage_percentage}%,"${theme.is_active ? 'Attivo' : 'Inattivo'}","${theme.created_date || ''}","${theme.updated_date || ''}"\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `theme_usage_report_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+// Initialize DataTable for better sorting/filtering
+document.addEventListener('DOMContentLoaded', function() {
+    // Simple table enhancement - you could add DataTables here if available
+    const table = document.getElementById('allThemesTable');
+    if (table) {
+        // Add basic sorting functionality
+        const headers = table.querySelectorAll('th');
+        headers.forEach((header, index) => {
+            if (index < headers.length - 1) { // Skip actions column
+                header.style.cursor = 'pointer';
+                header.addEventListener('click', () => sortTable(table, index));
+            }
+        });
+    }
+});
+
+function sortTable(table, column) {
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    rows.sort((a, b) => {
+        const aText = a.cells[column].textContent.trim();
+        const bText = b.cells[column].textContent.trim();
+        
+        // Try to parse as numbers
+        const aNum = parseFloat(aText);
+        const bNum = parseFloat(bText);
+        
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+            return aNum - bNum;
+        }
+        
+        return aText.localeCompare(bText);
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+}
+</script>
+{% endblock %}

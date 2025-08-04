@@ -1,0 +1,354 @@
+{% extends "base/layout.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    {% for item in breadcrumb %}
+                        {% if loop.last %}
+                            <li class="breadcrumb-item active">{{ item.name }}</li>
+                        {% else %}
+                            <li class="breadcrumb-item"><a href="{{ item.url }}">{{ item.name }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                </ol>
+            </nav>
+            <h1 class="h3 mb-1">{{ page_title }}</h1>
+            <p class="text-muted mb-0">{{ page_subtitle }}</p>
+        </div>
+    </div>
+
+    <form method="post" id="assignmentForm">
+        <div class="row">
+            <!-- Assignment Interface -->
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-link-45deg me-2"></i>Assegnazione Temi ai Tipi di Unità
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if unit_types %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Tipo di Unità</th>
+                                            <th>Tema Assegnato</th>
+                                            <th>Anteprima</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for unit_type in unit_types %}
+                                        <tr>
+                                            <td>
+                                                <div>
+                                                    <h6 class="mb-1">{{ unit_type.name }}</h6>
+                                                    {% if unit_type.short_name %}
+                                                    <small class="text-muted">{{ unit_type.short_name }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <select class="form-select theme-selector" 
+                                                        name="unit_type_{{ unit_type.id }}" 
+                                                        data-unit-type-id="{{ unit_type.id }}"
+                                                        onchange="updatePreview({{ unit_type.id }})">
+                                                    <option value="">Nessun tema</option>
+                                                    {% for theme in themes %}
+                                                    <option value="{{ theme.id }}" 
+                                                            data-theme-data="{{ theme.to_dict() | tojson | e }}"
+                                                            {{ 'selected' if assignments.get(unit_type.id) == theme.id else '' }}>
+                                                        {{ theme.name }}
+                                                        {% if theme.is_default %}(Default){% endif %}
+                                                    </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <div class="theme-preview-mini" id="preview_{{ unit_type.id }}">
+                                                    {% set current_theme_id = assignments.get(unit_type.id) %}
+                                                    {% if current_theme_id %}
+                                                        {% set current_theme = themes | selectattr('id', 'equalto', current_theme_id) | first %}
+                                                        {% if current_theme %}
+                                                        <div class="unit-mini {{ current_theme.generate_css_class_name() }}"
+                                                             style="--unit-primary: {{ current_theme.primary_color }}; 
+                                                                    --unit-secondary: {{ current_theme.secondary_color }};">
+                                                            <i class="bi bi-{{ current_theme.icon_class }} me-1"></i>
+                                                            <span class="small">{{ current_theme.display_label }}</span>
+                                                        </div>
+                                                        {% endif %}
+                                                    {% else %}
+                                                    <div class="unit-mini unit-default">
+                                                        <i class="bi bi-diagram-2 me-1"></i>
+                                                        <span class="small">Default</span>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="bi bi-diagram-2 display-4 text-muted"></i>
+                                <h5 class="mt-3">Nessun Tipo di Unità</h5>
+                                <p class="text-muted">
+                                    Non ci sono tipi di unità disponibili per l'assegnazione.
+                                </p>
+                                <a href="/unit-types/new" class="btn btn-primary">
+                                    <i class="bi bi-plus-circle me-2"></i>Crea Tipo di Unità
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Theme Reference -->
+            <div class="col-lg-4">
+                <div class="card sticky-top" style="top: 1rem;">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-palette me-2"></i>Temi Disponibili
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if themes %}
+                            <div class="theme-reference">
+                                {% for theme in themes %}
+                                <div class="theme-reference-item mb-3" data-theme-id="{{ theme.id }}">
+                                    <div class="d-flex align-items-center">
+                                        <div class="theme-preview-small me-3">
+                                            <div class="unit-mini {{ theme.generate_css_class_name() }}"
+                                                 style="--unit-primary: {{ theme.primary_color }}; 
+                                                        --unit-secondary: {{ theme.secondary_color }};">
+                                                <i class="bi bi-{{ theme.icon_class }} me-1"></i>
+                                                <span class="small">{{ theme.display_label }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">
+                                                {{ theme.name }}
+                                                {% if theme.is_default %}
+                                                    <span class="badge bg-primary ms-1">Default</span>
+                                                {% endif %}
+                                            </h6>
+                                            {% if theme.description %}
+                                            <small class="text-muted">{{ theme.description }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-3">
+                                <i class="bi bi-palette text-muted"></i>
+                                <p class="text-muted mb-0">Nessun tema disponibile</p>
+                                <a href="/themes/new" class="btn btn-sm btn-primary mt-2">
+                                    Crea Tema
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        {% if unit_types %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">Salva Assegnazioni</h6>
+                                <small class="text-muted">Le modifiche saranno applicate immediatamente a tutte le unità</small>
+                            </div>
+                            <div>
+                                <a href="/themes" class="btn btn-secondary me-2">
+                                    <i class="bi bi-arrow-left me-2"></i>Annulla
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle me-2"></i>Salva Assegnazioni
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- CSRF Token -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token if csrf_token else '' }}">
+    </form>
+</div>
+
+<style>
+.theme-preview-mini,
+.theme-preview-small {
+    min-width: 120px;
+}
+
+.unit-mini {
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    border: 2px solid var(--unit-primary, #0dcaf0);
+    background: linear-gradient(135deg, #ffffff 0%, var(--unit-secondary, #f0fdff) 100%);
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+.unit-mini:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.unit-default {
+    border: 2px solid #6c757d;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    color: #6c757d;
+}
+
+.theme-reference-item {
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    border: 1px solid #dee2e6;
+    transition: all 0.2s ease;
+}
+
+.theme-reference-item:hover {
+    border-color: #0d6efd;
+    background-color: #f8f9ff;
+}
+
+.theme-selector {
+    min-width: 200px;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.sticky-top {
+    z-index: 1020;
+}
+</style>
+
+<script>
+// Theme data for JavaScript access
+const themeData = {
+    {% for theme in themes %}
+    {{ theme.id }}: {{ theme.to_dict() | tojson | safe }}{{ ',' if not loop.last else '' }}
+    {% endfor %}
+};
+
+function updatePreview(unitTypeId) {
+    const selector = document.querySelector(`select[data-unit-type-id="${unitTypeId}"]`);
+    const preview = document.getElementById(`preview_${unitTypeId}`);
+    
+    if (!selector || !preview) return;
+    
+    const themeId = selector.value;
+    
+    if (!themeId || themeId === '') {
+        // No theme selected - show default
+        preview.innerHTML = `
+            <div class="unit-mini unit-default">
+                <i class="bi bi-diagram-2 me-1"></i>
+                <span class="small">Default</span>
+            </div>
+        `;
+        return;
+    }
+    
+    const theme = themeData[themeId];
+    if (!theme) return;
+    
+    // Update preview with selected theme
+    preview.innerHTML = `
+        <div class="unit-mini unit-${theme.css_class_suffix}"
+             style="--unit-primary: ${theme.primary_color}; 
+                    --unit-secondary: ${theme.secondary_color};">
+            <i class="bi bi-${theme.icon_class} me-1"></i>
+            <span class="small">${theme.display_label}</span>
+        </div>
+    `;
+}
+
+// Initialize form validation
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('assignmentForm');
+    
+    form.addEventListener('submit', function(e) {
+        // Add loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Salvando...';
+        
+        // Re-enable button after a delay if form submission fails
+        setTimeout(() => {
+            if (submitBtn.disabled) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        }, 10000);
+    });
+    
+    // Add change tracking
+    let hasChanges = false;
+    const selectors = document.querySelectorAll('.theme-selector');
+    const originalValues = {};
+    
+    // Store original values
+    selectors.forEach(selector => {
+        originalValues[selector.name] = selector.value;
+    });
+    
+    // Track changes
+    selectors.forEach(selector => {
+        selector.addEventListener('change', function() {
+            hasChanges = Object.keys(originalValues).some(name => {
+                const currentSelector = document.querySelector(`[name="${name}"]`);
+                return currentSelector && currentSelector.value !== originalValues[name];
+            });
+            
+            // Update submit button state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (hasChanges) {
+                submitBtn.classList.remove('btn-primary');
+                submitBtn.classList.add('btn-warning');
+                submitBtn.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Salva Modifiche';
+            } else {
+                submitBtn.classList.remove('btn-warning');
+                submitBtn.classList.add('btn-primary');
+                submitBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Salva Assegnazioni';
+            }
+        });
+    });
+    
+    // Warn about unsaved changes
+    window.addEventListener('beforeunload', function(e) {
+        if (hasChanges) {
+            e.preventDefault();
+            e.returnValue = 'Hai modifiche non salvate. Sei sicuro di voler uscire?';
+        }
+    });
+});
+</script>
+{% endblock %}

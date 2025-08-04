@@ -1,0 +1,81 @@
+<!-- 
+Example: How to use theme helper functions in templates
+This shows the transformation from hardcoded logic to theme-driven rendering
+-->
+
+<!-- BEFORE: Hardcoded logic (what we're replacing) -->
+<div class="unit-box {{ 'unit-function' if node.unit_type_id == 1 else 'unit-organizational' }}">
+    <i class="bi bi-{{ 'building' if node.unit_type_id == 1 else 'diagram-2' }}"></i>
+    <span class="badge bg-{{ 'primary' if node.unit_type_id == 1 else 'info' }}">
+        {{ 'Funzione' if node.unit_type_id == 1 else 'Unità Org.' }}
+    </span>
+    <div class="unit-emoji">
+        {% if node.unit_type_id == 1 %}🏢{% else %}🏛️{% endif %}
+    </div>
+</div>
+
+<!-- AFTER: Theme-driven rendering (using our helper functions) -->
+<div class="{{ get_unit_css_classes(node) }}" style="{{ render_unit_css_variables(node) }}">
+    {{ render_unit_icon(node) | safe }}
+    <span class="badge" style="background-color: var(--unit-primary);">
+        {{ get_unit_theme_badge_text(node) }}
+    </span>
+    <div class="unit-emoji">
+        {{ get_unit_theme_emoji(node) }}
+    </div>
+</div>
+
+<!-- Advanced usage: Conditional styling based on theme properties -->
+{% set theme = get_unit_theme_data(node) %}
+{% set colors = get_unit_theme_colors(node) %}
+
+<div class="unit-card" 
+     style="border-color: {{ colors.border }}; background: linear-gradient(135deg, #ffffff 0%, {{ colors.secondary }} 100%);">
+    
+    <!-- Theme-aware icon with fallback -->
+    <div class="unit-icon" style="color: {{ colors.primary }};">
+        {{ render_unit_icon(node, "bi fs-4") | safe }}
+    </div>
+    
+    <!-- Theme-aware text styling -->
+    <h5 class="unit-name" style="color: {{ colors.text }};">
+        {{ node.name }}
+    </h5>
+    
+    <!-- High contrast mode support -->
+    {% if is_unit_theme_high_contrast(node) %}
+    <div class="high-contrast-indicator">
+        <i class="bi bi-eye" title="Modalità alto contrasto"></i>
+    </div>
+    {% endif %}
+    
+    <!-- Dynamic badge with theme colors -->
+    <span class="badge" 
+          style="background-color: {{ colors.primary }}; color: white;">
+        {{ theme.display_label }}
+    </span>
+</div>
+
+<!-- CSS Custom Properties approach (recommended for performance) -->
+<style>
+/* This would be generated dynamically by the CSS generation system */
+{% for unit in units %}
+{% set css_vars = get_unit_css_variables(unit) %}
+.unit-{{ unit.id }} {
+    {% for var_name, var_value in css_vars.items() %}
+    {{ var_name }}: {{ var_value }};
+    {% endfor %}
+}
+{% endfor %}
+</style>
+
+<!-- Usage with CSS custom properties -->
+<div class="unit-themed unit-{{ node.id }}">
+    <div class="unit-header" style="border-color: var(--unit-border);">
+        {{ render_unit_icon(node) | safe }}
+        <span style="color: var(--unit-text);">{{ node.name }}</span>
+    </div>
+    <div class="unit-body" style="background: var(--unit-secondary);">
+        <!-- Content styled with theme variables -->
+    </div>
+</div>

@@ -1,0 +1,233 @@
+{% extends "base/layout.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/unit_types">Tipi di Unità</a></li>
+                    <li class="breadcrumb-item"><a href="/unit_types/{{ unit_type.id }}">{{ unit_type.name }}</a></li>
+                    <li class="breadcrumb-item active">Modifica</li>
+                </ol>
+            </nav>
+            <h1 class="h3 mb-0">{{ page_title }}</h1>
+            <p class="text-muted mb-0">Modifica le informazioni del tipo di unità</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Main Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-pencil me-2"></i>Informazioni Tipo di Unità
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="unitTypeForm">
+                        <!-- Name -->
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Nome *</label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   value="{{ form_data.name if form_data else unit_type.name }}" required>
+                            <div class="form-text">Nome del tipo di unità (es. "Direzione", "Ufficio")</div>
+                        </div>
+
+                        <!-- Short Name -->
+                        <div class="mb-3">
+                            <label for="short_name" class="form-label">Nome Breve</label>
+                            <input type="text" class="form-control" id="short_name" name="short_name" 
+                                   value="{{ form_data.short_name if form_data else (unit_type.short_name or '') }}">
+                            <div class="form-text">Abbreviazione opzionale (es. "DIR", "UFF")</div>
+                        </div>
+
+                        <!-- Theme Selection -->
+                        <div class="mb-3">
+                            <label for="theme_id" class="form-label">Tema Visuale</label>
+                            <select class="form-select" id="theme_id" name="theme_id" onchange="updateThemePreview()">
+                                <option value="">Usa tema default</option>
+                                {% for theme in themes %}
+                                {% set is_selected = (form_data and form_data.theme_id == theme.id|string) or (not form_data and unit_type.theme_id == theme.id) %}
+                                <option value="{{ theme.id }}" 
+                                        data-theme-data="{{ theme.to_dict() | tojson | e }}"
+                                        {% if is_selected %}selected{% endif %}>
+                                    {{ theme.name }}
+                                    {% if theme.is_default %}(Default){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Seleziona il tema visuale per questo tipo di unità</div>
+                        </div>
+
+                        <!-- Level -->
+                        <div class="mb-3">
+                            <label for="level" class="form-label">Livello Gerarchico</label>
+                            <input type="number" class="form-control" id="level" name="level" min="1" max="10"
+                                   value="{{ form_data.level if form_data else (unit_type.level or '') }}">
+                            <div class="form-text">Livello gerarchico opzionale (1 = più alto)</div>
+                        </div>
+
+                        <!-- Aliases -->
+                        <div class="mb-3">
+                            <label for="aliases" class="form-label">Alias</label>
+                            <textarea class="form-control" id="aliases" name="aliases" rows="3">{% if form_data %}{{ form_data.aliases }}{% else %}{% for alias in unit_type.aliases %}{{ alias.value }}
+{% endfor %}{% endif %}</textarea>
+                            <div class="form-text">Nomi alternativi, uno per riga</div>
+                        </div>
+
+                        <!-- Error Display -->
+                        {% if errors %}
+                        <div class="alert alert-danger">
+                            <h6>Errori di validazione:</h6>
+                            <ul class="mb-0">
+                                {% for error in errors %}
+                                <li>{{ error.message }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="/unit_types/{{ unit_type.id }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>Annulla
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>Salva Modifiche
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Current Theme Preview -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-eye me-2"></i>Anteprima Tema
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="themePreview">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usage Information -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>Utilizzo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Unità collegate:</span>
+                        <span class="badge bg-light text-dark">{{ unit_type.units_count }}</span>
+                    </div>
+                    
+                    {% if unit_type.units_count > 0 %}
+                    <div class="alert alert-warning small">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Le modifiche al tema si rifletteranno su tutte le {{ unit_type.units_count }} unità collegate.
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mt-3">
+                        <a href="/units?unit_type={{ unit_type.id }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-list me-1"></i>Visualizza Unità
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Help -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-question-circle me-2"></i>Aiuto
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6>Modifica Tema</h6>
+                    <p class="small text-muted">
+                        Cambiando il tema, tutte le unità di questo tipo 
+                        adotteranno immediatamente il nuovo stile visuale.
+                    </p>
+                    
+                    <h6>Impatto delle Modifiche</h6>
+                    <p class="small text-muted">
+                        Le modifiche si rifletteranno in tutti gli organigrammi 
+                        e nelle visualizzazioni delle unità.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateThemePreview() {
+    const select = document.getElementById('theme_id');
+    const preview = document.getElementById('themePreview');
+    const selectedOption = select.options[select.selectedIndex];
+    
+    if (selectedOption.value && selectedOption.dataset.themeData) {
+        try {
+            const theme = JSON.parse(selectedOption.dataset.themeData);
+            
+            preview.innerHTML = `
+                <div class="theme-preview-card p-3 border rounded" 
+                     style="border-color: ${theme.primary_color} !important; border-width: ${theme.border_width}px;">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="bi bi-${theme.icon_class} me-2" 
+                           style="color: ${theme.primary_color}; font-size: 1.2rem;"></i>
+                        <span class="fw-medium" style="color: ${theme.text_color};">
+                            {{ unit_type.name }}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge" 
+                              style="background-color: ${theme.primary_color}; color: white;">
+                            ${theme.display_label}
+                        </span>
+                        <small class="text-muted">${theme.emoji_fallback}</small>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">Tema: ${theme.name}</small>
+                    </div>
+                </div>
+            `;
+        } catch (e) {
+            console.error('Error parsing theme data:', e);
+            showDefaultPreview();
+        }
+    } else {
+        showDefaultPreview();
+    }
+}
+
+function showDefaultPreview() {
+    const preview = document.getElementById('themePreview');
+    preview.innerHTML = `
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-palette" style="font-size: 2rem;"></i>
+            <p class="mt-2 mb-0">Tema default sarà utilizzato</p>
+        </div>
+    `;
+}
+
+// Initialize preview on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateThemePreview();
+});
+</script>
+{% endblock %}

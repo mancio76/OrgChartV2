@@ -3,7 +3,6 @@ Orgchart visualization and analysis routes
 """
 
 from fastapi import APIRouter, Request, Depends, HTTPException, Query
-from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
 from typing import Optional, Dict, Any, List
 import logging
@@ -11,10 +10,10 @@ from app.services.orgchart import OrgchartService
 from app.services.unit import UnitService
 from app.services.assignment import AssignmentService
 from app.services.person import PersonService
+from app.templates import templates
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-templates = Jinja2Templates(directory="templates")
 
 
 def get_orgchart_service():

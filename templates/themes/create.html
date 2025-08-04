@@ -1,0 +1,464 @@
+{% extends "base/layout.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    {% for item in breadcrumb %}
+                        {% if loop.last %}
+                            <li class="breadcrumb-item active">{{ item.name }}</li>
+                        {% else %}
+                            <li class="breadcrumb-item"><a href="{{ item.url }}">{{ item.name }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                </ol>
+            </nav>
+            <h1 class="h3 mb-1">{{ page_title }}</h1>
+            <p class="text-muted mb-0">{{ page_subtitle }}</p>
+        </div>
+    </div>
+
+    <form method="post" id="themeForm">
+        <div class="row">
+            <!-- Form Fields -->
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-palette me-2"></i>Configurazione Tema
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Basic Information -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-muted mb-3">Informazioni Base</h6>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Nome Tema *</label>
+                                    <input type="text" class="form-control" id="name" name="name" 
+                                           value="{{ form_data.name if form_data else '' }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="css_class_suffix" class="form-label">Suffisso Classe CSS *</label>
+                                    <input type="text" class="form-control" id="css_class_suffix" name="css_class_suffix" 
+                                           value="{{ form_data.css_class_suffix if form_data else '' }}" required>
+                                    <div class="form-text">Utilizzato per generare le classi CSS (es: "executive" → "unit-executive")</div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">Descrizione</label>
+                                    <textarea class="form-control" id="description" name="description" rows="2">{{ form_data.description if form_data else '' }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Display Properties -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-muted mb-3">Proprietà di Visualizzazione</h6>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="display_label" class="form-label">Etichetta Singolare *</label>
+                                    <input type="text" class="form-control" id="display_label" name="display_label" 
+                                           value="{{ form_data.display_label if form_data else '' }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="display_label_plural" class="form-label">Etichetta Plurale</label>
+                                    <input type="text" class="form-control" id="display_label_plural" name="display_label_plural" 
+                                           value="{{ form_data.display_label_plural if form_data else '' }}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="emoji_fallback" class="form-label">Emoji Fallback *</label>
+                                    <input type="text" class="form-control" id="emoji_fallback" name="emoji_fallback" 
+                                           value="{{ form_data.emoji_fallback if form_data else '🏛️' }}" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Icon and Visual -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-muted mb-3">Icona e Aspetto</h6>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="icon_class" class="form-label">Classe Icona Bootstrap *</label>
+                                    <input type="text" class="form-control" id="icon_class" name="icon_class" 
+                                           value="{{ form_data.icon_class if form_data else 'diagram-2' }}" required>
+                                    <div class="form-text">Nome dell'icona Bootstrap (es: "building", "diagram-2")</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="border_style" class="form-label">Stile Bordo *</label>
+                                    <select class="form-select" id="border_style" name="border_style" required>
+                                        <option value="solid" {{ 'selected' if form_data and form_data.border_style == 'solid' else '' }}>Solido</option>
+                                        <option value="dashed" {{ 'selected' if form_data and form_data.border_style == 'dashed' else '' }}>Tratteggiato</option>
+                                        <option value="dotted" {{ 'selected' if form_data and form_data.border_style == 'dotted' else '' }}>Punteggiato</option>
+                                        <option value="double" {{ 'selected' if form_data and form_data.border_style == 'double' else '' }}>Doppio</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Colors -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-muted mb-3">Schema Colori</h6>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="primary_color" class="form-label">Colore Primario *</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color" id="primary_color" name="primary_color" 
+                                               value="{{ form_data.primary_color if form_data else '#0dcaf0' }}" required>
+                                        <input type="text" class="form-control" id="primary_color_text" 
+                                               value="{{ form_data.primary_color if form_data else '#0dcaf0' }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="secondary_color" class="form-label">Colore Secondario *</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color" id="secondary_color" name="secondary_color" 
+                                               value="{{ form_data.secondary_color if form_data else '#f0fdff' }}" required>
+                                        <input type="text" class="form-control" id="secondary_color_text" 
+                                               value="{{ form_data.secondary_color if form_data else '#f0fdff' }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="text_color" class="form-label">Colore Testo *</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color" id="text_color" name="text_color" 
+                                               value="{{ form_data.text_color if form_data else '#0dcaf0' }}" required>
+                                        <input type="text" class="form-control" id="text_color_text" 
+                                               value="{{ form_data.text_color if form_data else '#0dcaf0' }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="border_color" class="form-label">Colore Bordo</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color" id="border_color" name="border_color" 
+                                               value="{{ form_data.border_color if form_data and form_data.border_color else '#0dcaf0' }}">
+                                        <input type="text" class="form-control" id="border_color_text" 
+                                               value="{{ form_data.border_color if form_data and form_data.border_color else '' }}"
+                                               placeholder="Usa colore primario se vuoto">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="hover_shadow_color" class="form-label">Colore Ombra Hover</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color" id="hover_shadow_color" name="hover_shadow_color" 
+                                               value="{{ form_data.hover_shadow_color if form_data and form_data.hover_shadow_color else '#0dcaf0' }}">
+                                        <input type="text" class="form-control" id="hover_shadow_color_text" 
+                                               value="{{ form_data.hover_shadow_color if form_data and form_data.hover_shadow_color else '' }}"
+                                               placeholder="Usa colore primario se vuoto">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Layout Properties -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-muted mb-3">Proprietà Layout</h6>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="border_width" class="form-label">Larghezza Bordo (px) *</label>
+                                    <input type="number" class="form-control" id="border_width" name="border_width" 
+                                           min="0" max="20" value="{{ form_data.border_width if form_data else '2' }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="hover_shadow_intensity" class="form-label">Intensità Ombra Hover *</label>
+                                    <input type="number" class="form-control" id="hover_shadow_intensity" name="hover_shadow_intensity" 
+                                           min="0" max="1" step="0.1" value="{{ form_data.hover_shadow_intensity if form_data else '0.25' }}" required>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label for="background_gradient" class="form-label">Gradiente Sfondo CSS</label>
+                                    <input type="text" class="form-control" id="background_gradient" name="background_gradient" 
+                                           value="{{ form_data.background_gradient if form_data else '' }}"
+                                           placeholder="es: linear-gradient(135deg, #ffffff 0%, #f0fdff 100%)">
+                                    <div class="form-text">Lascia vuoto per usare il gradiente automatico</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Options -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-muted mb-3">Opzioni</h6>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="high_contrast_mode" name="high_contrast_mode" 
+                                           {{ 'checked' if form_data and form_data.high_contrast_mode else '' }}>
+                                    <label class="form-check-label" for="high_contrast_mode">
+                                        Modalità Alto Contrasto
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                           {{ 'checked' if not form_data or form_data.is_active != False else '' }}>
+                                    <label class="form-check-label" for="is_active">
+                                        Tema Attivo
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CSRF Token -->
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    </div>
+                </div>
+
+                <!-- Error Display -->
+                {% if errors %}
+                <div class="alert alert-danger mt-3">
+                    <h6>Errori di validazione:</h6>
+                    <ul class="mb-0">
+                        {% for error in errors %}
+                        <li>{{ error.message }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Live Preview -->
+            <div class="col-lg-4">
+                <div class="card sticky-top" style="top: 1rem;">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-eye me-2"></i>Anteprima Live
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="themePreview" class="theme-preview">
+                            <div class="unit-box preview-unit" id="previewUnit">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-diagram-2 me-2" id="previewIcon"></i>
+                                        <span class="unit-name" id="previewLabel">Unità Organizzativa</span>
+                                    </div>
+                                    <span class="badge" id="previewBadge" style="background-color: #0dcaf0;">
+                                        <span id="previewEmoji">🏛️</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <h6>Classe CSS Generata:</h6>
+                            <code id="previewCssClass">unit-organizational</code>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <h6>Variabili CSS:</h6>
+                            <div id="previewCssVars" class="small text-muted">
+                                <div>--unit-primary: #0dcaf0</div>
+                                <div>--unit-secondary: #f0fdff</div>
+                                <div>--unit-text: #0dcaf0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between">
+                    <a href="/themes" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Annulla
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-2"></i>Crea Tema
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+.theme-preview .unit-box {
+    padding: 1rem;
+    border-radius: 0.375rem;
+    transition: all 0.3s ease;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    border: 2px solid #0dcaf0;
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdff 100%);
+}
+
+.theme-preview .unit-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 1rem 2rem rgba(13, 202, 240, 0.25);
+}
+
+.unit-name {
+    font-weight: 600;
+    color: #0dcaf0;
+}
+
+.form-control-color {
+    width: 50px;
+    height: 38px;
+    border-radius: 0.375rem 0 0 0.375rem;
+}
+
+.input-group .form-control-color + .form-control {
+    border-left: 0;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Live preview functionality
+    const form = document.getElementById('themeForm');
+    const previewUnit = document.getElementById('previewUnit');
+    const previewIcon = document.getElementById('previewIcon');
+    const previewLabel = document.getElementById('previewLabel');
+    const previewEmoji = document.getElementById('previewEmoji');
+    const previewBadge = document.getElementById('previewBadge');
+    const previewCssClass = document.getElementById('previewCssClass');
+    const previewCssVars = document.getElementById('previewCssVars');
+
+    // Color input synchronization
+    function syncColorInputs(colorInput, textInput) {
+        colorInput.addEventListener('input', function() {
+            textInput.value = this.value;
+            updatePreview();
+        });
+        
+        textInput.addEventListener('input', function() {
+            if (this.value.match(/^#[0-9A-F]{6}$/i)) {
+                colorInput.value = this.value;
+            }
+            updatePreview();
+        });
+    }
+
+    // Sync all color inputs
+    syncColorInputs(document.getElementById('primary_color'), document.getElementById('primary_color_text'));
+    syncColorInputs(document.getElementById('secondary_color'), document.getElementById('secondary_color_text'));
+    syncColorInputs(document.getElementById('text_color'), document.getElementById('text_color_text'));
+    syncColorInputs(document.getElementById('border_color'), document.getElementById('border_color_text'));
+    syncColorInputs(document.getElementById('hover_shadow_color'), document.getElementById('hover_shadow_color_text'));
+
+    // Update preview function
+    function updatePreview() {
+        const formData = new FormData(form);
+        
+        const primaryColor = formData.get('primary_color') || '#0dcaf0';
+        const secondaryColor = formData.get('secondary_color') || '#f0fdff';
+        const textColor = formData.get('text_color') || '#0dcaf0';
+        const borderColor = formData.get('border_color') || primaryColor;
+        const borderWidth = formData.get('border_width') || '2';
+        const borderStyle = formData.get('border_style') || 'solid';
+        const iconClass = formData.get('icon_class') || 'diagram-2';
+        const displayLabel = formData.get('display_label') || 'Unità Organizzativa';
+        const emojiFallback = formData.get('emoji_fallback') || '🏛️';
+        const cssClassSuffix = formData.get('css_class_suffix') || 'organizational';
+        const backgroundGradient = formData.get('background_gradient') || 
+            `linear-gradient(135deg, #ffffff 0%, ${secondaryColor} 100%)`;
+
+        // Update preview styles
+        previewUnit.style.cssText = `
+            --unit-primary: ${primaryColor};
+            --unit-secondary: ${secondaryColor};
+            --unit-text: ${textColor};
+            --unit-border: ${borderColor};
+            --unit-border-width: ${borderWidth}px;
+            border: ${borderWidth}px ${borderStyle} ${borderColor};
+            background: ${backgroundGradient};
+            padding: 1rem;
+            border-radius: 0.375rem;
+            transition: all 0.3s ease;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+        `;
+
+        // Update preview content
+        previewIcon.className = `bi bi-${iconClass} me-2`;
+        previewLabel.textContent = displayLabel;
+        previewLabel.style.color = textColor;
+        previewEmoji.textContent = emojiFallback;
+        previewBadge.style.backgroundColor = primaryColor;
+
+        // Update CSS class preview
+        previewCssClass.textContent = `unit-${cssClassSuffix}`;
+
+        // Update CSS variables preview
+        previewCssVars.innerHTML = `
+            <div>--unit-primary: ${primaryColor}</div>
+            <div>--unit-secondary: ${secondaryColor}</div>
+            <div>--unit-text: ${textColor}</div>
+            <div>--unit-border: ${borderColor}</div>
+            <div>--unit-border-width: ${borderWidth}px</div>
+        `;
+    }
+
+    // Add event listeners to all form inputs
+    form.addEventListener('input', updatePreview);
+    form.addEventListener('change', updatePreview);
+
+    // Initial preview update
+    updatePreview();
+
+    // Auto-generate CSS class suffix from name
+    document.getElementById('name').addEventListener('input', function() {
+        const cssClassSuffixInput = document.getElementById('css_class_suffix');
+        if (!cssClassSuffixInput.value || cssClassSuffixInput.dataset.autoGenerated) {
+            const suffix = this.value.toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+            cssClassSuffixInput.value = suffix;
+            cssClassSuffixInput.dataset.autoGenerated = 'true';
+        }
+    });
+
+    // Clear auto-generation flag when manually edited
+    document.getElementById('css_class_suffix').addEventListener('input', function() {
+        delete this.dataset.autoGenerated;
+    });
+});
+</script>
+
+<!-- Theme Validation JavaScript -->
+<script src="/static/js/theme-validation.js"></script>
+{% endblock %}

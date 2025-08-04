@@ -1,0 +1,181 @@
+{% extends "base/layout.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">{{ page_title }}</h1>
+                    <p class="text-muted mb-0">Gestisci i tipi di unità organizzative e i loro temi</p>
+                </div>
+                <div>
+                    <a href="/unit_types/new" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Nuovo Tipo
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <form method="get" class="d-flex">
+                <input type="text" class="form-control me-2" name="search" 
+                       placeholder="Cerca tipi di unità..." value="{{ search }}">
+                <button type="submit" class="btn btn-outline-secondary">
+                    <i class="bi bi-search"></i>
+                </button>
+                {% if search %}
+                <a href="/unit_types" class="btn btn-outline-secondary ms-2">
+                    <i class="bi bi-x"></i>
+                </a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Unit Types List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-diagram-2 me-2"></i>Tipi di Unità
+                        <span class="badge bg-secondary ms-2">{{ unit_types|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if unit_types %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Nome</th>
+                                        <th>Tema Assegnato</th>
+                                        <th>Unità Collegate</th>
+                                        <th>Anteprima</th>
+                                        <th class="text-end">Azioni</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for unit_type in unit_types %}
+                                    {% set theme = unit_type.effective_theme %}
+                                    <tr>
+                                        <td>
+                                            <div>
+                                                <h6 class="mb-1">{{ unit_type.name }}</h6>
+                                                {% if unit_type.short_name %}
+                                                <small class="text-muted">{{ unit_type.short_name }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if unit_type.theme %}
+                                                <div class="d-flex align-items-center">
+                                                    <div class="theme-color-indicator me-2" 
+                                                         style="width: 16px; height: 16px; border-radius: 50%; background-color: {{ theme.primary_color }};"></div>
+                                                    <div>
+                                                        <span class="fw-medium">{{ theme.name }}</span>
+                                                        {% if theme.is_default %}
+                                                        <span class="badge bg-info ms-1">Default</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted">
+                                                    <i class="bi bi-arrow-right me-1"></i>Tema Default
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark">
+                                                {{ unit_type.units_count }} unità
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="theme-preview-mini d-flex align-items-center">
+                                                <i class="bi bi-{{ theme.icon_class }} me-2" 
+                                                   style="color: {{ theme.primary_color }};"></i>
+                                                <span class="badge" 
+                                                      style="background-color: {{ theme.primary_color }}; color: {{ theme.text_color }};">
+                                                    {{ theme.display_label }}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="/unit_types/{{ unit_type.id }}" 
+                                                   class="btn btn-outline-primary" title="Visualizza">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <a href="/unit_types/{{ unit_type.id }}/edit" 
+                                                   class="btn btn-outline-secondary" title="Modifica">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                {% if unit_type.units_count == 0 %}
+                                                <button type="button" class="btn btn-outline-danger" 
+                                                        title="Elimina" onclick="confirmDelete({{ unit_type.id }}, '{{ unit_type.name }}')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-diagram-2 text-muted" style="font-size: 3rem;"></i>
+                            <h5 class="text-muted mt-3">Nessun tipo di unità trovato</h5>
+                            {% if search %}
+                            <p class="text-muted">Prova a modificare i criteri di ricerca</p>
+                            <a href="/unit_types" class="btn btn-outline-primary">Visualizza tutti</a>
+                            {% else %}
+                            <p class="text-muted">Inizia creando il primo tipo di unità</p>
+                            <a href="/unit_types/new" class="btn btn-primary">Crea Tipo di Unità</a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Conferma Eliminazione</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Sei sicuro di voler eliminare il tipo di unità <strong id="deleteItemName"></strong>?</p>
+                <p class="text-muted small">Questa azione non può essere annullata.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Elimina</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(unitTypeId, unitTypeName) {
+    document.getElementById('deleteItemName').textContent = unitTypeName;
+    document.getElementById('deleteForm').action = `/unit_types/${unitTypeId}/delete`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

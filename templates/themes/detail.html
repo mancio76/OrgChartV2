@@ -1,0 +1,420 @@
+{% extends "base/layout.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    {% for item in breadcrumb %}
+                        {% if loop.last %}
+                            <li class="breadcrumb-item active">{{ item.name }}</li>
+                        {% else %}
+                            <li class="breadcrumb-item"><a href="{{ item.url }}">{{ item.name }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h1 class="h3 mb-1">{{ page_title }}</h1>
+                    {% if theme.description %}
+                    <p class="text-muted mb-0">{{ theme.description }}</p>
+                    {% endif %}
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="/themes/{{ theme.id }}/edit" class="btn btn-primary">
+                        <i class="bi bi-pencil me-2"></i>Modifica
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <button class="dropdown-item" onclick="cloneTheme({{ theme.id }}, '{{ theme.name }}')">
+                                    <i class="bi bi-files me-2"></i>Clona Tema
+                                </button>
+                            </li>
+                            {% if can_delete %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <button class="dropdown-item text-danger" onclick="deleteTheme({{ theme.id }}, '{{ theme.name }}')">
+                                    <i class="bi bi-trash me-2"></i>Elimina
+                                </button>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Theme Preview -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-eye me-2"></i>Anteprima Tema
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="theme-preview mb-3">
+                        <div class="unit-box {{ theme.generate_css_class_name() }}" 
+                             style="--unit-primary: {{ theme.primary_color }}; 
+                                    --unit-secondary: {{ theme.secondary_color }}; 
+                                    --unit-text: {{ theme.text_color }}; 
+                                    --unit-border: {{ theme.computed_border_color }}; 
+                                    --unit-border-width: {{ theme.border_width }}px;">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-{{ theme.icon_class }} me-2"></i>
+                                    <span class="unit-name">{{ theme.display_label }}</span>
+                                </div>
+                                <span class="badge" style="background-color: {{ theme.primary_color }};">
+                                    {{ theme.emoji_fallback }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Badges -->
+                    <div class="mb-3">
+                        {% if theme.is_default %}
+                            <span class="badge bg-primary me-2">Tema Predefinito</span>
+                        {% endif %}
+                        {% if theme.is_active %}
+                            <span class="badge bg-success">Attivo</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Inattivo</span>
+                        {% endif %}
+                        {% if theme.high_contrast_mode %}
+                            <span class="badge bg-info">Alto Contrasto</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Color Palette -->
+                    <div class="color-palette-display">
+                        <h6>Palette Colori</h6>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="color-swatch">
+                                    <div class="color-circle" style="background-color: {{ theme.primary_color }}"></div>
+                                    <small class="text-muted">Primario<br>{{ theme.primary_color }}</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="color-swatch">
+                                    <div class="color-circle" style="background-color: {{ theme.secondary_color }}"></div>
+                                    <small class="text-muted">Secondario<br>{{ theme.secondary_color }}</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="color-swatch">
+                                    <div class="color-circle" style="background-color: {{ theme.text_color }}"></div>
+                                    <small class="text-muted">Testo<br>{{ theme.text_color }}</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="color-swatch">
+                                    <div class="color-circle" style="background-color: {{ theme.computed_border_color }}"></div>
+                                    <small class="text-muted">Bordo<br>{{ theme.computed_border_color }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Theme Details -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>Dettagli Tema
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Basic Properties -->
+                        <div class="col-md-6 mb-4">
+                            <h6 class="text-muted mb-3">Proprietà Base</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td class="text-muted">Nome:</td>
+                                    <td>{{ theme.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Classe CSS:</td>
+                                    <td><code>{{ theme.generate_css_class_name() }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Suffisso:</td>
+                                    <td><code>{{ theme.css_class_suffix }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Icona:</td>
+                                    <td>
+                                        <i class="bi bi-{{ theme.icon_class }} me-2"></i>
+                                        <code>{{ theme.icon_class }}</code>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Emoji:</td>
+                                    <td>{{ theme.emoji_fallback }}</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Display Properties -->
+                        <div class="col-md-6 mb-4">
+                            <h6 class="text-muted mb-3">Etichette</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td class="text-muted">Singolare:</td>
+                                    <td>{{ theme.display_label }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Plurale:</td>
+                                    <td>{{ theme.computed_display_label_plural }}</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Layout Properties -->
+                        <div class="col-md-6 mb-4">
+                            <h6 class="text-muted mb-3">Layout</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td class="text-muted">Larghezza Bordo:</td>
+                                    <td>{{ theme.border_width }}px</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Stile Bordo:</td>
+                                    <td>{{ theme.border_style }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Intensità Ombra:</td>
+                                    <td>{{ theme.hover_shadow_intensity }}</td>
+                                </tr>
+                                {% if theme.background_gradient %}
+                                <tr>
+                                    <td class="text-muted">Gradiente:</td>
+                                    <td><code class="small">{{ theme.background_gradient }}</code></td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+
+                        <!-- Metadata -->
+                        <div class="col-md-6 mb-4">
+                            <h6 class="text-muted mb-3">Metadati</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td class="text-muted">Creato:</td>
+                                    <td>{{ theme.datetime_created.strftime('%d/%m/%Y %H:%M') if theme.datetime_created else 'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Modificato:</td>
+                                    <td>{{ theme.datetime_updated.strftime('%d/%m/%Y %H:%M') if theme.datetime_updated else 'N/A' }}</td>
+                                </tr>
+                                {% if theme.created_by %}
+                                <tr>
+                                    <td class="text-muted">Creato da:</td>
+                                    <td>{{ theme.created_by }}</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Usage Information -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-link-45deg me-2"></i>Utilizzo del Tema
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if unit_types_using_theme %}
+                        <p class="text-muted mb-3">
+                            Questo tema è utilizzato da {{ unit_types_using_theme|length }} tipo/i di unità:
+                        </p>
+                        <div class="row">
+                            {% for unit_type in unit_types_using_theme %}
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="card border-0 bg-light">
+                                    <div class="card-body py-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h6 class="mb-1">{{ unit_type.name }}</h6>
+                                                <small class="text-muted">{{ unit_type.units_count }} unità</small>
+                                            </div>
+                                            <a href="/units?unit_type={{ unit_type.id }}" class="btn btn-sm btn-outline-primary">
+                                                Visualizza
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if not can_delete %}
+                        <div class="alert alert-warning mt-3">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Impossibile eliminare:</strong> {{ delete_reason }}
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-link-slash display-4 text-muted"></i>
+                            <h5 class="mt-3">Tema Non Utilizzato</h5>
+                            <p class="text-muted">
+                                Questo tema non è attualmente assegnato a nessun tipo di unità.
+                            </p>
+                            <a href="/themes/assign/unit-types" class="btn btn-primary">
+                                <i class="bi bi-link-45deg me-2"></i>Assegna a Tipi di Unità
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSS Code Preview -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-code-slash me-2"></i>CSS Generato
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <pre><code class="language-css">{{ theme.generate_css_rules() }}</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Clone Theme Modal -->
+<div class="modal fade" id="cloneThemeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Clona Tema</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="cloneThemeForm" method="post">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="newThemeName" class="form-label">Nome del nuovo tema</label>
+                        <input type="text" class="form-control" id="newThemeName" name="new_name" required>
+                        <div class="form-text">Il nuovo tema sarà una copia esatta con questo nome.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-primary">Clona Tema</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Theme Modal -->
+<div class="modal fade" id="deleteThemeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Elimina Tema</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Sei sicuro di voler eliminare il tema <strong id="deleteThemeName"></strong>?</p>
+                <p class="text-danger">Questa azione non può essere annullata.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <form id="deleteThemeForm" method="post" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Elimina</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.theme-preview .unit-box {
+    padding: 1rem;
+    border-radius: 0.375rem;
+    transition: all 0.3s ease;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    border: {{ theme.border_width }}px {{ theme.border_style }} {{ theme.computed_border_color }};
+    background: {{ theme.background_gradient or 'linear-gradient(135deg, #ffffff 0%, ' + theme.secondary_color + ' 100%)' }};
+}
+
+.theme-preview .unit-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 1rem 2rem {{ theme._add_opacity_to_color(theme.computed_hover_shadow_color, theme.hover_shadow_intensity) }};
+}
+
+.unit-name {
+    font-weight: 600;
+    color: {{ theme.text_color }};
+}
+
+.color-swatch {
+    text-align: center;
+    padding: 0.5rem;
+}
+
+.color-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,0,0,0.1);
+    margin: 0 auto 0.5rem;
+}
+
+.color-palette-display {
+    margin-top: 1rem;
+}
+
+pre code {
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+</style>
+
+<script>
+function cloneTheme(themeId, themeName) {
+    document.getElementById('newThemeName').value = themeName + ' - Copia';
+    document.getElementById('cloneThemeForm').action = `/themes/${themeId}/clone`;
+    new bootstrap.Modal(document.getElementById('cloneThemeModal')).show();
+}
+
+function deleteTheme(themeId, themeName) {
+    document.getElementById('deleteThemeName').textContent = themeName;
+    document.getElementById('deleteThemeForm').action = `/themes/${themeId}/delete`;
+    new bootstrap.Modal(document.getElementById('deleteThemeModal')).show();
+}
+</script>
+{% endblock %}

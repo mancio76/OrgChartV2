@@ -1,0 +1,322 @@
+{% extends "base/layout.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">{{ page_title }}</h1>
+                    <p class="text-muted mb-0">{{ page_subtitle }}</p>
+                </div>
+                <div>
+                    <div class="btn-group me-2">
+                        <a href="/themes/analytics/dashboard" class="btn btn-outline-info">
+                            <i class="bi bi-speedometer2 me-2"></i>Dashboard Analisi
+                        </a>
+                        <a href="/themes/analytics/usage-report" class="btn btn-outline-info">
+                            <i class="bi bi-file-text me-2"></i>Report Utilizzo
+                        </a>
+                    </div>
+                    <div class="btn-group">
+                        <a href="/themes/new" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i>Nuovo Tema
+                        </a>
+                        <a href="/themes/assign/unit-types" class="btn btn-outline-secondary">
+                            <i class="bi bi-link-45deg me-2"></i>Assegna Temi
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <form method="get" class="d-flex">
+                <input type="text" name="search" class="form-control" 
+                       placeholder="Cerca temi..." value="{{ search }}"
+                       aria-label="Cerca temi">
+                <button type="submit" class="btn btn-outline-secondary ms-2">
+                    <i class="bi bi-search"></i>
+                </button>
+                {% if search %}
+                <a href="/themes" class="btn btn-outline-secondary ms-2">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Usage Statistics -->
+    {% if usage_stats %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-bar-chart me-2"></i>Statistiche Utilizzo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h3 class="text-primary">{{ usage_stats.total_themes }}</h3>
+                                <p class="text-muted mb-0">Temi Totali</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h3 class="text-success">{{ usage_stats.active_themes }}</h3>
+                                <p class="text-muted mb-0">Temi Attivi</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h3 class="text-info">{{ usage_stats.total_usage }}</h3>
+                                <p class="text-muted mb-0">Utilizzi Totali</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h3 class="text-warning">{{ usage_stats.unused_themes_count }}</h3>
+                                <p class="text-muted mb-0">Temi Non Utilizzati</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Themes List -->
+    <div class="row">
+        {% if themes %}
+            {% for theme in themes %}
+            <div class="col-lg-6 col-xl-4 mb-4">
+                <div class="card h-100 theme-card" data-theme-id="{{ theme.id }}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <h6 class="card-title mb-0">{{ theme.name }}</h6>
+                            {% if theme.is_default %}
+                                <span class="badge bg-primary ms-2">Default</span>
+                            {% endif %}
+                            {% if not theme.is_active %}
+                                <span class="badge bg-secondary ms-2">Inattivo</span>
+                            {% endif %}
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                    type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/themes/{{ theme.id }}">
+                                    <i class="bi bi-eye me-2"></i>Visualizza
+                                </a></li>
+                                <li><a class="dropdown-item" href="/themes/{{ theme.id }}/edit">
+                                    <i class="bi bi-pencil me-2"></i>Modifica
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <button class="dropdown-item" onclick="cloneTheme({{ theme.id }}, '{{ theme.name }}')">
+                                        <i class="bi bi-files me-2"></i>Clona
+                                    </button>
+                                </li>
+                                {% if theme.usage_count == 0 and not theme.is_default %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <button class="dropdown-item text-danger" 
+                                            onclick="deleteTheme({{ theme.id }}, '{{ theme.name }}')">
+                                        <i class="bi bi-trash me-2"></i>Elimina
+                                    </button>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <!-- Theme Preview -->
+                        <div class="theme-preview mb-3">
+                            <div class="unit-box {{ theme.generate_css_class_name() }}" 
+                                 style="--unit-primary: {{ theme.primary_color }}; 
+                                        --unit-secondary: {{ theme.secondary_color }}; 
+                                        --unit-text: {{ theme.text_color }}; 
+                                        --unit-border: {{ theme.computed_border_color }}; 
+                                        --unit-border-width: {{ theme.border_width }}px;">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-{{ theme.icon_class }} me-2"></i>
+                                        <span class="unit-name">{{ theme.display_label }}</span>
+                                    </div>
+                                    <span class="badge" style="background-color: {{ theme.primary_color }};">
+                                        {{ theme.emoji_fallback }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Theme Details -->
+                        {% if theme.description %}
+                        <p class="text-muted small mb-2">{{ theme.description }}</p>
+                        {% endif %}
+                        
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <small class="text-muted">Utilizzi</small>
+                                <div class="fw-bold">{{ theme.usage_count }}</div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Classe CSS</small>
+                                <div class="fw-bold small">{{ theme.css_class_suffix }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                Creato: {{ theme.datetime_created.strftime('%d/%m/%Y') if theme.datetime_created else 'N/A' }}
+                            </small>
+                            <div class="color-palette">
+                                <span class="color-dot" style="background-color: {{ theme.primary_color }}" 
+                                      title="Colore primario"></span>
+                                <span class="color-dot" style="background-color: {{ theme.secondary_color }}" 
+                                      title="Colore secondario"></span>
+                                <span class="color-dot" style="background-color: {{ theme.text_color }}" 
+                                      title="Colore testo"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="bi bi-palette display-1 text-muted"></i>
+                    <h3 class="mt-3">Nessun tema trovato</h3>
+                    <p class="text-muted">
+                        {% if search %}
+                            Nessun tema corrisponde ai criteri di ricerca.
+                        {% else %}
+                            Inizia creando il tuo primo tema personalizzato.
+                        {% endif %}
+                    </p>
+                    {% if not search %}
+                    <a href="/themes/new" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Crea Primo Tema
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Clone Theme Modal -->
+<div class="modal fade" id="cloneThemeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Clona Tema</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="cloneThemeForm" method="post">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="newThemeName" class="form-label">Nome del nuovo tema</label>
+                        <input type="text" class="form-control" id="newThemeName" name="new_name" required>
+                        <div class="form-text">Il nuovo tema sarà una copia esatta con questo nome.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-primary">Clona Tema</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Theme Modal -->
+<div class="modal fade" id="deleteThemeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Elimina Tema</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Sei sicuro di voler eliminare il tema <strong id="deleteThemeName"></strong>?</p>
+                <p class="text-danger">Questa azione non può essere annullata.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <form id="deleteThemeForm" method="post" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Elimina</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.theme-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.theme-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.theme-preview .unit-box {
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    transition: all 0.3s ease;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+}
+
+.color-palette {
+    display: flex;
+    gap: 4px;
+}
+
+.color-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,0,0,0.1);
+    display: inline-block;
+}
+
+.unit-name {
+    font-weight: 600;
+}
+</style>
+
+<script>
+function cloneTheme(themeId, themeName) {
+    document.getElementById('newThemeName').value = themeName + ' - Copia';
+    document.getElementById('cloneThemeForm').action = `/themes/${themeId}/clone`;
+    new bootstrap.Modal(document.getElementById('cloneThemeModal')).show();
+}
+
+function deleteTheme(themeId, themeName) {
+    document.getElementById('deleteThemeName').textContent = themeName;
+    document.getElementById('deleteThemeForm').action = `/themes/${themeId}/delete`;
+    new bootstrap.Modal(document.getElementById('deleteThemeModal')).show();
+}
+</script>
+{% endblock %}

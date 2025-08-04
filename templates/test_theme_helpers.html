@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Theme Helpers</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Theme Helper Functions Test</h1>
+        
+        {% if unit %}
+        <div class="card">
+            <div class="card-header">
+                <h5>Unit: {{ unit.name }}</h5>
+            </div>
+            <div class="card-body">
+                <!-- Test get_unit_theme_data -->
+                {% set theme = get_unit_theme_data(unit) %}
+                <p><strong>Theme Name:</strong> {{ theme.name }}</p>
+                
+                <!-- Test render_unit_icon -->
+                <p><strong>Icon:</strong> {{ render_unit_icon(unit) | safe }}</p>
+                
+                <!-- Test get_unit_css_classes -->
+                <p><strong>CSS Classes:</strong> {{ get_unit_css_classes(unit) }}</p>
+                
+                <!-- Test get_unit_theme_badge_text -->
+                <p><strong>Badge Text:</strong> {{ get_unit_theme_badge_text(unit) }}</p>
+                
+                <!-- Test get_unit_theme_emoji -->
+                <p><strong>Emoji:</strong> {{ get_unit_theme_emoji(unit) }}</p>
+                
+                <!-- Test get_unit_theme_colors -->
+                {% set colors = get_unit_theme_colors(unit) %}
+                <p><strong>Colors:</strong></p>
+                <ul>
+                    <li>Primary: {{ colors.primary }}</li>
+                    <li>Secondary: {{ colors.secondary }}</li>
+                    <li>Text: {{ colors.text }}</li>
+                    <li>Border: {{ colors.border }}</li>
+                </ul>
+                
+                <!-- Test render_unit_css_variables -->
+                <div class="unit-box" style="{{ render_unit_css_variables(unit) }}; border: var(--unit-border-width) solid var(--unit-border); background: var(--unit-secondary); color: var(--unit-text); padding: 1rem; margin: 1rem 0;">
+                    <strong>Styled with theme variables:</strong> {{ unit.name }}
+                </div>
+                
+                <!-- Test is_unit_theme_high_contrast -->
+                <p><strong>High Contrast Mode:</strong> {{ is_unit_theme_high_contrast(unit) }}</p>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+            No unit data provided for testing.
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

@@ -76,11 +76,19 @@
                         <td class="fw-bold">{{ person_name }}</td>
                         <td>
                             {% for skill in person_data.skills %}
-                            <div class="skill-item mb-2">
+                            <div class="skill-item mb-2" {% if skill.unit_theme_primary_color %}style="border-left-color: {{ skill.unit_theme_primary_color }};"{% endif %}>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <strong>{{ skill.area }}</strong>
-                                        <br><small class="text-muted">{{ skill.role }}</small>
+                                    <div class="d-flex align-items-center">
+                                        {% if skill.unit_theme_icon_class %}
+                                        <i class="bi bi-{{ skill.unit_theme_icon_class }} me-2" style="color: {{ skill.unit_theme_primary_color or 'var(--bs-primary)' }};"></i>
+                                        {% endif %}
+                                        <div>
+                                            <strong>{{ skill.area }}</strong>
+                                            <br><small class="text-muted">{{ skill.role }}</small>
+                                            {% if skill.unit_name %}
+                                            <br><small class="text-muted">{{ skill.unit_name }}</small>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                     <span class="badge bg-{{ 'success' if skill.level == 'Expert' else 'info' if skill.level == 'Experienced' else 'secondary' }}">
                                         {{ skill.level }}
@@ -157,11 +165,17 @@
                         </td>
                         <td>
                             {% for assignment in person_data.assignments %}
-                            <div class="assignment-item mb-1">
+                            {% set unit_theme = get_theme_css_class_by_id(assignment.unit_theme_id) if assignment.unit_theme_id else None %}
+                            <div class="assignment-item mb-1" {% if assignment.unit_theme_primary_color %}style="border-left-color: {{ assignment.unit_theme_primary_color }};"{% endif %}>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <small class="fw-medium">{{ assignment.unit_name }}</small>
-                                        <br><small class="text-muted">{{ assignment.job_title_name }}</small>
+                                    <div class="d-flex align-items-center">
+                                        {% if assignment.unit_theme_icon_class %}
+                                        <i class="bi bi-{{ assignment.unit_theme_icon_class }} me-2" style="color: {{ assignment.unit_theme_primary_color or 'var(--bs-primary)' }};"></i>
+                                        {% endif %}
+                                        <div>
+                                            <small class="fw-medium">{{ assignment.unit_name }}</small>
+                                            <br><small class="text-muted">{{ assignment.job_title_name }}</small>
+                                        </div>
                                     </div>
                                     <div class="d-flex align-items-center gap-1">
                                         <span class="badge bg-light text-dark">
@@ -171,7 +185,7 @@
                                         <span class="badge bg-warning">Interim</span>
                                         {% endif %}
                                         {% if assignment.is_unit_boss %}
-                                        <span class="badge bg-info">Boss</span>
+                                        <span class="badge" style="background-color: {{ assignment.unit_theme_primary_color or '#0dcaf0' }}; color: white;">Boss</span>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -269,20 +283,27 @@
                 </div>
                 <div class="row">
                     {% for unit in units %}
+                    {% set theme = get_unit_theme_data(unit) %}
                     <div class="col-md-6 col-lg-4 mb-3">
-                        <div class="card border-{{ 'primary' if level == 0 else 'secondary' }}">
+                        <div class="card" style="border-color: {{ theme.primary_color }}; border-width: {{ '2px' if level == 0 else '1px' }};">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div class="flex-grow-1">
-                                        <h6 class="card-title mb-1">{{ unit.name }}</h6>
+                                        <div class="d-flex align-items-center mb-2">
+                                            {{ render_unit_icon(unit, "bi me-2") }}
+                                            <h6 class="card-title mb-0" style="color: {{ theme.text_color }};">{{ unit.name }}</h6>
+                                        </div>
                                         <div class="unit-stats">
-                                            <span class="badge bg-light text-dark">
+                                            <span class="badge" style="background-color: {{ theme.secondary_color }}; color: {{ theme.text_color }};">
                                                 <i class="bi bi-people me-1"></i>{{ unit.person_count }}
+                                            </span>
+                                            <span class="badge" style="background-color: {{ theme.primary_color }}; color: white;">
+                                                {{ get_unit_theme_badge_text(unit) }}
                                             </span>
                                         </div>
                                     </div>
                                     <div class="btn-group-vertical btn-group-sm">
-                                        <a href="/orgchart/unit/{{ unit.id }}" class="btn btn-outline-primary">
+                                        <a href="/orgchart/unit/{{ unit.id }}" class="btn btn-outline-primary" style="border-color: {{ theme.primary_color }}; color: {{ theme.primary_color }};">
                                             <i class="bi bi-diagram-3"></i>
                                         </a>
                                         <a href="/units/{{ unit.id }}" class="btn btn-outline-secondary">
@@ -353,6 +374,12 @@
     background: rgba(0, 0, 0, 0.02);
     border-radius: 0.25rem;
     border-left: 3px solid var(--bs-primary);
+    transition: all 0.3s ease;
+}
+
+.skill-item:hover {
+    background: rgba(0, 0, 0, 0.05);
+    transform: translateX(2px);
 }
 
 .assignment-item {
@@ -360,6 +387,12 @@
     background: rgba(0, 0, 0, 0.02);
     border-radius: 0.25rem;
     border-left: 2px solid var(--bs-info);
+    transition: all 0.3s ease;
+}
+
+.assignment-item:hover {
+    background: rgba(0, 0, 0, 0.05);
+    transform: translateX(2px);
 }
 
 .hierarchy-level {

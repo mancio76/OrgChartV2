@@ -40,17 +40,18 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-8">
+                        {% set theme = get_unit_theme_data(unit_detail.unit) %}
                         <div class="d-flex align-items-center mb-3">
-                            <div class="unit-icon me-3">
-                                <i class="bi bi-{{ 'building' if unit_detail.unit.unit_type_id == 1 else 'diagram-2' }} fs-1 text-primary"></i>
+                            <div class="unit-icon me-3" style="{{ render_unit_css_variables(unit_detail.unit) }}">
+                                {{ render_unit_icon(unit_detail.unit, "fs-1") | safe }}
                             </div>
                             <div>
                                 <h4 class="mb-0">{{ unit_detail.unit.name }}</h4>
                                 {% if unit_detail.unit.short_name %}
                                 <p class="text-muted mb-0">{{ unit_detail.unit.short_name }}</p>
                                 {% endif %}
-                                <span class="badge bg-{{ 'primary' if unit_detail.unit.unit_type_id == 1 else 'info' }} mt-1">
-                                    {{ 'Funzione' if unit_detail.unit.unit_type_id == 1 else 'Unità Organizzativa' }}
+                                <span class="badge mt-1" style="background-color: {{ theme.primary_color }}; color: white;">
+                                    {{ get_unit_theme_badge_text(unit_detail.unit) }}
                                 </span>
                             </div>
                         </div>
@@ -217,13 +218,14 @@
             <div class="card-body">
                 <div class="row">
                     {% for child in unit_detail.children %}
+                    {% set child_theme = get_unit_theme_data(child) %}
                     <div class="col-md-6 col-lg-4 mb-3">
-                        <div class="card border-{{ 'primary' if child.unit_type_id == 1 else 'info' }}">
+                        <div class="card" style="border-color: {{ child_theme.primary_color }}; border-width: {{ child_theme.border_width }}px;">
                             <div class="card-body">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div class="flex-grow-1">
-                                        <h6 class="card-title mb-1">
-                                            <i class="bi bi-{{ 'building' if child.unit_type_id == 1 else 'diagram-2' }} me-2"></i>
+                                        <h6 class="card-title mb-1" style="color: {{ child_theme.text_color }};">
+                                            {{ render_unit_icon(child, "me-2") | safe }}
                                             {{ child.name }}
                                         </h6>
                                         {% if child.short_name %}
@@ -454,7 +456,8 @@
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    background: rgba(13, 110, 253, 0.1);
+    background: color-mix(in srgb, var(--unit-primary, #0dcaf0) 10%, transparent);
+    color: var(--unit-primary, #0dcaf0);
     display: flex;
     align-items: center;
     justify-content: center;

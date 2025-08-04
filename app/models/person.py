@@ -135,6 +135,53 @@ class Person(BaseModel):
         
         return errors
     
+    def _validate_for_create(self, person: 'Person') -> None:
+        """Enhanced validation with error messages"""
+
+        # Check name uniqueness
+        if person.name:
+            existing = self.db_manager.fetch_one(
+                "SELECT id, name FROM persons WHERE LOWER(name) = LOWER(?) AND id != ?",
+                (person.name, person.id or -1)
+            )
+            if existing:
+                raise ServiceValidationException(
+                    f"Name '{person.name}' is already used by '{existing['name']} with id={existing['id']}'"
+                )
+
+        # Check name uniqueness
+        if person.last_name and person.first_name:
+            existing = self.db_manager.fetch_one(
+                "SELECT id, name FROM persons WHERE LOWER(first_name) = LOWER(?) AND LOWER(last_name) = LOWER(?) AND id != ?",
+                (person.first_name, person.last_name, person.id or -1)
+            )
+            if existing:
+                raise ServiceValidationException(
+                    f"FirstName '{person.first_name}' and LastName '{person.last_name}' are already used by '{existing['name']} with id={existing['id']}'"
+                )
+
+        # Check email uniqueness
+        if person.email:
+            existing = self.db_manager.fetch_one(
+                "SELECT id, name FROM persons WHERE LOWER(email) = LOWER(?) AND id != ?",
+                (person.email, person.id or -1)
+            )
+            if existing:
+                raise ServiceValidationException(
+                    f"Email '{person.email}' is already used by '{existing['name']}'"
+                )
+        
+        # Check registration number uniqueness
+        if person.registration_no:
+            existing = self.db_manager.fetch_one(
+                "SELECT id, name FROM persons WHERE registration_no = ? AND id != ?",
+                (person.registration_no, person.id or -1)
+            )
+            if existing:
+                raise ServiceValidationException(
+                    f"Registration number '{person.registration_no}' is already used by '{existing['name']}'"
+                )
+
     def _is_valid_email(self, email: str) -> bool:
         """Email validation with comprehensive regex pattern"""
         if not email or not email.strip():

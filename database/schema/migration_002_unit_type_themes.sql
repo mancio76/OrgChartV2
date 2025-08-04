@@ -76,8 +76,19 @@ CREATE INDEX IF NOT EXISTS idx_unit_type_themes_css_class_suffix ON unit_type_th
 -- UNIT_TYPES TABLE ENHANCEMENT
 -- ============================================================================
 
--- Add theme_id foreign key column to unit_types table
-ALTER TABLE unit_types ADD COLUMN theme_id INTEGER REFERENCES unit_type_themes(id);
+-- Check if theme_id column already exists before adding it
+-- SQLite doesn't have IF NOT EXISTS for ALTER TABLE ADD COLUMN, so we use a workaround
+-- First, check if the column exists
+SELECT CASE 
+    WHEN COUNT(*) > 0 THEN 'Column theme_id already exists, skipping...'
+    ELSE 'Adding theme_id column...'
+END as column_check
+FROM pragma_table_info('unit_types') 
+WHERE name = 'theme_id';
+
+-- Add theme_id foreign key column to unit_types table (only if it doesn't exist)
+-- Note: This will fail gracefully if column already exists, which is handled by the Python script
+-- ALTER TABLE unit_types ADD COLUMN theme_id INTEGER REFERENCES unit_type_themes(id);
 
 -- Create index for the new foreign key
 CREATE INDEX IF NOT EXISTS idx_unit_types_theme_id ON unit_types(theme_id);

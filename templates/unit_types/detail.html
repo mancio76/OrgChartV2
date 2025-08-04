@@ -1,0 +1,285 @@
+{% extends "base/layout.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/unit_types">Tipi di Unità</a></li>
+                    <li class="breadcrumb-item active">{{ unit_type.name }}</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">{{ unit_type.name }}</h1>
+                    {% if unit_type.short_name %}
+                    <p class="text-muted mb-0">{{ unit_type.short_name }}</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <a href="/unit_types/{{ unit_type.id }}/edit" class="btn btn-primary">
+                        <i class="bi bi-pencil me-2"></i>Modifica
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Basic Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>Informazioni Generali
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">Nome:</dt>
+                        <dd class="col-sm-9">{{ unit_type.name }}</dd>
+                        
+                        {% if unit_type.short_name %}
+                        <dt class="col-sm-3">Nome Breve:</dt>
+                        <dd class="col-sm-9">{{ unit_type.short_name }}</dd>
+                        {% endif %}
+                        
+                        {% if unit_type.level %}
+                        <dt class="col-sm-3">Livello Gerarchico:</dt>
+                        <dd class="col-sm-9">{{ unit_type.level }}</dd>
+                        {% endif %}
+                        
+                        <dt class="col-sm-3">Unità Collegate:</dt>
+                        <dd class="col-sm-9">
+                            <span class="badge bg-light text-dark">{{ unit_type.units_count }} unità</span>
+                        </dd>
+                        
+                        {% if unit_type.aliases %}
+                        <dt class="col-sm-3">Alias:</dt>
+                        <dd class="col-sm-9">
+                            {% for alias in unit_type.aliases %}
+                            <span class="badge bg-secondary me-1">{{ alias.value }}</span>
+                            {% endfor %}
+                        </dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Associated Units -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-diagram-3 me-2"></i>Unità Associate
+                        <span class="badge bg-secondary ms-2">{{ units|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if units %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Nome Unità</th>
+                                        <th>Nome Breve</th>
+                                        <th>Unità Padre</th>
+                                        <th>Data Inizio</th>
+                                        <th class="text-end">Azioni</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for unit in units %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                {% set theme = unit_type.effective_theme %}
+                                                <i class="bi bi-{{ theme.icon_class }} me-2" 
+                                                   style="color: {{ theme.primary_color }};"></i>
+                                                <span>{{ unit.name }}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if unit.short_name %}
+                                            <span class="text-muted">{{ unit.short_name }}</span>
+                                            {% else %}
+                                            <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if unit.parent_unit_id %}
+                                            <span class="text-muted">ID: {{ unit.parent_unit_id }}</span>
+                                            {% else %}
+                                            <span class="text-muted">Radice</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if unit.start_date %}
+                                            <span class="text-muted">{{ unit.start_date.strftime('%d/%m/%Y') }}</span>
+                                            {% else %}
+                                            <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <a href="/units/{{ unit.id }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-diagram-3 text-muted" style="font-size: 2rem;"></i>
+                            <h6 class="text-muted mt-2">Nessuna unità associata</h6>
+                            <p class="text-muted small">Le unità create con questo tipo appariranno qui</p>
+                            <a href="/units/new" class="btn btn-outline-primary">
+                                <i class="bi bi-plus-circle me-1"></i>Crea Unità
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Theme Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-palette me-2"></i>Tema Visuale
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% set theme = unit_type.effective_theme %}
+                    
+                    <!-- Theme Preview -->
+                    <div class="theme-preview-card p-3 border rounded mb-3" 
+                         style="border-color: {{ theme.primary_color }} !important; border-width: {{ theme.border_width }}px;">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-{{ theme.icon_class }} me-2" 
+                               style="color: {{ theme.primary_color }}; font-size: 1.2rem;"></i>
+                            <span class="fw-medium" style="color: {{ theme.text_color }};">
+                                {{ unit_type.name }}
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge" 
+                                  style="background-color: {{ theme.primary_color }}; color: white;">
+                                {{ theme.display_label }}
+                            </span>
+                            <small class="text-muted">{{ theme.emoji_fallback }}</small>
+                        </div>
+                    </div>
+
+                    <!-- Theme Details -->
+                    <dl class="row small">
+                        <dt class="col-5">Tema:</dt>
+                        <dd class="col-7">
+                            {% if unit_type.theme %}
+                            <a href="/themes/{{ theme.id }}" class="text-decoration-none">
+                                {{ theme.name }}
+                            </a>
+                            {% if theme.is_default %}
+                            <span class="badge bg-info ms-1">Default</span>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-muted">Tema Default</span>
+                            {% endif %}
+                        </dd>
+                        
+                        <dt class="col-5">Colore Primario:</dt>
+                        <dd class="col-7">
+                            <div class="d-flex align-items-center">
+                                <div class="theme-color-indicator me-2" 
+                                     style="width: 16px; height: 16px; border-radius: 50%; background-color: {{ theme.primary_color }};"></div>
+                                <code class="small">{{ theme.primary_color }}</code>
+                            </div>
+                        </dd>
+                        
+                        <dt class="col-5">Icona:</dt>
+                        <dd class="col-7">
+                            <i class="bi bi-{{ theme.icon_class }} me-1"></i>
+                            <code class="small">{{ theme.icon_class }}</code>
+                        </dd>
+                    </dl>
+
+                    <div class="mt-3">
+                        <a href="/unit_types/{{ unit_type.id }}/edit" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-pencil me-1"></i>Cambia Tema
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-gear me-2"></i>Azioni
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="/unit_types/{{ unit_type.id }}/edit" class="btn btn-outline-primary">
+                            <i class="bi bi-pencil me-2"></i>Modifica Tipo
+                        </a>
+                        
+                        <a href="/units/new?unit_type={{ unit_type.id }}" class="btn btn-outline-success">
+                            <i class="bi bi-plus-circle me-2"></i>Crea Unità
+                        </a>
+                        
+                        {% if units|length > 0 %}
+                        <a href="/units?unit_type={{ unit_type.id }}" class="btn btn-outline-info">
+                            <i class="bi bi-list me-2"></i>Visualizza Unità
+                        </a>
+                        {% endif %}
+                        
+                        {% if unit_type.units_count == 0 %}
+                        <button type="button" class="btn btn-outline-danger" 
+                                onclick="confirmDelete({{ unit_type.id }}, '{{ unit_type.name }}')">
+                            <i class="bi bi-trash me-2"></i>Elimina Tipo
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Conferma Eliminazione</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Sei sicuro di voler eliminare il tipo di unità <strong id="deleteItemName"></strong>?</p>
+                <p class="text-muted small">Questa azione non può essere annullata.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Elimina</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(unitTypeId, unitTypeName) {
+    document.getElementById('deleteItemName').textContent = unitTypeName;
+    document.getElementById('deleteForm').action = `/unit_types/${unitTypeId}/delete`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

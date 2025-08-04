@@ -40,12 +40,16 @@
                             <!-- Type -->
                             <div class="mb-3">
                                 <label for="unit_type_id" class="form-label">Tipo Unità *</label>
-                                <select class="form-select" id="unit_type_id" name="unit_type_id" required>
+                                <select class="form-select" id="unit_type_id" name="unit_type_id" required onchange="updateUnitTypePreview()">
                                     <option value="">Seleziona tipo...</option>
                                     {% for unit_type in unit_types %}
                                     <option value="{{ unit_type.id }}" 
+                                            data-theme-data="{{ unit_type.effective_theme.to_dict() | tojson | e }}"
                                             {% if (form_data and form_data.unit_type_id == unit_type.id|string) or (not form_data and unit.unit_type_id == unit_type.id) %}selected{% endif %}>
-                                        {{ 'Funzione' if unit_type.name == 'Function' else 'Unità Organizzativa' }}
+                                        {{ unit_type.name }}
+                                        {% if unit_type.theme %}
+                                        - {{ unit_type.theme.name }}
+                                        {% endif %}
                                     </option>
                                     {% endfor %}
                                 </select>
@@ -53,8 +57,22 @@
                                     Seleziona il tipo di unità.
                                 </div>
                                 <div class="form-text">
-                                    <strong>Funzione:</strong> Unità operativa con responsabilità specifiche<br>
-                                    <strong>Unità Organizzativa:</strong> Struttura organizzativa generale
+                                    Il tipo di unità determina l'aspetto visuale nell'organigramma.
+                                    <a href="/unit_types" target="_blank" class="text-decoration-none">
+                                        <i class="bi bi-box-arrow-up-right"></i> Gestisci tipi
+                                    </a>
+                                </div>
+                                
+                                <!-- Unit Type Preview -->
+                                <div id="unitTypePreview" class="mt-2" style="display: none;">
+                                    <div class="card border-0 bg-light">
+                                        <div class="card-body p-2">
+                                            <small class="text-muted">Anteprima:</small>
+                                            <div id="previewContent" class="mt-1">
+                                                <!-- Will be populated by JavaScript -->
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -248,6 +266,9 @@ document.addEventListener('DOMContentLoaded', function() {
     startDateInput.addEventListener('change', validateDates);
     endDateInput.addEventListener('change', validateDates);
     
+    // Initialize unit type preview
+    updateUnitTypePreview();
+    
     // Parent unit change warning
     const parentSelect = document.getElementById('parent_unit_id');
     const originalParent = parentSelect.value;
@@ -301,5 +322,39 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function updateUnitTypePreview() {
+    const select = document.getElementById('unit_type_id');
+    const preview = document.getElementById('unitTypePreview');
+    const previewContent = document.getElementById('previewContent');
+    const selectedOption = select.options[select.selectedIndex];
+    
+    if (selectedOption.value && selectedOption.dataset.themeData) {
+        try {
+            const theme = JSON.parse(selectedOption.dataset.themeData);
+            
+            previewContent.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-${theme.icon_class} me-2" 
+                       style="color: ${theme.primary_color}; font-size: 1.1rem;"></i>
+                    <span class="fw-medium me-2" style="color: ${theme.text_color};">
+                        {{ unit.name }}
+                    </span>
+                    <span class="badge" 
+                          style="background-color: ${theme.primary_color}; color: white; font-size: 0.7rem;">
+                        ${theme.display_label}
+                    </span>
+                </div>
+            `;
+            
+            preview.style.display = 'block';
+        } catch (e) {
+            console.error('Error parsing theme data:', e);
+            preview.style.display = 'none';
+        }
+    } else {
+        preview.style.display = 'none';
+    }
+}
 </script>
 {% endblock %}

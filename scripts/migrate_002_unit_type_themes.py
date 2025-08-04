@@ -26,13 +26,33 @@ def run_migration():
     try:
         print("Starting Migration 002: Unit Type Themes System...")
         
-        # Read and execute the migration SQL
-        migration_file = Path(__file__).parent.parent / "database" / "schema" / "migration_002_unit_type_themes.sql"
+        # Check if migration has already been run
+        migration_status = check_migration_status(db_manager)
+        
+        if migration_status['complete']:
+            print("✅ Migration 002 has already been run completely. Skipping...")
+            verify_migration(db_manager)
+            return
+        
+        # Handle partial migration - add theme_id column if missing
+        if not migration_status['theme_id_exists']:
+            print("📝 Adding theme_id column to unit_types table...")
+            try:
+                db_manager.execute_query("ALTER TABLE unit_types ADD COLUMN theme_id INTEGER REFERENCES unit_type_themes(id)")
+                print("✅ theme_id column added successfully")
+            except Exception as e:
+                if "duplicate column name" in str(e):
+                    print("✅ theme_id column already exists")
+                else:
+                    raise e
+        
+        # Use the idempotent migration script
+        migration_file = Path(__file__).parent.parent / "database" / "schema" / "migration_002_unit_type_themes_idempotent.sql"
         
         if not migration_file.exists():
             raise FileNotFoundError(f"Migration file not found: {migration_file}")
         
-        # Execute the migration using the database manager
+        # Execute the idempotent migration
         db_manager.execute_script(migration_file)
         
         print("✅ Migration 002 completed successfully!")
@@ -43,6 +63,57 @@ def run_migration():
     except Exception as e:
         print(f"❌ Migration failed: {e}")
         raise
+
+
+def check_migration_status(db_manager):
+    """Check the status of the migration components"""
+    
+    status = {
+        'themes_table_exists': False,
+        'theme_id_exists': False,
+        'themes_created': False,
+        'themes_assigned': False,
+        'complete': False
+    }
+    
+    try:
+        # Check if unit_type_themes table exists
+        table_exists = db_manager.fetch_one("""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='unit_type_themes'
+        """)
+        status['themes_table_exists'] = bool(table_exists)
+        
+        # Check if theme_id column exists in unit_types table
+        columns_result = db_manager.fetch_all("PRAGMA table_info(unit_types)")
+        columns = [row[1] for row in columns_result]
+        status['theme_id_exists'] = 'theme_id' in columns
+        
+        # Check if default themes exist
+        if status['themes_table_exists']:
+            theme_count_result = db_manager.fetch_one("SELECT COUNT(*) FROM unit_type_themes")
+            theme_count = theme_count_result[0] if theme_count_result else 0
+            status['themes_created'] = theme_count >= 2
+            
+            # Check if themes are assigned to unit types
+            if status['theme_id_exists']:
+                assigned_count_result = db_manager.fetch_one("SELECT COUNT(*) FROM unit_types WHERE theme_id IS NOT NULL")
+                assigned_count = assigned_count_result[0] if assigned_count_result else 0
+                status['themes_assigned'] = assigned_count >= 2
+        
+        # Migration is complete if all components are in place
+        status['complete'] = (
+            status['themes_table_exists'] and 
+            status['theme_id_exists'] and 
+            status['themes_created'] and 
+            status['themes_assigned']
+        )
+        
+        return status
+        
+    except Exception as e:
+        print(f"Warning: Could not check migration status: {e}")
+        return status
 
 
 def verify_migration(db_manager):

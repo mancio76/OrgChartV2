@@ -4,6 +4,14 @@
 
 This document outlines the technical requirements for the Organigramma Web App, a comprehensive organizational chart management system built with FastAPI, SQLite, and Bootstrap. The system provides CRUD operations for organizational entities with automatic versioning of assignments and a responsive web interface.
 
+Organigramma Web App should implement centralized style UX/UI based on models deriving from database tables.
+Organigramma Web App should implement multi-language user interface based on models deriving from database tables.
+
+Each table in Organigramma Web App database should have a datetime_created DATETIME and datetime_updated DATETIME column which are managed by database triggers and not visible to app models.
+
+Organigramma Web App must be compliant with WCAG.
+Organigramma Web App must implement API calls with Swagger documentation.
+
 ## Requirements
 
 ### Requirement 1

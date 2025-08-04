@@ -1,0 +1,413 @@
+{% extends "base/layout.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">{{ page_title }}</h1>
+            <p class="text-muted mb-0">{{ page_subtitle }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="/themes/analytics/usage-report" class="btn btn-outline-primary">
+                <i class="bi bi-file-text"></i> Report Dettagliato
+            </a>
+            <button type="button" class="btn btn-outline-secondary" onclick="refreshDashboard()">
+                <i class="bi bi-arrow-clockwise"></i> Aggiorna
+            </button>
+        </div>
+    </div>
+
+    <!-- Overview Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ dashboard_data.overview.total_themes }}</h4>
+                            <p class="card-text">Temi Totali</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-palette2 fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ dashboard_data.overview.active_themes }}</h4>
+                            <p class="card-text">Temi Attivi</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-check-circle fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ dashboard_data.overview.total_usage }}</h4>
+                            <p class="card-text">Utilizzi Totali</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-graph-up fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ dashboard_data.overview.unused_themes_count }}</h4>
+                            <p class="card-text">Temi Non Utilizzati</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-exclamation-triangle fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Usage Distribution Chart -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-pie-chart"></i> Distribuzione Utilizzo Temi
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="usageDistributionChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Health Indicators -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-heart-pulse"></i> Stato Sistema
+                        <span class="badge bg-{{ 'success' if dashboard_data.health_indicators.overall_health == 'good' else 'warning' }} ms-2">
+                            {{ 'Buono' if dashboard_data.health_indicators.overall_health == 'good' else 'Attenzione' }}
+                        </span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if dashboard_data.health_indicators.indicators %}
+                        {% for indicator in dashboard_data.health_indicators.indicators %}
+                            <div class="alert alert-{{ 'danger' if indicator.type == 'error' else 'warning' if indicator.type == 'warning' else 'info' }} alert-sm mb-2">
+                                <strong>{{ indicator.title }}</strong><br>
+                                <small>{{ indicator.message }}</small>
+                                {% if indicator.details %}
+                                    <div class="mt-1">
+                                        {% for detail in indicator.details[:3] %}
+                                            <small class="d-block">• {{ detail.name if detail.name else 'ID ' + detail.id|string }}</small>
+                                        {% endfor %}
+                                        {% if indicator.details|length > 3 %}
+                                            <small class="text-muted">... e altri {{ indicator.details|length - 3 }}</small>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-success alert-sm">
+                            <i class="bi bi-check-circle"></i> Tutti i sistemi funzionano correttamente
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <!-- Most/Least Used Themes -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-trophy"></i> Temi Più Utilizzati
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if dashboard_data.most_used_theme %}
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="theme-preview me-3" style="
+                                background: linear-gradient(135deg, #ffffff 0%, {{ dashboard_data.most_used_theme.secondary_color if dashboard_data.most_used_theme.secondary_color else '#f0fdff' }} 100%);
+                                border: 2px solid {{ dashboard_data.most_used_theme.primary_color if dashboard_data.most_used_theme.primary_color else '#0dcaf0' }};
+                                width: 40px; height: 40px; border-radius: 8px;
+                            "></div>
+                            <div>
+                                <h6 class="mb-1">{{ dashboard_data.most_used_theme.name }}</h6>
+                                <small class="text-muted">
+                                    {{ dashboard_data.most_used_theme.usage_count }} utilizzi 
+                                    ({{ dashboard_data.most_used_theme.usage_percentage }}%)
+                                </small>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% for theme in dashboard_data.usage_distribution[:5] %}
+                        {% if theme.usage_count > 0 %}
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="d-flex align-items-center">
+                                    <div class="theme-preview-small me-2" style="
+                                        background: {{ theme.primary_color if theme.primary_color else '#0dcaf0' }};
+                                        width: 20px; height: 20px; border-radius: 4px;
+                                    "></div>
+                                    <span class="small">{{ theme.name }}</span>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-primary">{{ theme.usage_count }}</span>
+                                    <small class="text-muted ms-1">{{ theme.usage_percentage }}%</small>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Metrics -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-speedometer2"></i> Metriche Performance
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if dashboard_data.performance_metrics %}
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <h4 class="text-primary">{{ dashboard_data.performance_metrics.usage_metrics.average_usage }}</h4>
+                                <small class="text-muted">Utilizzo Medio</small>
+                            </div>
+                            <div class="col-4">
+                                <h4 class="text-success">{{ dashboard_data.performance_metrics.efficiency_metrics.utilization_rate }}%</h4>
+                                <small class="text-muted">Tasso Utilizzo</small>
+                            </div>
+                            <div class="col-4">
+                                <h4 class="text-info">{{ dashboard_data.performance_metrics.usage_metrics.max_usage }}</h4>
+                                <small class="text-muted">Max Utilizzo</small>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="progress mb-2">
+                            <div class="progress-bar" role="progressbar" 
+                                 style="width: {{ dashboard_data.performance_metrics.efficiency_metrics.utilization_rate }}%"
+                                 aria-valuenow="{{ dashboard_data.performance_metrics.efficiency_metrics.utilization_rate }}" 
+                                 aria-valuemin="0" aria-valuemax="100">
+                                {{ dashboard_data.performance_metrics.efficiency_metrics.utilization_rate }}%
+                            </div>
+                        </div>
+                        <small class="text-muted">Efficienza Utilizzo Temi</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendations -->
+    {% if dashboard_data.recommendations %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-lightbulb"></i> Raccomandazioni
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for recommendation in dashboard_data.recommendations %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card border-{{ 'danger' if recommendation.priority == 'high' else 'warning' if recommendation.priority == 'medium' else 'info' }}">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <i class="bi bi-{{ 'exclamation-triangle' if recommendation.priority == 'high' else 'info-circle' }}"></i>
+                                            {{ recommendation.title }}
+                                        </h6>
+                                        <p class="card-text small">{{ recommendation.description }}</p>
+                                        <span class="badge bg-{{ 'danger' if recommendation.priority == 'high' else 'warning' if recommendation.priority == 'medium' else 'info' }}">
+                                            {{ 'Alta' if recommendation.priority == 'high' else 'Media' if recommendation.priority == 'medium' else 'Bassa' }} Priorità
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Adoption Trends -->
+    {% if dashboard_data.adoption_trends.monthly_creation %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-graph-up-arrow"></i> Trend Adozione Temi
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="adoptionTrendsChart" width="400" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Dashboard refresh functionality
+function refreshDashboard() {
+    const refreshBtn = document.querySelector('button[onclick="refreshDashboard()"]');
+    const originalContent = refreshBtn.innerHTML;
+    
+    refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Aggiornamento...';
+    refreshBtn.disabled = true;
+    
+    fetch('/themes/api/analytics/dashboard-data')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload the page with fresh data
+                window.location.reload();
+            } else {
+                console.error('Error refreshing dashboard:', data.error);
+                alert('Errore durante l\'aggiornamento del dashboard');
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing dashboard:', error);
+            alert('Errore durante l\'aggiornamento del dashboard');
+        })
+        .finally(() => {
+            refreshBtn.innerHTML = originalContent;
+            refreshBtn.disabled = false;
+        });
+}
+
+// Usage Distribution Chart
+const usageCtx = document.getElementById('usageDistributionChart').getContext('2d');
+const usageData = {{ dashboard_data.usage_distribution | tojson }};
+
+// Prepare data for chart (only themes with usage > 0)
+const chartData = usageData.filter(theme => theme.usage_count > 0).slice(0, 10);
+const labels = chartData.map(theme => theme.name);
+const data = chartData.map(theme => theme.usage_count);
+const colors = chartData.map(theme => theme.primary_color || '#0dcaf0');
+
+new Chart(usageCtx, {
+    type: 'doughnut',
+    data: {
+        labels: labels,
+        datasets: [{
+            data: data,
+            backgroundColor: colors,
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    padding: 20,
+                    usePointStyle: true
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const theme = chartData[context.dataIndex];
+                        return `${theme.name}: ${theme.usage_count} utilizzi (${theme.usage_percentage}%)`;
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Adoption Trends Chart
+{% if dashboard_data.adoption_trends.monthly_creation %}
+const trendsCtx = document.getElementById('adoptionTrendsChart').getContext('2d');
+const trendsData = {{ dashboard_data.adoption_trends.monthly_creation | tojson }};
+
+new Chart(trendsCtx, {
+    type: 'line',
+    data: {
+        labels: trendsData.map(item => item.month),
+        datasets: [{
+            label: 'Temi Creati',
+            data: trendsData.map(item => item.themes_created),
+            borderColor: '#0dcaf0',
+            backgroundColor: 'rgba(13, 202, 240, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+{% endif %}
+
+// Add spinning animation for refresh button
+const style = document.createElement('style');
+style.textContent = `
+    .spin {
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+`;
+document.head.appendChild(style);
+</script>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}

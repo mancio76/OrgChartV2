@@ -22,8 +22,8 @@ from app.middleware.security_mini import MiniSecurityMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.routes import (
-    home, units, job_titles, persons, companies,
-    assignments, orgchart, api, health
+    home, units, unit_types, job_titles, persons, companies,
+    assignments, orgchart, api, health, themes
 )
 
 # Get configuration
@@ -139,23 +139,89 @@ if settings.security.cors_origins:
 # Static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Templates
-templates = Jinja2Templates(directory="templates")
+# Templates (shared instance with registered helpers)
+from app.templates import templates
 
 # Include routes
 app.include_router(health.router, tags=["Health"])
 app.include_router(home.router, tags=["Home"])
 app.include_router(units.router, prefix="/units", tags=["Units"])
+app.include_router(unit_types.router, prefix="/unit_types", tags=["Unit Types"])
 app.include_router(job_titles.router, prefix="/job-titles", tags=["Job Titles"])
 app.include_router(persons.router, prefix="/persons", tags=["Persons"])
 app.include_router(companies.router, prefix="/companies", tags=["Companies"])
 app.include_router(assignments.router, prefix="/assignments", tags=["Assignments"])
 app.include_router(orgchart.router, prefix="/orgchart", tags=["Orgchart"])
+app.include_router(themes.router, prefix="/themes", tags=["Themes"])
 app.include_router(api.router, prefix="/api", tags=["API"])
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return FileResponse("static/img/favicon.ico")
+
+# Dynamic CSS generation route
+@app.get("/css/themes.css", include_in_schema=False)
+async def dynamic_themes_css(request: Request):
+    """Serve dynamically generated CSS for unit type themes with conditional requests support"""
+    from fastapi.responses import Response
+    from app.services.unit_type_theme import UnitTypeThemeService
+    import hashlib
+    import time
+    
+    try:
+        theme_service = UnitTypeThemeService()
+        css_content = theme_service.generate_dynamic_css()
+        
+        # Generate ETag for caching based on content hash
+        etag = hashlib.md5(css_content.encode()).hexdigest()
+        
+        # Check if client has cached version (conditional request)
+        client_etag = request.headers.get("if-none-match", "").strip('"')
+        if client_etag == etag:
+            logger.debug("CSS not modified, returning 304")
+            return Response(status_code=304)
+        
+        # Set cache headers for performance
+        headers = {
+            "Content-Type": "text/css; charset=utf-8",
+            "Cache-Control": "public, max-age=3600, must-revalidate",  # Cache for 1 hour with validation
+            "ETag": f'"{etag}"',
+            "Last-Modified": time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime()),
+            "Vary": "Accept-Encoding"
+        }
+        
+        logger.debug(f"Serving dynamic CSS ({len(css_content)} chars) with ETag: {etag}")
+        return Response(content=css_content, headers=headers)
+        
+    except Exception as e:
+        logger.error(f"Error generating dynamic CSS: {e}")
+        # Return minimal fallback CSS
+        fallback_css = """
+/* Fallback CSS - Theme generation failed */
+.unit-themed {
+    border: 2px solid #0dcaf0;
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdff 100%);
+    transition: all 0.3s ease;
+}
+.unit-themed:hover {
+    box-shadow: 0 1rem 2rem rgba(13, 202, 240, 0.25);
+    transform: translateY(-2px);
+}
+.unit-organizational {
+    border: 2px solid #0dcaf0;
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdff 100%);
+}
+.unit-organizational:hover {
+    box-shadow: 0 1rem 2rem rgba(13, 202, 240, 0.25);
+}
+"""
+        return Response(
+            content=fallback_css,
+            headers={
+                "Content-Type": "text/css; charset=utf-8",
+                "Cache-Control": "no-cache"
+            }
+        )
 
 # Test route for Task 6.3 - Form validation and user feedback
 @app.get("/test-validation", response_class=HTMLResponse)
@@ -167,6 +233,43 @@ async def test_validation(request: Request):
             "request": request,
             "page_title": "Test Validazione Avanzata",
             "page_subtitle": "Implementazione Task 6.3 - Form validation e user feedback"
+        }
+    )
+
+# Test route for Task 6 - Theme helper functions
+@app.get("/test-theme-helpers", response_class=HTMLResponse)
+async def test_theme_helpers(request: Request):
+    """Test page for theme helper functions"""
+    from app.models.unit import Unit
+    from app.models.unit_type import UnitType
+    from app.models.unit_type_theme import UnitTypeTheme
+    
+    # Create test data
+    theme = UnitTypeTheme(
+        id=1,
+        name="Test Theme",
+        icon_class="building",
+        emoji_fallback="🏢",
+        primary_color="#0d6efd",
+        secondary_color="#f8f9ff",
+        text_color="#0d6efd",
+        border_color="#0d6efd",
+        border_width=4,
+        css_class_suffix="test",
+        display_label="Test Unit Type"
+    )
+    
+    unit_type = UnitType(id=1, name="Test Unit Type", theme_id=1)
+    unit_type.theme = theme
+    
+    unit = Unit(id=1, name="Test Unit", unit_type_id=1)
+    unit.unit_type = unit_type
+    
+    return templates.TemplateResponse(
+        "test_theme_helpers.html",
+        {
+            "request": request,
+            "unit": unit
         }
     )
 

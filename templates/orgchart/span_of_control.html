@@ -209,10 +209,16 @@
                         </thead>
                         <tbody>
                             {% for unit in span_analysis %}
-                            <tr class="unit-row" data-span="{{ unit.span_of_control }}" data-efficiency="{{ unit.efficiency_score }}" data-name="{{ unit.name }}">
+                            {% set theme = unit.unit_type.effective_theme %}
+                            <tr class="unit-row {{ theme.generate_css_class_name() }}" 
+                                data-span="{{ unit.span_of_control }}" 
+                                data-efficiency="{{ unit.efficiency_score }}" 
+                                data-name="{{ unit.name }}"
+                                style="--unit-primary: {{ theme.primary_color }};">
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <i class="bi bi-{{ 'building' if unit.unit_type_id == 1 else 'diagram-2' }} me-2 text-primary"></i>
+                                        {% set theme = unit.unit_type.effective_theme %}
+                                        <i class="bi bi-{{ theme.icon_class }} me-2 text-primary"></i>
                                         <div>
                                             <div class="fw-medium">{{ unit.name }}</div>
                                             {% if unit.short_name %}
@@ -498,6 +504,20 @@
 
 .unit-row:hover {
     background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Theme-based unit styling - supports dynamic theme data */
+.unit-row.unit-function {
+    --unit-primary: #0d6efd;
+}
+
+.unit-row.unit-organizational {
+    --unit-primary: #0dcaf0;
+}
+
+.unit-row.unit-function .bi,
+.unit-row.unit-organizational .bi {
+    color: var(--unit-primary) !important;
 }
 
 @media (max-width: 768px) {

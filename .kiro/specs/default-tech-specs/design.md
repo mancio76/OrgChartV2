@@ -6,6 +6,10 @@ The Organigramma Web App is a comprehensive organizational chart management syst
 
 The application serves as a centralized platform for managing organizational structures, personnel data, job assignments, and their historical evolution through automatic versioning capabilities. The design directly addresses all eight core requirements: robust database management with referential integrity, responsive WCAG-compliant web interface, comprehensive CRUD operations, automatic assignment versioning, comprehensive logging and error handling, interactive organizational chart visualization with specific rendering rules, modular architecture, and configurable deployment with security-by-design and security-by-default principles.
 
+The application should be multi-language so provide a centralized tool to manage other languages in visual style and representation.
+
+The application should implement model binded CSS customization like colors, icons and visual styles for common entities.
+
 ## Architecture
 
 ### High-Level Architecture
@@ -537,7 +541,7 @@ graph TD
 - UI component behavior
 - Cross-browser compatibility
 
-### Test Configuration (`tests/conftest.py`)
+### Test Configuration (`tests/test_app_configuration.py`)
 
 ```python
 @pytest.fixture

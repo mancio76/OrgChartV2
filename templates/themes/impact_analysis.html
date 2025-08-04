@@ -1,0 +1,465 @@
+{% extends "base/layout.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">{{ page_title }}</h1>
+            <p class="text-muted mb-0">{{ page_subtitle }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="/themes/{{ impact_analysis.theme.id }}" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left"></i> Torna al Tema
+            </a>
+            <button type="button" class="btn btn-outline-secondary" onclick="refreshAnalysis()">
+                <i class="bi bi-arrow-clockwise"></i> Aggiorna
+            </button>
+        </div>
+    </div>
+
+    <!-- Impact Severity Alert -->
+    <div class="alert alert-{{ 'danger' if impact_analysis.impact_severity == 'critical' else 'warning' if impact_analysis.impact_severity == 'high' else 'info' if impact_analysis.impact_severity == 'medium' else 'success' }} mb-4">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-{{ 'exclamation-triangle-fill' if impact_analysis.impact_severity in ['critical', 'high'] else 'info-circle-fill' }} fs-4 me-3"></i>
+            <div>
+                <h5 class="alert-heading mb-1">
+                    Livello di Impatto: 
+                    <span class="badge bg-{{ 'danger' if impact_analysis.impact_severity == 'critical' else 'warning' if impact_analysis.impact_severity == 'high' else 'info' if impact_analysis.impact_severity == 'medium' else 'success' }}">
+                        {{ 'CRITICO' if impact_analysis.impact_severity == 'critical' else 'ALTO' if impact_analysis.impact_severity == 'high' else 'MEDIO' if impact_analysis.impact_severity == 'medium' else 'BASSO' }}
+                    </span>
+                </h5>
+                <p class="mb-0">
+                    Le modifiche a questo tema influenzeranno <strong>{{ impact_analysis.total_units_affected }}</strong> unità 
+                    attraverso <strong>{{ impact_analysis.affected_unit_types|length }}</strong> tipi di unità diversi.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Warnings -->
+    {% if impact_analysis.warnings %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> Avvertenze Importanti
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        {% for warning in impact_analysis.warnings %}
+                            <li class="mb-2">{{ warning }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Theme Overview -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-palette2"></i> Dettagli Tema
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="theme-preview me-3" style="
+                            background: linear-gradient(135deg, #ffffff 0%, {{ impact_analysis.theme.secondary_color if impact_analysis.theme.secondary_color else '#f0fdff' }} 100%);
+                            border: 2px solid {{ impact_analysis.theme.primary_color if impact_analysis.theme.primary_color else '#0dcaf0' }};
+                            width: 60px; height: 60px; border-radius: 12px;
+                        "></div>
+                        <div>
+                            <h6 class="mb-1">{{ impact_analysis.theme.name }}</h6>
+                            {% if impact_analysis.theme.is_default %}
+                                <span class="badge bg-primary">Tema Predefinito</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h4 class="text-primary">{{ impact_analysis.affected_unit_types|length }}</h4>
+                            <small class="text-muted">Tipi Unità</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-info">{{ impact_analysis.total_units_affected }}</h4>
+                            <small class="text-muted">Unità Totali</small>
+                        </div>
+                    </div>
+
+                    {% if impact_analysis.levels_affected %}
+                    <hr>
+                    <div>
+                        <strong>Livelli Organizzativi Interessati:</strong>
+                        <div class="mt-2">
+                            {% for level in impact_analysis.levels_affected %}
+                                <span class="badge bg-secondary me-1">Livello {{ level }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- CSS Impact -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-code-slash"></i> Impatto CSS
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Cache Invalidation:</strong>
+                        <span class="badge bg-{{ 'warning' if impact_analysis.css_impact.cache_invalidation_required else 'success' }}">
+                            {{ 'Richiesta' if impact_analysis.css_impact.cache_invalidation_required else 'Non Necessaria' }}
+                        </span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Tempo Rigenerazione:</strong>
+                        <span class="badge bg-{{ 'warning' if impact_analysis.css_impact.estimated_regeneration_time == 'high' else 'info' if impact_analysis.css_impact.estimated_regeneration_time == 'medium' else 'success' }}">
+                            {{ 'Alto' if impact_analysis.css_impact.estimated_regeneration_time == 'high' else 'Medio' if impact_analysis.css_impact.estimated_regeneration_time == 'medium' else 'Basso' }}
+                        </span>
+                    </div>
+
+                    {% if impact_analysis.css_impact.affected_css_classes %}
+                    <div>
+                        <strong>Classi CSS Interessate:</strong>
+                        <div class="mt-2">
+                            {% for css_class in impact_analysis.css_impact.affected_css_classes %}
+                                <code class="badge bg-light text-dark me-1">{{ css_class }}</code>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Affected Unit Types -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-diagram-3"></i> Tipi di Unità Interessati
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if impact_analysis.affected_unit_types %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Tipo Unità</th>
+                                        <th>Nome Breve</th>
+                                        <th>Livello</th>
+                                        <th>Unità Interessate</th>
+                                        <th>Impatto</th>
+                                        <th>Azioni</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for unit_type in impact_analysis.affected_unit_types %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ unit_type.name }}</strong>
+                                            </td>
+                                            <td>
+                                                <code>{{ unit_type.short_name or '-' }}</code>
+                                            </td>
+                                            <td>
+                                                {% if unit_type.level %}
+                                                    <span class="badge bg-secondary">{{ unit_type.level }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <strong class="text-{{ 'danger' if unit_type.units_count > 20 else 'warning' if unit_type.units_count > 5 else 'info' }}">
+                                                    {{ unit_type.units_count }}
+                                                </strong>
+                                            </td>
+                                            <td>
+                                                {% set impact_level = 'alto' if unit_type.units_count > 20 else 'medio' if unit_type.units_count > 5 else 'basso' %}
+                                                <span class="badge bg-{{ 'danger' if impact_level == 'alto' else 'warning' if impact_level == 'medio' else 'success' }}">
+                                                    {{ impact_level.title() }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="/unit_types/{{ unit_type.id }}" class="btn btn-outline-primary btn-sm" title="Visualizza Tipo Unità">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Impact Distribution Chart -->
+                        <div class="mt-4">
+                            <h6>Distribuzione Impatto per Tipo Unità</h6>
+                            <canvas id="impactDistributionChart" width="400" height="200"></canvas>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-info-circle fs-1"></i>
+                            <p>Nessun tipo di unità utilizza questo tema</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendations -->
+    {% if impact_analysis.recommendations %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-lightbulb"></i> Raccomandazioni
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for recommendation in impact_analysis.recommendations %}
+                            <div class="col-md-6 mb-3">
+                                <div class="alert alert-info mb-0">
+                                    <i class="bi bi-check-circle"></i>
+                                    {{ recommendation }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-tools"></i> Azioni Disponibili
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group me-2">
+                        <a href="/themes/{{ impact_analysis.theme.id }}/edit" class="btn btn-primary">
+                            <i class="bi bi-pencil"></i> Modifica Tema
+                        </a>
+                        <a href="/themes/{{ impact_analysis.theme.id }}" class="btn btn-outline-primary">
+                            <i class="bi bi-eye"></i> Visualizza Tema
+                        </a>
+                    </div>
+                    
+                    <div class="btn-group me-2">
+                        <button type="button" class="btn btn-outline-info" onclick="previewChanges()">
+                            <i class="bi bi-eye-fill"></i> Anteprima Modifiche
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="exportAnalysis()">
+                            <i class="bi bi-download"></i> Esporta Analisi
+                        </button>
+                    </div>
+
+                    {% if impact_analysis.theme.is_default %}
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-outline-warning" onclick="showDefaultThemeWarning()">
+                                <i class="bi bi-exclamation-triangle"></i> Tema Predefinito
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Default Theme Warning Modal -->
+<div class="modal fade" id="defaultThemeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle"></i> Attenzione: Tema Predefinito
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Questo è il tema predefinito del sistema.</strong></p>
+                <p>Le modifiche a questo tema influenzeranno:</p>
+                <ul>
+                    <li>Tutti i tipi di unità senza tema specifico assegnato</li>
+                    <li>Eventuali nuovi tipi di unità creati in futuro</li>
+                    <li>Il fallback per temi corrotti o non validi</li>
+                </ul>
+                <p class="text-muted">Considera di creare temi specifici per ridurre la dipendenza dal tema predefinito.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+                <a href="/themes/new" class="btn btn-primary">Crea Nuovo Tema</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Refresh analysis
+function refreshAnalysis() {
+    const refreshBtn = document.querySelector('button[onclick="refreshAnalysis()"]');
+    const originalContent = refreshBtn.innerHTML;
+    
+    refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Aggiornamento...';
+    refreshBtn.disabled = true;
+    
+    fetch(`/themes/api/analytics/{{ impact_analysis.theme.id }}/impact`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                console.error('Error refreshing analysis:', data.error);
+                alert('Errore durante l\'aggiornamento dell\'analisi');
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing analysis:', error);
+            alert('Errore durante l\'aggiornamento dell\'analisi');
+        })
+        .finally(() => {
+            refreshBtn.innerHTML = originalContent;
+            refreshBtn.disabled = false;
+        });
+}
+
+// Preview changes (placeholder)
+function previewChanges() {
+    alert('Funzionalità di anteprima non ancora implementata');
+}
+
+// Export analysis
+function exportAnalysis() {
+    const analysisData = {{ impact_analysis | tojson }};
+    
+    let report = `Analisi Impatto Tema: ${analysisData.theme.name}\n`;
+    report += `Generato: ${new Date().toLocaleString()}\n\n`;
+    report += `Livello Impatto: ${analysisData.impact_severity.toUpperCase()}\n`;
+    report += `Unità Interessate: ${analysisData.total_units_affected}\n`;
+    report += `Tipi Unità Interessati: ${analysisData.affected_unit_types.length}\n\n`;
+    
+    if (analysisData.warnings.length > 0) {
+        report += `Avvertenze:\n`;
+        analysisData.warnings.forEach(warning => {
+            report += `- ${warning}\n`;
+        });
+        report += '\n';
+    }
+    
+    report += `Tipi di Unità Interessati:\n`;
+    analysisData.affected_unit_types.forEach(unitType => {
+        report += `- ${unitType.name}: ${unitType.units_count} unità\n`;
+    });
+    
+    if (analysisData.recommendations.length > 0) {
+        report += `\nRaccomandazioni:\n`;
+        analysisData.recommendations.forEach(rec => {
+            report += `- ${rec}\n`;
+        });
+    }
+    
+    const blob = new Blob([report], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `impact_analysis_theme_${analysisData.theme.id}_${new Date().toISOString().split('T')[0]}.txt`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+// Show default theme warning
+function showDefaultThemeWarning() {
+    new bootstrap.Modal(document.getElementById('defaultThemeModal')).show();
+}
+
+// Impact Distribution Chart
+{% if impact_analysis.affected_unit_types %}
+const ctx = document.getElementById('impactDistributionChart').getContext('2d');
+const unitTypes = {{ impact_analysis.affected_unit_types | tojson }};
+
+const chartData = {
+    labels: unitTypes.map(ut => ut.name),
+    datasets: [{
+        label: 'Unità Interessate',
+        data: unitTypes.map(ut => ut.units_count),
+        backgroundColor: unitTypes.map(ut => {
+            if (ut.units_count > 20) return '#dc3545'; // danger
+            if (ut.units_count > 5) return '#ffc107';  // warning
+            return '#0dcaf0'; // info
+        }),
+        borderWidth: 1,
+        borderColor: '#fff'
+    }]
+};
+
+new Chart(ctx, {
+    type: 'bar',
+    data: chartData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return `${context.parsed.y} unità interessate`;
+                    }
+                }
+            }
+        }
+    }
+});
+{% endif %}
+
+// Add spinning animation for refresh button
+const style = document.createElement('style');
+style.textContent = `
+    .spin {
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+`;
+document.head.appendChild(style);
+</script>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}

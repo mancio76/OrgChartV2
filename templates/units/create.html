@@ -47,11 +47,16 @@
                             <!-- Type -->
                             <div class="mb-3">
                                 <label for="unit_type_id" class="form-label">Tipo Unità *</label>
-                                <select class="form-select" id="unit_type_id" name="unit_type_id" required>
+                                <select class="form-select" id="unit_type_id" name="unit_type_id" required onchange="updateUnitTypePreview()">
                                     <option value="">Seleziona tipo...</option>
                                     {% for unit_type in unit_types %}
-                                    <option value="{{ unit_type.id }}" {% if form_data and form_data.unit_type_id==unit_type.id|string %}selected{% endif %}>
+                                    <option value="{{ unit_type.id }}" 
+                                            data-theme-data="{{ unit_type.effective_theme.to_dict() | tojson | e }}"
+                                            {% if form_data and form_data.unit_type_id==unit_type.id|string %}selected{% endif %}>
                                         {{ unit_type.name }}
+                                        {% if unit_type.theme %}
+                                        - {{ unit_type.theme.name }}
+                                        {% endif %}
                                     </option>
                                     {% endfor %}
                                 </select>
@@ -59,8 +64,22 @@
                                     Seleziona il tipo di unità.
                                 </div>
                                 <div class="form-text">
-                                    <strong>Funzione:</strong> Unità operativa con responsabilità specifiche<br>
-                                    <strong>Unità Organizzativa:</strong> Struttura organizzativa generale
+                                    Il tipo di unità determina l'aspetto visuale nell'organigramma.
+                                    <a href="/unit_types" target="_blank" class="text-decoration-none">
+                                        <i class="bi bi-box-arrow-up-right"></i> Gestisci tipi
+                                    </a>
+                                </div>
+                                
+                                <!-- Unit Type Preview -->
+                                <div id="unitTypePreview" class="mt-2" style="display: none;">
+                                    <div class="card border-0 bg-light">
+                                        <div class="card-body p-2">
+                                            <small class="text-muted">Anteprima:</small>
+                                            <div id="previewContent" class="mt-1">
+                                                <!-- Will be populated by JavaScript -->
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -183,18 +202,8 @@
         startDateInput.addEventListener('change', validateDates);
         endDateInput.addEventListener('change', validateDates);
 
-        // Type selection help
-        const typeSelect = document.getElementById('unit_type_id');
-        typeSelect.addEventListener('change', function () {
-            const helpText = this.nextElementSibling.nextElementSibling;
-            const selectedOption = this.options[this.selectedIndex];
-            const typeName = selectedOption.text;
-            if (typeName.includes('Funzione')) {
-                helpText.innerHTML = '<strong>Funzione selezionata:</strong> Unità operativa con responsabilità specifiche. Verrà visualizzata con bordo evidenziato nell\'organigramma.';
-            } else if (typeName.includes('Organizzativa')) {
-                helpText.innerHTML = '<strong>Unità Organizzativa selezionata:</strong> Struttura organizzativa generale. Verrà visualizzata con bordo normale nell\'organigramma.';
-            }
-        });
+        // Initialize unit type preview
+        updateUnitTypePreview();
 
         // Auto-generate short name suggestion
         const nameInput = document.getElementById('name');
@@ -217,5 +226,39 @@
             }
         });
     });
+
+    function updateUnitTypePreview() {
+        const select = document.getElementById('unit_type_id');
+        const preview = document.getElementById('unitTypePreview');
+        const previewContent = document.getElementById('previewContent');
+        const selectedOption = select.options[select.selectedIndex];
+        
+        if (selectedOption.value && selectedOption.dataset.themeData) {
+            try {
+                const theme = JSON.parse(selectedOption.dataset.themeData);
+                
+                previewContent.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-${theme.icon_class} me-2" 
+                           style="color: ${theme.primary_color}; font-size: 1.1rem;"></i>
+                        <span class="fw-medium me-2" style="color: ${theme.text_color};">
+                            Esempio Unità
+                        </span>
+                        <span class="badge" 
+                              style="background-color: ${theme.primary_color}; color: white; font-size: 0.7rem;">
+                            ${theme.display_label}
+                        </span>
+                    </div>
+                `;
+                
+                preview.style.display = 'block';
+            } catch (e) {
+                console.error('Error parsing theme data:', e);
+                preview.style.display = 'none';
+            }
+        } else {
+            preview.style.display = 'none';
+        }
+    }
 </script>
 {% endblock %}

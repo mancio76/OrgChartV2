@@ -131,7 +131,26 @@
                                         <i class="bi bi-calendar me-2"></i>Struttura Precedente
                                     </h6>
                                     <div id="previous-structure" class="structure-view">
-                                        <!-- Previous structure will be populated here -->
+                                        {% if comparison_data and comparison_data.previous_structure_data %}
+                                        {% for unit in comparison_data.previous_structure_data %}
+                                        <div class="structure-item">
+                                            <div class="d-flex align-items-center">
+                                                {% if unit.icon_class %}
+                                                <i class="bi bi-{{ unit.icon_class }} me-2" style="color: {{ unit.primary_color or '#6c757d' }};"></i>
+                                                {% else %}
+                                                <i class="bi bi-diagram-2 me-2 text-muted"></i>
+                                                {% endif %}
+                                                <strong>{{ unit.name }}</strong>
+                                            </div>
+                                            <span class="badge bg-light text-dark">{{ unit.person_count }} persone</span>
+                                        </div>
+                                        {% endfor %}
+                                        {% else %}
+                                        <div class="text-center text-muted py-3">
+                                            <i class="bi bi-clock-history mb-2"></i>
+                                            <p>Nessun dato struttura precedente</p>
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -141,7 +160,33 @@
                                         <i class="bi bi-calendar-check me-2"></i>Struttura Attuale
                                     </h6>
                                     <div id="current-structure" class="structure-view">
-                                        <!-- Current structure will be populated here -->
+                                        {% if comparison_data and comparison_data.current_structure_data %}
+                                        {% for unit in comparison_data.current_structure_data %}
+                                        <div class="structure-item {{ unit.change_type if unit.change_type else '' }}">
+                                            <div class="d-flex align-items-center">
+                                                {% if unit.icon_class %}
+                                                <i class="bi bi-{{ unit.icon_class }} me-2" style="color: {{ unit.primary_color or '#6c757d' }};"></i>
+                                                {% else %}
+                                                <i class="bi bi-diagram-2 me-2 text-muted"></i>
+                                                {% endif %}
+                                                <strong>{{ unit.name }}</strong>
+                                                {% if unit.change_type == 'added' %}
+                                                <span class="badge bg-success ms-2">Nuovo</span>
+                                                {% elif unit.change_type == 'modified' %}
+                                                <span class="badge bg-warning ms-2">Modificato</span>
+                                                {% elif unit.change_type == 'removed' %}
+                                                <span class="badge bg-danger ms-2">Rimosso</span>
+                                                {% endif %}
+                                            </div>
+                                            <span class="badge bg-light text-dark">{{ unit.person_count }} persone</span>
+                                        </div>
+                                        {% endfor %}
+                                        {% else %}
+                                        <div class="text-center text-muted py-3">
+                                            <i class="bi bi-calendar-check mb-2"></i>
+                                            <p>Nessun dato struttura attuale</p>
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -331,6 +376,12 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    transition: all 0.3s ease;
+}
+
+.structure-item:hover {
+    background: rgba(0, 0, 0, 0.05);
+    transform: translateX(2px);
 }
 
 .structure-item.added {
@@ -666,65 +717,9 @@ function populateSummaryCards() {
 }
 
 function populateStructureComparison() {
-    const previousStructure = document.getElementById('previous-structure');
-    const currentStructure = document.getElementById('current-structure');
-    
-    previousStructure.innerHTML = `
-        <div class="structure-item">
-            <div>
-                <i class="bi bi-building me-2"></i>
-                <strong>CEO Office</strong>
-            </div>
-            <span class="badge bg-light text-dark">3 persone</span>
-        </div>
-        <div class="structure-item">
-            <div>
-                <i class="bi bi-diagram-2 me-2"></i>
-                <strong>IT Department</strong>
-            </div>
-            <span class="badge bg-light text-dark">12 persone</span>
-        </div>
-        <div class="structure-item">
-            <div>
-                <i class="bi bi-diagram-2 me-2"></i>
-                <strong>HR Department</strong>
-            </div>
-            <span class="badge bg-light text-dark">5 persone</span>
-        </div>
-    `;
-    
-    currentStructure.innerHTML = `
-        <div class="structure-item">
-            <div>
-                <i class="bi bi-building me-2"></i>
-                <strong>CEO Office</strong>
-            </div>
-            <span class="badge bg-light text-dark">3 persone</span>
-        </div>
-        <div class="structure-item added">
-            <div>
-                <i class="bi bi-diagram-2 me-2"></i>
-                <strong>Digital Innovation</strong>
-                <span class="badge bg-success ms-2">Nuovo</span>
-            </div>
-            <span class="badge bg-light text-dark">8 persone</span>
-        </div>
-        <div class="structure-item modified">
-            <div>
-                <i class="bi bi-diagram-2 me-2"></i>
-                <strong>IT Department</strong>
-                <span class="badge bg-warning ms-2">Modificato</span>
-            </div>
-            <span class="badge bg-light text-dark">15 persone</span>
-        </div>
-        <div class="structure-item">
-            <div>
-                <i class="bi bi-diagram-2 me-2"></i>
-                <strong>HR Department</strong>
-            </div>
-            <span class="badge bg-light text-dark">5 persone</span>
-        </div>
-    `;
+    // Structure comparison is now rendered server-side with theme data
+    // This function can be used for dynamic updates if needed
+    console.log('Structure comparison populated with theme-based styling');
 }
 
 function createMetricsChart() {

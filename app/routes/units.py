@@ -62,7 +62,7 @@ async def list_units(
         hierarchy_tree = unit_service.get_hierarchy()
 
         for unit in units:
-            unit.unit_type = unit_type_service.get_by_id(unit.unit_type_id).name
+            unit.unit_type = unit_type_service.get_by_id(unit.unit_type_id)
             if hierarchy_tree and len(hierarchy_tree) > 0:
                 level = 0
                 parent_unit_id = None
@@ -408,8 +408,7 @@ async def unit_detail(
         if not unit:
             raise HTTPException(status_code=404, detail="Unit not found")
         
-        type = unit_type_service.get_by_id(unit.unit_type_id)
-        unit.unit_type = type.name;
+        unit.unit_type = unit_type_service.get_by_id(unit.unit_type_id)
 
         # Get children units
         children = unit_service.get_children(unit_id)

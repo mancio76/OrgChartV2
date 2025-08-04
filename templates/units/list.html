@@ -72,8 +72,9 @@
                     <tr>
                         <td>
                             <div class="d-flex align-items-center">
-                                <i
-                                    class="bi bi-{{ 'building' if unit.unit_type == 'Function' else 'diagram-2' }} me-2 text-primary"></i>
+                                {% set theme = unit.unit_type.effective_theme %}
+                                <i class="bi bi-{{ theme.icon_class }} me-2" 
+                                   style="color: {{ theme.primary_color }};"></i>
                                 <div>
                                     <strong>{{ unit.name }}</strong>
                                     {% if unit.short_name %}
@@ -83,9 +84,13 @@
                             </div>
                         </td>
                         <td>
-                            <span class="badge bg-{{ 'primary' if unit.unit_type == 'Function' else 'info' }}">
-                                {{ unit.unit_type }}
+                            <span class="badge" 
+                                  style="background-color: {{ theme.primary_color }}; color: white;">
+                                {{ unit.unit_type.name }}
                             </span>
+                            {% if unit.unit_type.theme %}
+                            <br><small class="text-muted">{{ unit.unit_type.theme.name }}</small>
+                            {% endif %}
                         </td>
                         <td>
                             {% if unit.parent_name %}
@@ -173,14 +178,14 @@
 
                             <i
                                 class="bi bi-{{ 'building' if unit.unit_type == 'Function' else 'diagram-2' }} me-2 text-{{ 'primary' if unit.unit_type == 'Function' else 'info' }}"></i>
-                            <strong>{{ unit.name }}</strong>
+                            <strong>{{ unit.unit_type.short_name }} -- {{ unit.name }}</strong>
                             {% if unit.short_name %}
                             <small class="text-muted ms-2">({{ unit.short_name }})</small>
                             {% endif %}
 
                             <!-- Unit type badge -->
                             <span class="badge bg-{{ 'primary' if unit.unit_type == 'Function' else 'info' }} ms-2">
-                                {{ unit.unit_type }}
+                                {{ unit.unit_type.name }}
                             </span>
 
                             <div class="unit-actions ms-auto">
