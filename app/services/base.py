@@ -157,10 +157,13 @@ class BaseService(ABC):
             errors = model.validate()
             if errors:
                 logger.warning(f"Validation failed for {self.table_name}: {[e.message for e in errors]}")
-                raise ServiceValidationException(
-                    f"Validation failed for {self.table_name}",
-                    errors
-                )
+
+                warnings = [w for w in errors if w.level == ValidationError.__WARNING_LEVEL__]
+                if len(errors) != len(warnings):
+                    raise ServiceValidationException(
+                        f"Validation failed for {self.table_name}",
+                        errors
+                    )
             
             # Perform additional service-level validation
             self._validate_for_create(model)
@@ -220,10 +223,12 @@ class BaseService(ABC):
             errors = model.validate()
             if errors:
                 logger.warning(f"Validation failed for {self.table_name}: {[e.message for e in errors]}")
-                raise ServiceValidationException(
-                    f"Validation failed for {self.table_name}",
-                    errors
-                )
+
+                if len([e for e in errors if e.level == 'error' or e.level == 'critical']) > 0:
+                    raise ServiceValidationException(
+                        f"Validation failed for {self.table_name}",
+                        errors
+                    )
             
             # Perform additional service-level validation
             self._validate_for_update(model, existing)

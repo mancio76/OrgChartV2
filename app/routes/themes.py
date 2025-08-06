@@ -9,6 +9,7 @@ from typing import Optional
 import logging
 import json
 
+from app.services.base import ServiceValidationException
 from app.services.unit_type_theme import UnitTypeThemeService
 from app.services.unit_type import UnitTypeService
 from app.models.unit_type_theme import UnitTypeTheme
@@ -43,6 +44,9 @@ async def list_themes(
         else:
             themes = theme_service.get_themes_with_usage_stats()
         
+        for theme in themes:
+            theme.css_rules = theme.get_css_rules()
+
         # Get usage statistics
         usage_stats = theme_service.get_theme_usage_statistics()
         
@@ -792,8 +796,16 @@ async def update_theme(
         existing_theme.high_contrast_mode = high_contrast_mode
         existing_theme.is_active = is_active
         
-        # Update theme
-        updated_theme = theme_service.update(existing_theme)
+        try:
+            # Update theme
+            updated_theme = theme_service.update(existing_theme)
+        except ServiceValidationException as e:
+            concrete_errors = [e for e in e.errors if e.level == 'critical' or e.level == 'error']
+            if len(concrete_errors) > 0:
+                raise
+        except Exception as e:
+            raise
+            
         
         # Log successful update
         log_security_event('THEME_UPDATED', {
@@ -927,6 +939,10 @@ async def theme_detail(
         # Check if theme can be deleted
         can_delete, delete_reason = theme_service.can_delete_theme(theme_id)
         
+        validation_errors = []
+        if theme.validation_errors:
+            validation_errors.append([ve for ve in theme.validation_errors if ve.level == 'warning'])
+
         return templates.TemplateResponse(
             "themes/detail.html",
             {
@@ -939,7 +955,8 @@ async def theme_detail(
                 "breadcrumb": [
                     {"name": "Temi", "url": "/themes"},
                     {"name": theme.name}
-                ]
+                ],
+                "validation_errors": validation_errors
             }
         )
         

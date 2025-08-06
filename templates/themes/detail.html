@@ -65,12 +65,7 @@
                 </div>
                 <div class="card-body">
                     <div class="theme-preview mb-3">
-                        <div class="unit-box unit-box-rendered {{ theme.generate_css_class_name() }}" 
-                             style="--unit-primary: {{ theme.primary_color }}; 
-                                    --unit-secondary: {{ theme.secondary_color }}; 
-                                    --unit-text: {{ theme.text_color }}; 
-                                    --unit-border: {{ theme.computed_border_color }}; 
-                                    --unit-border-width: {{ theme.border_width }}px;">
+                        <div class="unit-box unit-box-rendered {{ theme.generate_css_class_name() }}" style="{{ theme.get_css_rules() }}">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div class="d-flex align-items-center">
                                     <i class="bi bi-{{ theme.icon_class }} me-2"></i>
@@ -95,6 +90,12 @@
                         {% endif %}
                         {% if theme.high_contrast_mode %}
                             <span class="badge bg-info">Alto Contrasto</span>
+                        {% endif %}
+                        {% if validation_errors and len(validation_errors) > 0 %}
+                            <span class="badge bg-info">Errori di validazione</span>
+                            {% for error in validation_errors %}
+                            <span class="badge bg-info">{{ error.description }}</span>
+                            {% endfor %}
                         {% endif %}
                     </div>
 

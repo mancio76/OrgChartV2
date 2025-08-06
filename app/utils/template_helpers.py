@@ -36,6 +36,7 @@ def get_unit_theme_data(unit: Unit) -> UnitTypeTheme:
                 if 'effective_theme' in unit_type.keys():
                     theme = unit_type['effective_theme']
                     if theme and _is_theme_valid(theme):
+                        theme.css_rules = theme.get_css_rules()
                         return theme
                     else:
                         logger.warning(f"Unit {unit.id} has invalid effective_theme, using fallback")
@@ -45,6 +46,7 @@ def get_unit_theme_data(unit: Unit) -> UnitTypeTheme:
                     theme_service = UnitTypeThemeService()
                     theme = theme_service.get_theme_with_fallback(unit_type['theme_id'])
                     if theme:
+                        theme.css_rules = theme.get_css_rules()
                         return theme
             
             # Fallback: get theme by unit_type_id if available
@@ -55,6 +57,7 @@ def get_unit_theme_data(unit: Unit) -> UnitTypeTheme:
                     if unit_type and hasattr(unit_type, 'effective_theme'):
                         theme = unit_type.effective_theme
                         if theme and _is_theme_valid(theme):
+                            theme.css_rules = theme.get_css_rules()
                             return theme
                 except Exception as e:
                     logger.warning(f"Error getting unit_type for unit {unit.id}: {e}")
@@ -64,6 +67,7 @@ def get_unit_theme_data(unit: Unit) -> UnitTypeTheme:
                 if hasattr(unit.unit_type, 'effective_theme'):
                     theme = unit.unit_type.effective_theme
                     if theme and _is_theme_valid(theme):
+                        theme.css_rules = theme.get_css_rules()
                         return theme
                     else:
                         logger.warning(f"Unit {unit.id} has invalid effective_theme, using fallback")
@@ -73,6 +77,7 @@ def get_unit_theme_data(unit: Unit) -> UnitTypeTheme:
                     theme_service = UnitTypeThemeService()
                     theme = theme_service.get_theme_with_fallback(unit.unit_type.theme_id)
                     if theme:
+                        theme.css_rules = theme.get_css_rules()
                         return theme
             
             # Fallback: get theme by unit_type_id if available
@@ -84,6 +89,7 @@ def get_unit_theme_data(unit: Unit) -> UnitTypeTheme:
                     if unit_type and hasattr(unit_type, 'effective_theme'):
                         theme = unit_type.effective_theme
                         if theme and _is_theme_valid(theme):
+                            theme.css_rules = theme.get_css_rules()
                             return theme
                 except Exception as e:
                     logger.warning(f"Error getting unit_type for unit {unit.id}: {e}")
@@ -170,10 +176,10 @@ def get_unit_css_variables(unit: Unit) -> Dict[str, str]:
         
         # Add unit-specific variables for easier template usage
         unit_vars = {
-            '--unit-primary': theme.primary_color,
-            '--unit-secondary': theme.secondary_color,
-            '--unit-text': theme.text_color,
-            '--unit-border': theme.computed_border_color,
+            '--unit-primary-color': theme.primary_color,
+            '--unit-secondary-color': theme.secondary_color,
+            '--unit-text-color': theme.text_color,
+            '--unit-border-color': theme.computed_border_color,
             '--unit-border-width': f"{theme.border_width}px",
             '--unit-hover-shadow': theme.computed_hover_shadow_color,
         }
@@ -207,7 +213,14 @@ def render_unit_css_variables(unit: Unit) -> str:
         CSS style attribute value string
     """
     css_vars = get_unit_css_variables(unit)
-    
+    from app.model.unit_type_theme import UnitTypeTheme
+    from app.services.unit_type_theme import UnitTypeThemeService
+
+    # service = UnitTypeThemeService()
+    # model = UnitTypeTheme()
+    # model.
+
+    css_vars.append('css_rules', )
     # Convert to CSS style string
     style_parts = [f"{key}: {value}" for key, value in css_vars.items()]
     

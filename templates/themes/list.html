@@ -146,12 +146,18 @@
                     <div class="card-body">
                         <!-- Theme Preview -->
                         <div class="theme-preview mb-3">
-                            <div class="unit-box unit-box-rendered {{ theme.generate_css_class_name() }}" 
+                            <!-- <div class="unit-box unit-box-rendered {{ theme.generate_css_class_name() }}" 
                                  style="--unit-primary: {{ theme.primary_color }}; 
                                         --unit-secondary: {{ theme.secondary_color }}; 
-                                        --unit-text: {{ theme.text_color }}; 
-                                        --unit-border: {{ theme.computed_border_color }}; 
-                                        --unit-border-width: {{ theme.border_width }}px;">
+                                        --unit-text-color: {{ theme.text_color }}; 
+                                        --unit-border-color: {{ theme.computed_border_color }}; 
+                                        --unit-border-width: {{ theme.border_width }}px;
+                                        --unit-border-style: {{ theme.border_style }};
+                                        --unit-shadow-color: {{ theme.computed_hover_shadow_color }};
+                                        border: var(--unit-border-width) var(--unit-border-style) var(--unit-border-color);
+                                        color: var(--unit-text-color);
+                                        background-color: var(--unit-secondary);"> -->
+                            <div class="unit-box unit-box-rendered {{ theme.generate_css_class_name() }}" style="{{ theme.get_css_rules() }};">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div class="d-flex align-items-center">
                                         <i class="bi bi-{{ theme.icon_class }} me-2"></i>
@@ -193,6 +199,8 @@
                                       title="Colore secondario"></span>
                                 <span class="color-dot" style="background-color: {{ theme.text_color }}" 
                                       title="Colore testo"></span>
+                                <span class="color-dot" style="background-color: {{ theme.border_color }}" 
+                                      title="Colore bordo"></span>
                             </div>
                         </div>
                     </div>

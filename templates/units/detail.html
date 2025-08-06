@@ -199,9 +199,20 @@
                 <div class="text-center py-4">
                     <i class="bi bi-person-x display-4 text-muted"></i>
                     <p class="text-muted mt-2">Nessun incarico assegnato a questa unità</p>
-                    <a href="/assignments/new?unit_id={{ unit.id }}" class="btn btn-primary">
-                        <i class="bi bi-person-plus me-1"></i>Assegna Prima Persona
-                    </a>
+                    <div class="btn-group">
+                        <a href="/assignments/new?unit_id={{ unit.id }}" class="btn btn-primary">
+                            <i class="bi bi-person-plus me-1"></i>Assegna Prima Persona
+                        </a>
+                        <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" 
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="visually-hidden">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/persons/new">
+                                <i class="bi bi-person-plus me-2"></i>Nuova Persona
+                            </a></li>
+                        </ul>
+                    </div>
                 </div>
                 {% endif %}
             </div>

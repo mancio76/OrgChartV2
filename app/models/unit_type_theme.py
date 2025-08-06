@@ -50,6 +50,9 @@ class UnitTypeTheme(BaseModel):
     
     # Computed fields (not stored in DB)
     usage_count: int = field(default=0, init=False)
+    validation_errors: Optional[List[ValidationError]] = None
+
+    css_rules: Optional[str] = None
     
     @property
     def computed_border_color(self) -> str:
@@ -78,14 +81,42 @@ class UnitTypeTheme(BaseModel):
             return {}
         
         return {
-            f"--theme-{self.id}-primary": self.primary_color,
-            f"--theme-{self.id}-secondary": self.secondary_color,
-            f"--theme-{self.id}-text": self.text_color,
-            f"--theme-{self.id}-border": self.computed_border_color,
+            f"--theme-{self.id}-primary-color": self.primary_color,
+            f"--theme-{self.id}-secondary-color": self.secondary_color,
+            f"--theme-{self.id}-text-color": self.text_color,
+            f"--theme-{self.id}-border-color": self.computed_border_color,
+            f"--theme-{self.id}-border-style": self.border_style,
             f"--theme-{self.id}-border-width": f"{self.border_width}px",
             f"--theme-{self.id}-hover-shadow": self.computed_hover_shadow_color,
         }
-    
+
+    def get_css_border_rules(self) -> str:
+        return f"""border: {self.border_width}px {self.border_style} {self.computed_border_color};
+"""
+ 
+    def get_css_rules(self) -> str:
+        css_rules = []
+        
+        primary_color_rgb = self._add_opacity_to_color('#ffffff', 0.1)
+        secondary_color_rgb = self._add_opacity_to_color(self.secondary_color, 0.9)
+
+        # Base styles with CSS custom properties support
+        base_rule = f"""--unit-primary-color: {self.primary_color};
+    --unit-secondary-color: {self.secondary_color};
+    --unit-text-color: {self.text_color};
+    --unit-border-color: {self.computed_border_color};
+    --unit-border-style: {self.border_style};
+    --unit-border-width: {self.border_width}px;
+    --unit-hover-shadow: {self.computed_hover_shadow_color};
+    border: var(--unit-border-width) {self.border_style} var(--unit-border-color);
+    background: {self.background_gradient or f'linear-gradient(135deg, {primary_color_rgb} 0%, {secondary_color_rgb} 100%)'};
+    transition: all 0.3s ease;
+    position: relative;
+"""
+        css_rules.append(base_rule)
+        
+        return "\n".join(css_rules)
+
     def generate_css_rules(self) -> str:
         """Generate comprehensive CSS rules for this theme with accessibility support"""
         class_name = self.generate_css_class_name()
@@ -94,10 +125,11 @@ class UnitTypeTheme(BaseModel):
         
         # Base styles with CSS custom properties support
         base_rule = f""".{class_name} {{
-    --unit-primary: {self.primary_color};
-    --unit-secondary: {self.secondary_color};
-    --unit-text: {self.text_color};
-    --unit-border: {self.computed_border_color};
+    --unit-primary-color: {self.primary_color};
+    --unit-secondary-color: {self.secondary_color};
+    --unit-text-color: {self.text_color};
+    --unit-border-color: {self.computed_border_color};
+    --unit-border-style: {self.border_style};
     --unit-border-width: {self.border_width}px;
     --unit-hover-shadow: {self.computed_hover_shadow_color};
     
@@ -111,7 +143,7 @@ class UnitTypeTheme(BaseModel):
         # Hover effects with proper shadow opacity and accessibility considerations
         hover_rule = f""".{class_name}:hover {{
     box-shadow: 0 1rem 2rem {self._add_opacity_to_color(self.computed_hover_shadow_color, self.hover_shadow_intensity)};
-    border-color: var(--unit-primary);
+    border-color: var(--unit-primary-color);
     transform: translateY(-2px);
 }}
 
@@ -129,7 +161,7 @@ class UnitTypeTheme(BaseModel):
         
         # Text styling with improved readability
         text_rule = f""".{class_name} .unit-name {{
-    color: var(--unit-text);
+    color: var(--unit-text-color);
     font-weight: 600;
     line-height: 1.4;
     text-rendering: optimizeLegibility;
@@ -138,7 +170,7 @@ class UnitTypeTheme(BaseModel):
         
         # Badge styling with accessibility improvements
         badge_rule = f""".{class_name} .badge {{
-    background-color: var(--unit-primary) !important;
+    background-color: var(--unit-primary-color) !important;
     color: white;
     border: none;
     font-weight: 500;
@@ -149,7 +181,7 @@ class UnitTypeTheme(BaseModel):
         
         # Icon styling with better visibility
         icon_rule = f""".{class_name} .bi {{
-    color: var(--unit-primary);
+    color: var(--unit-primary-color);
     font-size: 1.1em;
 }}"""
         css_rules.append(icon_rule)
@@ -255,17 +287,17 @@ body.high-contrast .{class_name} .bi {{
     
     def validate(self) -> List[ValidationError]:
         """Validate theme data"""
-        errors = []
+        validation_errors = []
         
         # Required fields validation
         if not self.name or not self.name.strip():
-            errors.append(ValidationError("name", "Nome del tema è obbligatorio"))
+            validation_errors.append(ValidationError("name", "Nome del tema è obbligatorio"))
         
         if not self.display_label or not self.display_label.strip():
-            errors.append(ValidationError("display_label", "Etichetta di visualizzazione è obbligatoria"))
+            validation_errors.append(ValidationError("display_label", "Etichetta di visualizzazione è obbligatoria"))
         
         if not self.css_class_suffix or not self.css_class_suffix.strip():
-            errors.append(ValidationError("css_class_suffix", "Suffisso classe CSS è obbligatorio"))
+            validation_errors.append(ValidationError("css_class_suffix", "Suffisso classe CSS è obbligatorio"))
         
         # Color validation
         color_fields = [
@@ -282,61 +314,61 @@ body.high-contrast .{class_name} .bi {{
         
         for field_name, color_value in color_fields:
             if not self._is_valid_color(color_value):
-                errors.append(ValidationError(field_name, f"Colore non valido: {color_value}"))
+                validation_errors.append(ValidationError(field_name, f"Colore non valido: {color_value}"))
         
         # Icon class validation
         if not self._is_valid_icon_class(self.icon_class):
-            errors.append(ValidationError("icon_class", f"Classe icona non valida: {self.icon_class}"))
+            validation_errors.append(ValidationError("icon_class", f"Classe icona non valida: {self.icon_class}"))
         
         # CSS class suffix validation
         if not self._is_valid_css_class_suffix(self.css_class_suffix):
-            errors.append(ValidationError("css_class_suffix", "Suffisso classe CSS deve contenere solo lettere, numeri e trattini"))
+            validation_errors.append(ValidationError("css_class_suffix", "Suffisso classe CSS deve contenere solo lettere, numeri e trattini"))
         
         # Border width validation
         if self.border_width < 0 or self.border_width > 20:
-            errors.append(ValidationError("border_width", "Larghezza bordo deve essere tra 0 e 20 pixel"))
+            validation_errors.append(ValidationError("border_width", "Larghezza bordo deve essere tra 0 e 20 pixel", level=ValidationError.__WARNING_LEVEL__))
         
         # Border style validation
         valid_border_styles = ["solid", "dashed", "dotted", "double", "groove", "ridge", "inset", "outset"]
         if self.border_style not in valid_border_styles:
-            errors.append(ValidationError("border_style", f"Stile bordo non valido. Valori consentiti: {', '.join(valid_border_styles)}"))
+            validation_errors.append(ValidationError("border_style", f"Stile bordo non valido. Valori consentiti: {', '.join(valid_border_styles)}"))
         
         # Hover shadow intensity validation
         if self.hover_shadow_intensity < 0 or self.hover_shadow_intensity > 1:
-            errors.append(ValidationError("hover_shadow_intensity", "Intensità ombra hover deve essere tra 0 e 1"))
+            validation_errors.append(ValidationError("hover_shadow_intensity", "Intensità ombra hover deve essere tra 0 e 1", level=ValidationError.__WARNING_LEVEL__))
         
         # Background gradient validation
         if self.background_gradient and not self._is_valid_css_gradient(self.background_gradient):
-            errors.append(ValidationError("background_gradient", "Gradiente CSS non valido"))
+            validation_errors.append(ValidationError("background_gradient", "Gradiente CSS non valido", level=ValidationError.__WARNING_LEVEL__))
         
         # Name uniqueness validation (will be checked at service level)
         if self.name and len(self.name.strip()) > 100:
-            errors.append(ValidationError("name", "Nome del tema troppo lungo (massimo 100 caratteri)"))
+            validation_errors.append(ValidationError("name", "Nome del tema troppo lungo (massimo 100 caratteri)"))
         
         # Description length validation
         if self.description and len(self.description) > 500:
-            errors.append(ValidationError("description", "Descrizione troppo lunga (massimo 500 caratteri)"))
+            validation_errors.append(ValidationError("description", "Descrizione troppo lunga (massimo 500 caratteri)"))
         
         # Display label length validation
         if self.display_label and len(self.display_label) > 50:
-            errors.append(ValidationError("display_label", "Etichetta di visualizzazione troppo lunga (massimo 50 caratteri)"))
+            validation_errors.append(ValidationError("display_label", "Etichetta di visualizzazione troppo lunga (massimo 50 caratteri)"))
         
         if self.display_label_plural and len(self.display_label_plural) > 50:
-            errors.append(ValidationError("display_label_plural", "Etichetta plurale troppo lunga (massimo 50 caratteri)"))
+            validation_errors.append(ValidationError("display_label_plural", "Etichetta plurale troppo lunga (massimo 50 caratteri)"))
         
         # Emoji validation
         if not self._is_valid_emoji(self.emoji_fallback):
-            errors.append(ValidationError("emoji_fallback", "Emoji fallback non valido"))
+            validation_errors.append(ValidationError("emoji_fallback", "Emoji fallback non valido", level=ValidationError.__WARNING_LEVEL__))
         
         # CSS class suffix additional validation
         if self.css_class_suffix and len(self.css_class_suffix) > 30:
-            errors.append(ValidationError("css_class_suffix", "Suffisso classe CSS troppo lungo (massimo 30 caratteri)"))
+            validation_errors.append(ValidationError("css_class_suffix", "Suffisso classe CSS troppo lungo (massimo 30 caratteri)", level=ValidationError.__WARNING_LEVEL__))
         
         # Color contrast validation for accessibility
         contrast_errors = self._validate_color_contrast()
-        errors.extend(contrast_errors)
+        validation_errors.extend(contrast_errors)
         
-        return errors
+        return validation_errors
     
     def _is_valid_color(self, color: str) -> bool:
         """Validate color format (hex, rgb, rgba, hsl, hsla, named colors)"""
@@ -529,7 +561,8 @@ body.high-contrast .{class_name} .bi {{
                 if contrast_ratio < 4.5:
                     errors.append(ValidationError(
                         "text_color", 
-                        f"Contrasto insufficiente tra colore primario e testo (ratio: {contrast_ratio:.2f}, minimo WCAG AA: 4.5)"
+                        f"Contrasto insufficiente tra colore primario e testo (ratio: {contrast_ratio:.2f}, minimo WCAG AA: 4.5)",
+                        level=ValidationError.__WARNING_LEVEL__
                     ))
             
             # Validate secondary background vs text color
@@ -539,7 +572,8 @@ body.high-contrast .{class_name} .bi {{
                 if contrast_ratio < 4.5:
                     errors.append(ValidationError(
                         "text_color", 
-                        f"Contrasto insufficiente tra colore secondario e testo (ratio: {contrast_ratio:.2f}, minimo WCAG AA: 4.5)"
+                        f"Contrasto insufficiente tra colore secondario e testo (ratio: {contrast_ratio:.2f}, minimo WCAG AA: 4.5)",
+                        level=ValidationError.__WARNING_LEVEL__
                     ))
             
             # Validate primary background vs white text (for badges)
@@ -549,7 +583,8 @@ body.high-contrast .{class_name} .bi {{
                 if contrast_ratio < 3.0:  # More lenient for badges with larger text
                     errors.append(ValidationError(
                         "primary_color", 
-                        f"Contrasto insufficiente tra colore primario e testo bianco per badge (ratio: {contrast_ratio:.2f}, minimo: 3.0)"
+                        f"Contrasto insufficiente tra colore primario e testo bianco per badge (ratio: {contrast_ratio:.2f}, minimo: 3.0)",
+                        level=ValidationError.__WARNING_LEVEL__
                     ))
             
             # Additional validation for high contrast mode
@@ -560,7 +595,8 @@ body.high-contrast .{class_name} .bi {{
                     if contrast_ratio < 7.0:  # WCAG AAA standard
                         errors.append(ValidationError(
                             "text_color", 
-                            f"Modalità alto contrasto richiede ratio minimo 7.0 (attuale: {contrast_ratio:.2f})"
+                            f"Modalità alto contrasto richiede ratio minimo 7.0 (attuale: {contrast_ratio:.2f})",
+                            level=ValidationError.__WARNING_LEVEL__
                         ))
         
         except Exception as e:

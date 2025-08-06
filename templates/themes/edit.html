@@ -263,7 +263,7 @@
                     </div>
                     <div class="card-body">
                         <div id="themePreview" class="theme-preview">
-                            <div class="unit-box preview-unit" id="previewUnit">
+                            <div class="unit-box preview-unit unit-box-rendered" id="previewUnit" style="{{ theme.get_css_rules() }}">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div class="d-flex align-items-center">
                                         <i class="bi bi-{{ theme.icon_class }} me-2" id="previewIcon"></i>

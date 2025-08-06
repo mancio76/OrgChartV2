@@ -43,7 +43,8 @@
      aria-expanded="{{ 'true' if node.children else 'false' }}"
      aria-level="{{ level + 1 }}">
     
-    <div class="{{ get_unit_css_classes(node) }} {{ 'unit-vacant' if show_vacant and node.person_count == 0 else '' }}" style="{{ render_unit_css_variables(node) }}{{ '; display: none;' if not priority_load else '' }}">
+    <div class="{{ get_unit_css_classes(node) }} {{ 'unit-vacant' if show_vacant and node.person_count == 0 else '' }}"
+         style="{{ render_unit_css_variables(node) }}{{ '; display: none;' if not priority_load else '' }}">
         
         <!-- Unit Type Indicator -->
         <!-- <div class="unit-type-indicator"></div>

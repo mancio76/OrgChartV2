@@ -10,10 +10,16 @@ import json
 
 @dataclass
 class ValidationError:
+    __ERROR_LEVEL__ = 'error'
+    __WARNING_LEVEL__ = 'warning'
+    __CRITICAL_LEVEL__ = 'critical'
+    __DEFAULT_LEVEL__ = __ERROR_LEVEL__
+    
     """Validation error model"""
     field: str
     message: str
     value: Any = None
+    level: Optional[str] = __DEFAULT_LEVEL__
 
 
 class ModelValidationException(Exception):
@@ -21,7 +27,7 @@ class ModelValidationException(Exception):
     
     def __init__(self, errors: List[ValidationError]):
         self.errors = errors
-        messages = [f"{error.field}: {error.message}" for error in errors]
+        messages = [f"{error.level.upper()} {error.field}: {error.message}" for error in errors]
         super().__init__("Validation failed: " + "; ".join(messages))
 
 
@@ -84,6 +90,31 @@ class BaseModel:
         """Check if the model instance is valid"""
         return len(self.validate()) == 0
     
+    def items(self, level: str) -> List[ValidationError]:
+        """Check if the model instance is valid"""
+        return [v for v in self.validate() if v.level==level]
+
+    def count(self, level: str) -> int:
+        return len(self.items(level))
+
+    def get_warnings(self) -> List[ValidationError]:
+        return self.items(ValidationError.__WARNING_LEVEL__)
+
+    def warning_count(self) -> int:
+        return len(self.get_warnings())
+
+    def get_errors(self) -> List[ValidationError]:
+        return self.items(ValidationError.__ERROR_LEVEL__)
+
+    def error_count(self) -> int:
+        return len(self.get_errors())
+
+    def get_criticals(self) -> List[ValidationError]:
+        return self.items(ValidationError.__CRITICAL_LEVEL__)
+
+    def critical_count(self) -> int:
+        return len(self.get_criticals())
+
     def validate_and_raise(self) -> None:
         """Validate the model and raise ModelValidationException if invalid"""
         errors = self.validate()
