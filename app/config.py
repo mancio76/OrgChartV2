@@ -21,6 +21,8 @@ class DatabaseConfig:
     backup_enabled: bool = field(default_factory=lambda: os.getenv("DATABASE_BACKUP_ENABLED", "true").lower() == "true")
     backup_schedule: str = field(default_factory=lambda: os.getenv("DATABASE_BACKUP_SCHEDULE", "daily"))
     backup_directory: str = field(default_factory=lambda: os.getenv("DATABASE_BACKUP_DIRECTORY", "backups"))
+    backup_schema: bool = field(default_factory=lambda: os.getenv("DATABASE_BACKUP_SCHEMA", "true").lower() == "true")
+    backup_data: bool = field(default_factory=lambda: os.getenv("DATABASE_BACKUP_DATA", "false").lower() == "true")
 
 @dataclass
 class LoggingConfig:

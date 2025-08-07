@@ -2,10 +2,11 @@
 
 ## Overview
 
-The Organigramma Web App includes a comprehensive backup system with two specialized scripts:
+The Organigramma Web App includes a comprehensive backup system with three specialized scripts:
 
 1. **Database Backup** (`scripts/backup_db.py`) - Focused on database backups with retention policies
 2. **Project Backup** (`scripts/backup_project.py`) - Complete project backup respecting `.gitignore` rules
+3. **Schema Backup** (`scripts/backup_schema.py`) - Database schema structure backup in SQL format
 
 ## Project Backup Script
 
@@ -143,14 +144,15 @@ A typical project backup includes:
 - **~716 KB** compressed size (79% compression ratio)
 - **File types**: Python (90), HTML (62), Markdown (26), JavaScript (10), CSS (6), etc.
 
-### Integration with Existing Database Backup
+### Integration with Existing Backup Scripts
 
-The project backup complements the existing database backup:
+The project backup complements the existing backup scripts:
 
 - **Database Backup**: Focused on database files with SQL dumps and metadata
 - **Project Backup**: Complete project snapshot excluding temporary/generated files
+- **Schema Backup**: Database schema structure in SQL format
 
-Both can be used together for comprehensive backup coverage:
+All three can be used together for comprehensive backup coverage:
 
 ```bash
 # Create database backup
@@ -158,6 +160,9 @@ python scripts/backup_db.py create
 
 # Create project backup
 python scripts/backup_project.py create
+
+# Create schema backup
+python scripts/backup_schema.py create
 ```
 
 ### Automation

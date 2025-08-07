@@ -7,10 +7,64 @@ Organigramma Web App - Enhanced with environment-based configuration
 import uvicorn
 import sys
 import os
+import subprocess
+import logging
 from pathlib import Path
+from datetime import datetime
 
 # Add app directory to Python path
 sys.path.insert(0, str(Path(__file__).parent))
+
+def perform_startup_backup(settings):
+    """Perform database backup on startup if enabled"""
+    if not settings.database.backup_enabled:
+        return
+    
+    print("🔄 Performing startup database backup...")
+    
+    try:
+        # Determine backup type based on configuration
+        backup_commands = []
+        
+        if settings.database.backup_schema:
+            schema_cmd = ["python", "scripts/backup_schema.py", "create"]
+            if settings.database.backup_data:
+                schema_cmd.append("--include-data")
+            backup_commands.append(("Schema", schema_cmd))
+        
+        # Always create a full database backup if backup is enabled
+        db_cmd = ["python", "scripts/backup_db.py", "create"]
+        backup_commands.append(("Database", db_cmd))
+        
+        # Execute backup commands
+        for backup_type, cmd in backup_commands:
+            try:
+                print(f"   📋 Creating {backup_type.lower()} backup...")
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                
+                if result.returncode == 0:
+                    print(f"   ✅ {backup_type} backup completed successfully")
+                    # Log any output from the backup script
+                    if result.stdout:
+                        for line in result.stdout.strip().split('\n'):
+                            if line.strip() and not line.startswith('🚀') and not line.startswith('📁'):
+                                print(f"      {line}")
+                else:
+                    print(f"   ⚠️  {backup_type} backup failed (exit code: {result.returncode})")
+                    if result.stderr:
+                        print(f"      Error: {result.stderr.strip()}")
+                        
+            except subprocess.TimeoutExpired:
+                print(f"   ⚠️  {backup_type} backup timed out after 60 seconds")
+            except FileNotFoundError:
+                print(f"   ⚠️  {backup_type} backup script not found")
+            except Exception as e:
+                print(f"   ⚠️  {backup_type} backup error: {e}")
+        
+        print("✅ Startup backup process completed")
+        
+    except Exception as e:
+        print(f"⚠️  Startup backup failed: {e}")
 
 def main():
     """Main entry point with enhanced configuration support"""
@@ -54,6 +108,10 @@ def main():
         print(f"🔒 Security: {'HTTPS' if settings.security.https_only else 'HTTP'}")
         print(f"🔒 CSRF: {'ON' if settings.security.csrf_protection else 'OFF'}")
         print("=" * 60)
+        
+        # Perform startup backup if enabled
+        if settings.database.backup_enabled:
+            perform_startup_backup(settings)
         
         # Production warnings
         if settings.is_production:
