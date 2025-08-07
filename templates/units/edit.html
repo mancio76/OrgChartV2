@@ -89,7 +89,7 @@
                                     {% for parent in available_parents %}
                                     <option value="{{ parent.id }}" 
                                             {% if (form_data and form_data.parent_unit_id == parent.id) or (not form_data and unit.parent_unit_id == parent.id) %}selected{% endif %}>
-                                        {{ parent.name }}
+                                        {{ parent.unit_type_short }} - {{ parent.name }}
                                         {% if parent.short_name %} ({{ parent.short_name }}){% endif %}
                                     </option>
                                     {% endfor %}

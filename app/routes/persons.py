@@ -2,11 +2,14 @@
 Persons CRUD routes
 """
 
-from fastapi import APIRouter, Request, Form, Depends, HTTPException
+from fastapi import APIRouter, Request, Form, Depends, HTTPException, File, UploadFile
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
 from typing import Optional
 import logging
+import os
+import aiofiles
+from pathlib import Path
 from app.services.person import PersonService
 from app.services.assignment import AssignmentService
 from app.models.person import Person
@@ -18,6 +21,84 @@ from app.services.base import ServiceValidationException
 logger = logging.getLogger(__name__)
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+
+# File upload configuration
+UPLOAD_DIR = Path("static/profiles")
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+
+
+async def save_profile_image(file: UploadFile, first_name: str, last_name: str) -> Optional[str]:
+    """Save uploaded profile image and return the relative path"""
+    try:
+        # Ensure upload directory exists
+        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        
+        # Validate file
+        if not file.filename:
+            raise ValueError("No filename provided")
+        
+        # Get file extension
+        file_ext = Path(file.filename).suffix.lower()
+        if file_ext not in ALLOWED_EXTENSIONS:
+            raise ValueError(f"File type {file_ext} not allowed")
+        
+        # Generate filename
+        first_clean = first_name.strip().lower().replace(" ", "_") if first_name else ""
+        last_clean = last_name.strip().lower().replace(" ", "_") if last_name else ""
+        
+        if not first_clean and not last_clean:
+            raise ValueError("First name or last name required")
+        
+        base_name = f"{last_clean}.{first_clean}" if last_clean and first_clean else (last_clean or first_clean)
+        # Clean filename of special characters
+        base_name = "".join(c for c in base_name if c.isalnum() or c in "._-")
+        filename = f"{base_name}{file_ext}"
+        
+        file_path = UPLOAD_DIR / filename
+        
+        # Read and validate file size
+        content = await file.read()
+        if len(content) > MAX_FILE_SIZE:
+            raise ValueError("File too large")
+        
+        # Save file
+        async with aiofiles.open(file_path, 'wb') as f:
+            await f.write(content)
+        
+        # Return relative path for database storage
+        return f"profiles/{filename}"
+        
+    except Exception as e:
+        logger.error(f"Error saving profile image: {e}")
+        raise
+
+
+async def delete_profile_image(image_path: str) -> bool:
+    """Delete profile image file"""
+    try:
+        if not image_path:
+            return True
+        
+        # Handle both absolute and relative paths
+        if image_path.startswith("profiles/"):
+            file_path = Path("static") / image_path
+        elif image_path.startswith("/static/profiles/"):
+            file_path = Path(image_path[1:])  # Remove leading slash
+        elif image_path.startswith("static/profiles/"):
+            file_path = Path(image_path)
+        else:
+            file_path = UPLOAD_DIR / Path(image_path).name
+        
+        if file_path.exists():
+            file_path.unlink()
+            logger.info(f"Deleted profile image: {file_path}")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error deleting profile image {image_path}: {e}")
+        return False
 
 
 def get_person_service():
@@ -139,7 +220,7 @@ async def create_person(
     short_name: Optional[str] = Form(None),
     email: Optional[str] = Form(None),
     registration_no: Optional[str] = Form(None),
-    profile_image: Optional[str] = Form(None),
+    profile_image: Optional[UploadFile] = File(None),
     csrf_protection: bool = Depends(validate_csrf_token_flexible),
     csrf_token: Optional[str] = Form(None),
     person_service: PersonService = Depends(get_person_service)
@@ -149,6 +230,28 @@ async def create_person(
     logger.info(f"Request received - Name: {name}, First: {first_name}, Last: {last_name}, Email: {email}")
 
     try:
+        # Handle profile image upload
+        profile_image_path = None
+        if profile_image and profile_image.filename:
+            try:
+                profile_image_path = await save_profile_image(profile_image, first_name, last_name)
+            except ValueError as e:
+                return templates.TemplateResponse(
+                    "persons/create.html",
+                    {
+                        "request": request,
+                        "errors": [{"field": "profile_image", "message": str(e)}],
+                        "form_data": await request.form(),
+                        "page_title": "Nuova Persona",
+                        "page_icon": "person-plus",
+                        "breadcrumb": [
+                            {"name": "Persone", "url": "/persons"},
+                            {"name": "Nuova Persona"}
+                        ]
+                    },
+                    status_code=400
+                )
+        
         # Prepare form data
         form_data = {
             'name': name,
@@ -157,7 +260,7 @@ async def create_person(
             'short_name': short_name,
             'email': email,
             'registration_no': registration_no,
-            'profile_image': profile_image
+            'profile_image': profile_image_path
         }
         
         # Clean and validate form data
@@ -360,7 +463,8 @@ async def update_person(
     short_name: Optional[str] = Form(None),
     email: Optional[str] = Form(None),
     registration_no: Optional[str] = Form(None),
-    profile_image: Optional[str] = Form(None),
+    profile_image: Optional[UploadFile] = File(None),
+    remove_image: Optional[str] = Form(""),
     person_service: PersonService = Depends(get_person_service)
 ):
     """Update existing person with enhanced field support (Requirements 1.1-1.5, 2.1-2.4, 6.1-6.2)"""
@@ -370,6 +474,44 @@ async def update_person(
         if not existing_person:
             raise HTTPException(status_code=404, detail="Persona non trovata")
         
+        # Handle profile image operations
+        profile_image_path = existing_person.profile_image
+        
+        # Check if user wants to remove existing image
+        if remove_image == "true":
+            if existing_person.profile_image:
+                await delete_profile_image(existing_person.profile_image)
+            profile_image_path = None
+        
+        # Handle new image upload
+        elif profile_image and profile_image.filename:
+            try:
+                # Delete old image if exists
+                if existing_person.profile_image:
+                    await delete_profile_image(existing_person.profile_image)
+                
+                # Save new image
+                profile_image_path = await save_profile_image(profile_image, first_name, last_name)
+            except ValueError as e:
+                person = person_service.get_by_id(person_id)
+                return templates.TemplateResponse(
+                    "persons/edit.html",
+                    {
+                        "request": request,
+                        "person": person,
+                        "errors": [{"field": "profile_image", "message": str(e)}],
+                        "form_data": await request.form(),
+                        "page_title": f"Modifica Persona: {person.name}",
+                        "page_icon": "person-gear",
+                        "breadcrumb": [
+                            {"name": "Persone", "url": "/persons"},
+                            {"name": person.name, "url": f"/persons/{person_id}"},
+                            {"name": "Modifica"}
+                        ]
+                    },
+                    status_code=400
+                )
+        
         # Prepare form data
         form_data = {
             'name': name,
@@ -378,7 +520,7 @@ async def update_person(
             'short_name': short_name,
             'email': email,
             'registration_no': registration_no,
-            'profile_image': profile_image
+            'profile_image': profile_image_path
         }
         
         # Clean and validate form data
@@ -448,10 +590,19 @@ async def delete_person(
 ):
     """Delete person"""
     try:
+        # Get person to check for profile image
+        person = person_service.get_by_id(person_id)
+        if not person:
+            raise HTTPException(status_code=404, detail="Persona non trovata")
+        
         # Check if person can be deleted
         can_delete, reason = person_service.can_delete(person_id)
         if not can_delete:
             raise HTTPException(status_code=400, detail=reason)
+        
+        # Delete profile image if exists
+        if person.profile_image:
+            await delete_profile_image(person.profile_image)
         
         # Delete person
         success = person_service.delete(person_id)

@@ -215,14 +215,24 @@ def render_unit_css_variables(unit: Unit) -> str:
         CSS style attribute value string
     """
     css_vars = get_unit_css_variables(unit)
+    is_dict = type(unit) is dict
 
-    if unit and 'unit_type_id' in unit.keys():
-        from app.services.unit_type import UnitTypeService
-        from app.services.unit_type_theme import UnitTypeThemeService
-        unit_type = UnitTypeService().get_by_id(int(unit['unit_type_id']))
-        if unit_type and unit_type.theme_id:
-            unit_theme = UnitTypeThemeService().get_by_id(unit_type.theme_id)
-            css_vars['css_rules'] = unit_theme.get_css_rules()
+    if is_dict:
+        if unit and 'unit_type_id' in unit.keys():
+            from app.services.unit_type import UnitTypeService
+            from app.services.unit_type_theme import UnitTypeThemeService
+            unit_type = UnitTypeService().get_by_id(int(unit['unit_type_id']))
+            if unit_type and unit_type.theme_id:
+                unit_theme = UnitTypeThemeService().get_by_id(unit_type.theme_id)
+                css_vars['css_rules'] = unit_theme.get_css_rules()
+    else:
+        if hasattr(unit, 'unit_type_id'):
+            from app.services.unit_type import UnitTypeService
+            from app.services.unit_type_theme import UnitTypeThemeService
+            unit_type = UnitTypeService().get_by_id(int(unit.unit_type_id))
+            if unit_type and unit_type.theme_id:
+                unit_theme = UnitTypeThemeService().get_by_id(unit_type.theme_id)
+                css_vars['css_rules'] = unit_theme.get_css_rules()
 
     # Convert to CSS style string
     style_parts = [f"{key}: {value}" for key, value in css_vars.items()]

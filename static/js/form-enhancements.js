@@ -317,6 +317,10 @@ FormEnhancements.setupFormProgress = function() {
             </div>
         `;
         
+        const firstElement = form.firstChild;
+        form.insertBefore(progressContainer, firstElement);
+
+        /*
         // Insert at the beginning of the form
         const firstField = form.querySelector('.form-control, .form-select');
         if (firstField) {
@@ -325,7 +329,8 @@ FormEnhancements.setupFormProgress = function() {
                 firstContainer.parentElement.insertBefore(progressContainer, firstContainer);
             }
         }
-        
+        */
+
         // Update progress on field changes
         const fields = form.querySelectorAll('.form-control, .form-select');
         fields.forEach(function(field) {

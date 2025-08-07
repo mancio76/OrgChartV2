@@ -924,6 +924,7 @@ async def clone_theme(
 async def theme_detail(
     request: Request,
     theme_id: int,
+    csrf_token: str = Depends(generate_csrf_token),
     theme_service: UnitTypeThemeService = Depends(get_theme_service),
     unit_type_service: UnitTypeService = Depends(get_unit_type_service)
 ):
@@ -956,7 +957,8 @@ async def theme_detail(
                     {"name": "Temi", "url": "/themes"},
                     {"name": theme.name}
                 ],
-                "validation_errors": validation_errors
+                "validation_errors": validation_errors,
+                "csrf_token": csrf_token
             }
         )
         

@@ -273,6 +273,19 @@ async def test_theme_helpers(request: Request):
         }
     )
 
+# API Test page
+@app.get("/api-test", response_class=HTMLResponse)
+async def api_test_page(request: Request):
+    """API testing page"""
+    return templates.TemplateResponse(
+        "api_test.html",
+        {
+            "request": request,
+            "page_title": "API Test",
+            "page_icon": "code-slash"
+        }
+    )
+
 # Error handlers
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc):

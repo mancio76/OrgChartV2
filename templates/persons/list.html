@@ -98,11 +98,12 @@
                             <div class="d-flex align-items-center">
                                 <div class="position-relative me-3">
                                     <div class="avatar-circle">
-                                        {{ person.initials }}
+                                        {% if person.has_profile_image %}
+                                        <img src="{{ person.profile_image_url }}" class="avatar-image" alt="Profile">
+                                        {% else %}
+                                            {{ person.initials }}
+                                        {% endif %}
                                     </div>
-                                    {% if person.has_profile_image %}
-                                    <img src="{{ person.profile_image_url }}" class="avatar-image" alt="Profile">
-                                    {% endif %}
                                 </div>
                                 <div>
                                     <strong>{{ person.display_name }}</strong>
@@ -221,40 +222,13 @@
 {% endblock %}
 
 {% block extra_css %}
+<link href="{{ url_for('static', path='/css/persons.css') }}" rel="stylesheet">
 <style>
-.avatar-circle {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 0.9rem;
-    flex-shrink: 0;
-}
-
-.avatar-image {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-    position: absolute;
-    top: 0;
-    left: 0;
-}
-
-.position-relative {
-    position: relative;
-}
-
-.btn-check:checked + .btn {
-    background-color: var(--bs-primary);
-    border-color: var(--bs-primary);
-    color: white;
-}
+    .btn-check:checked + .btn {
+        background-color: var(--bs-primary);
+        border-color: var(--bs-primary);
+        color: white;
+    }
 </style>
 {% endblock %}
 

@@ -89,6 +89,8 @@ class Person(BaseModel):
                 return self.profile_image
             elif self.profile_image.startswith('static/'):
                 return f"/{self.profile_image}"
+            elif self.profile_image.startswith('profiles/'):
+                return f"/static/{self.profile_image}"
             else:
                 return f"/static/profiles/{self.profile_image}"
         return ""

@@ -256,17 +256,31 @@ class UnitService(BaseService):
                     SELECT u.id FROM units u
                     JOIN descendants d ON u.parent_unit_id = d.id
                 )
-                SELECT u.*, p.name as parent_name,
+                SELECT u.*,
+                       ut.name unit_type,
+                       ut.short_name unit_type_short,
+                       p.name as parent_name,
                        0 as children_count, 0 as person_count
                 FROM units u
                 LEFT JOIN units p ON u.parent_unit_id = p.id
+                LEFT JOIN unit_types ut ON u.unit_type_id = ut.id
                 WHERE u.id NOT IN (SELECT id FROM descendants)
-                ORDER BY u.name
+                ORDER BY ut.short_name, u.name
                 """
                 rows = self.db_manager.fetch_all(query, (unit_id,))
             else:
                 rows = self.db_manager.fetch_all(
-                    "SELECT *, NULL as parent_name, 0 as children_count, 0 as person_count FROM units ORDER BY name"
+                    """
+                    SELECT u.*,
+                        ut.name unit_type,
+                        ut.short_name unit_type_short,
+                        NULL as parent_name,
+                        0 as children_count,
+                        0 as person_count
+                    FROM units u
+                    LEFT JOIN unit_types ut ON u.unit_type_id = ut.id
+                    ORDER BY ut.short_name, u.name
+                    """
                 )
             
             return [Unit.from_sqlite_row(row) for row in rows]

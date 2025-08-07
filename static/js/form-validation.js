@@ -12,7 +12,7 @@ window.FormValidator = window.FormValidator || {};
 FormValidator.init = function() {
     this.setupValidation();
     this.setupRealTimeValidation();
-    this.setupFormProgress();
+    //this.setupFormProgress();
     this.setupSuccessNotifications();
     this.setupAdvancedValidation();
     this.setupUserFeedback();
@@ -98,9 +98,10 @@ FormValidator.validateForm = function(form) {
         }
     });
     
+    /*
     // Update form progress
     FormValidator.updateFormProgress(form);
-    
+    */
     return isValid;
 };
 
@@ -363,6 +364,7 @@ FormValidator.focusFirstInvalidField = function(form) {
 /**
  * Setup form progress indicator
  */
+/*
 FormValidator.setupFormProgress = function() {
     const forms = document.querySelectorAll('.needs-validation');
     
@@ -388,10 +390,12 @@ FormValidator.setupFormProgress = function() {
         });
     });
 };
+*/
 
 /**
  * Update form progress
  */
+/*
 FormValidator.updateFormProgress = function(form) {
     const progressBar = form.querySelector('.form-progress-bar');
     if (!progressBar) return;
@@ -425,6 +429,7 @@ FormValidator.updateFormProgress = function(form) {
         progressBar.style.background = 'linear-gradient(90deg, var(--primary-color), var(--info-color))';
     }
 };
+*/
 
 /**
  * Show form loading state

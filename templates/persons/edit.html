@@ -10,7 +10,7 @@
                 </h5>
             </div>
             <div class="card-body">
-                <form method="post" class="needs-validation" novalidate>
+                <form method="post" class="needs-validation" enctype="multipart/form-data" novalidate>
                     <!-- CSRF Token -->
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
@@ -85,17 +85,54 @@
                         <div class="form-text">Indirizzo email aziendale (opzionale)</div>
                     </div>
                     
-                    <!-- Profile Image (Requirements 6.1, 6.4) -->
+                    <!-- Profile Image Upload (Requirements 8.1-8.10) -->
                     <div class="mb-3">
                         <label for="profile_image" class="form-label">Immagine Profilo</label>
-                        <input type="text" class="form-control" id="profile_image" name="profile_image" 
-                               value="{{ form_data.profile_image if form_data else (person.profile_image or '') }}" 
-                               maxlength="1024"
-                               placeholder="es. mario_rossi.jpg">
-                        <div class="form-text">
-                            Percorso del file immagine profilo (opzionale, max 1024 caratteri)<br>
-                            <small class="text-muted">Formati supportati: .jpg, .jpeg, .png, .gif, .bmp, .webp, .svg</small>
+                        <div class="profile-image-upload">
+                            <div class="current-image mb-3" id="current-image">
+                                {% if person.has_profile_image %}
+                                <img id="upload-preview-image" class="avatar-image" 
+                                     src="{{ person.profile_image_url }}" alt="Profile Preview" style="position: relative;">
+                                {% else %}
+                                <img id="upload-preview-image" class="avatar-image" style="display: none;" alt="Profile Preview">
+                                <div class="avatar-circle" id="upload-preview-avatar">
+                                    {{ person.initials }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="upload-controls">
+                                <input type="file" class="form-control" id="profile_image" name="profile_image" 
+                                       accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" style="display: none;">
+                                <button type="button" class="btn btn-outline-primary" id="upload-btn">
+                                    <i class="bi bi-upload me-1"></i>Carica Nuova Immagine
+                                </button>
+                                {% if person.has_profile_image %}
+                                <button type="button" class="btn btn-outline-danger ms-2" id="remove-image-btn">
+                                    <i class="bi bi-trash me-1"></i>Rimuovi
+                                </button>
+                                {% else %}
+                                <button type="button" class="btn btn-outline-danger ms-2" id="remove-image-btn" style="display: none;">
+                                    <i class="bi bi-trash me-1"></i>Rimuovi
+                                </button>
+                                {% endif %}
+                            </div>
+                            <div class="drag-drop-area mt-2" id="drag-drop-area" style="display: none;">
+                                <div class="text-center p-4 border border-dashed rounded">
+                                    <i class="bi bi-cloud-upload fs-1 text-muted"></i>
+                                    <p class="mb-0">Trascina qui l'immagine o <a href="#" id="browse-link">sfoglia</a></p>
+                                </div>
+                            </div>
                         </div>
+                        <div class="form-text">
+                            Formati supportati: JPG, PNG, GIF, WebP. Dimensione massima: 5MB<br>
+                            <small class="text-muted">L'immagine verrà salvata come: [cognome].[nome].[estensione]</small>
+                        </div>
+                        <div id="upload-error" class="alert alert-danger mt-2" style="display: none;"></div>
+                        <div id="upload-progress" class="progress mt-2" style="display: none;">
+                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <!-- Hidden field to track image removal -->
+                        <input type="hidden" id="remove_image" name="remove_image" value="">
                     </div>
                     
                     <!-- Preview -->
@@ -268,35 +305,7 @@
 {% endblock %}
 
 {% block extra_css %}
-<style>
-.avatar-circle {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 1.1rem;
-    flex-shrink: 0;
-}
-
-.avatar-image {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    object-fit: cover;
-    position: absolute;
-    top: 0;
-    left: 0;
-}
-
-.position-relative {
-    position: relative;
-}
-</style>
+<link href="{{ url_for('static', path='/css/persons.css') }}" rel="stylesheet">
 {% endblock %}
 
 {% block extra_js %}
@@ -310,6 +319,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const emailInput = document.getElementById('email');
     const registrationInput = document.getElementById('registration_no');
     const profileImageInput = document.getElementById('profile_image');
+    
+    // File upload elements
+    const uploadBtn = document.getElementById('upload-btn');
+    const removeImageBtn = document.getElementById('remove-image-btn');
+    const dragDropArea = document.getElementById('drag-drop-area');
+    const browseLink = document.getElementById('browse-link');
+    const uploadPreviewAvatar = document.getElementById('upload-preview-avatar');
+    const uploadPreviewImage = document.getElementById('upload-preview-image');
+    const uploadError = document.getElementById('upload-error');
+    const uploadProgress = document.getElementById('upload-progress');
+    const removeImageField = document.getElementById('remove_image');
+    
+    let selectedFile = null;
+    let hasExistingImage = {{ 'true' if person.has_profile_image else 'false' }};
     
     // Preview elements
     const previewAvatar = document.getElementById('preview-avatar');
@@ -336,13 +359,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             nameInput.value = fullName;
 
-            if (shortName.length == 0)
-            {
-                if (firstName) {
-                    shortNameInput.value = ([lastName, firstName[0]].filter(Boolean).join(' ') + '.').toUpperCase();
-                } else {
-                    shortNameInput.value = lastName.toUpperCase();
-                }
+            if (firstName) {
+                shortNameInput.value = ([lastName, firstName[0]].filter(Boolean).join(' ') + '.').toUpperCase();
+            } else {
+                shortNameInput.value = lastName.toUpperCase();
             }
             
             // Update suggested format (Requirement 2.1)
@@ -532,6 +552,143 @@ document.addEventListener('DOMContentLoaded', function() {
         return pattern.test(email);
     }
     
+    // File upload functions
+    function showError(message) {
+        uploadError.textContent = message;
+        uploadError.style.display = 'block';
+        setTimeout(() => {
+            uploadError.style.display = 'none';
+        }, 5000);
+    }
+    
+    function validateFile(file) {
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        
+        if (!allowedTypes.includes(file.type)) {
+            showError('Formato file non supportato. Usa JPG, PNG, GIF o WebP.');
+            return false;
+        }
+        
+        if (file.size > maxSize) {
+            showError('File troppo grande. Dimensione massima: 5MB.');
+            return false;
+        }
+        
+        return true;
+    }
+    
+    function previewFile(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            uploadPreviewImage.src = e.target.result;
+            uploadPreviewImage.style.display = 'block';
+            uploadPreviewAvatar.style.opacity = '0.3';
+            removeImageBtn.style.display = 'inline-block';
+            hasExistingImage = false; // Mark as new image
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    function clearPreview() {
+        if (hasExistingImage) {
+            // Mark for removal
+            removeImageField.value = 'true';
+            uploadPreviewImage.style.display = 'none';
+            uploadPreviewAvatar.style.opacity = '1';
+            removeImageBtn.textContent = 'Annulla Rimozione';
+            removeImageBtn.classList.remove('btn-outline-danger');
+            removeImageBtn.classList.add('btn-outline-warning');
+        } else {
+            // Clear new upload
+            uploadPreviewImage.style.display = 'none';
+            uploadPreviewAvatar.style.opacity = '1';
+            removeImageBtn.style.display = 'none';
+            selectedFile = null;
+            profileImageInput.value = '';
+        }
+    }
+    
+    function restoreImage() {
+        removeImageField.value = '';
+        if ({{ 'true' if person.has_profile_image else 'false' }}) {
+            uploadPreviewImage.src = '{{ person.profile_image_url }}';
+            uploadPreviewImage.style.display = 'block';
+            uploadPreviewAvatar.style.opacity = '0.3';
+            removeImageBtn.textContent = 'Rimuovi';
+            removeImageBtn.classList.remove('btn-outline-warning');
+            removeImageBtn.classList.add('btn-outline-danger');
+            hasExistingImage = true;
+        }
+    }
+    
+    function generateFileName() {
+        const firstName = firstNameInput.value.trim().toLowerCase();
+        const lastName = lastNameInput.value.trim().toLowerCase();
+        
+        if (!firstName && !lastName) {
+            showError('Inserisci nome e cognome prima di caricare l\'immagine.');
+            return null;
+        }
+        
+        const baseName = lastName && firstName ? `${lastName}.${firstName}` : 
+                        lastName ? lastName : firstName;
+        return baseName.replace(/[^a-z0-9.]/g, '_');
+    }
+    
+    // File upload event listeners
+    uploadBtn.addEventListener('click', () => {
+        profileImageInput.click();
+    });
+    
+    browseLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        profileImageInput.click();
+    });
+    
+    profileImageInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file && validateFile(file)) {
+            selectedFile = file;
+            previewFile(file);
+        }
+    });
+    
+    removeImageBtn.addEventListener('click', () => {
+        if (removeImageField.value === 'true') {
+            // Restore image
+            restoreImage();
+        } else {
+            // Remove/clear image
+            clearPreview();
+        }
+    });
+    
+    // Drag and drop functionality
+    dragDropArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dragDropArea.classList.add('dragover');
+    });
+    
+    dragDropArea.addEventListener('dragleave', () => {
+        dragDropArea.classList.remove('dragover');
+    });
+    
+    dragDropArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dragDropArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            if (validateFile(file)) {
+                selectedFile = file;
+                profileImageInput.files = files;
+                previewFile(file);
+            }
+        }
+    });
+
     // Initialize preview
     updatePreview();
 });

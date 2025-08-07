@@ -142,7 +142,7 @@
                             <tr>
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <div class="person-avatar me-2">
+                                        <div class="avatar-image-small person-avatar me-2">
                                             {{ assignment.person_name[:2].upper() if assignment.person_name else '?' }}
                                         </div>
                                         <div>
@@ -437,11 +437,9 @@
 {% endblock %}
 
 {% block extra_css %}
+<link href="{{ url_for('static', path='/css/persons.css') }}" rel="stylesheet">
 <style>
 .person-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
     background: var(--bs-primary);
     color: white;
     display: flex;

@@ -52,6 +52,10 @@ Organigramma Web App must implement API calls with Swagger documentation.
 5. WHEN managing assignments THEN the system SHALL verify if the assisment is the boss of the unit
 6. WHEN managing assignments THEN the system SHALL verify if the assisment is ad interim
 7. WHEN deleting entities THEN the system SHALL check referential integrity and prevent orphaned records
+8. WHEN managing person profile images THEN the system SHALL allow users to upload, change, and remove image files directly through the web interface
+9. WHEN a profile image is uploaded THEN the system SHALL store it in the static/profiles directory with the naming convention "[last_name].[first_name].[extension]"
+10. WHEN a profile image is uploaded THEN the system SHALL store the file path in the profile_image field of the persons table
+11. WHEN displaying persons THEN the system SHALL show profile images when available and fallback to initials when not available
 
 ### Requirement 4
 
@@ -105,6 +109,23 @@ Organigramma Web App must implement API calls with Swagger documentation.
 5. WHEN adding new features THEN the system SHALL follow established patterns for models, services, and routes
 
 ### Requirement 8
+
+**User Story:** As an HR manager, I want to upload and manage profile images for persons, so that I can maintain visual identification and professional presentation in the organizational system.
+
+#### Profile Image Management Acceptance Criteria
+
+1. WHEN creating or editing a person THEN the system SHALL provide a file upload interface for profile images
+2. WHEN a user selects an image file THEN the system SHALL validate the file type and size before upload
+3. WHEN an image is uploaded THEN the system SHALL save it to the static/profiles directory with the naming convention "[last_name].[first_name].[extension]"
+4. WHEN an image is uploaded THEN the system SHALL store the relative file path in the profile_image field of the persons table
+5. WHEN a user uploads a new image for an existing person THEN the system SHALL replace the old image file and update the database
+6. WHEN a user removes a profile image THEN the system SHALL delete the file from the filesystem and clear the profile_image field
+7. WHEN displaying persons THEN the system SHALL show the profile image if available, otherwise display initials in a circular avatar
+8. WHEN the profile image file is missing THEN the system SHALL gracefully fallback to displaying initials
+9. WHEN validating image uploads THEN the system SHALL only accept common image formats (jpg, jpeg, png, gif, webp)
+10. WHEN handling file uploads THEN the system SHALL implement proper error handling for file system operations
+
+### Requirement 9
 
 **User Story:** As a system administrator, I want configurable deployment options, so that I can deploy the application in different environments with appropriate settings and security best practices.
 

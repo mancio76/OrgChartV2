@@ -144,7 +144,7 @@ async def orgchart_unit_detail(
         unit_detail = orgchart_service.get_unit_organizational_context(unit_id)
         if not unit_detail:
             raise HTTPException(status_code=404, detail="Unità non trovata")
-        
+        unit = unit_detail['unit']
         # Get unit performance metrics
         performance_metrics = orgchart_service.get_unit_performance_metrics(unit_id)
         
@@ -154,23 +154,27 @@ async def orgchart_unit_detail(
         # Get unit change history
         change_history = orgchart_service.get_unit_change_history(unit_id, limit=20)
         
-        return templates.TemplateResponse(
+        context = {
+            "request": request,
+            "unit_detail": unit_detail,
+            "performance_metrics": performance_metrics,
+            "reporting_structure": reporting_structure,
+            "change_history": change_history,
+            "page_title": f"Unità: {unit.name}",
+            "page_icon": "building",
+            "breadcrumb": [
+                {"name": "Organigramma", "url": "/orgchart"},
+                {"name": "Struttura", "url": "/orgchart/tree"},
+                {"name": unit.name}
+            ]
+        }
+
+        result = templates.TemplateResponse(
             "orgchart/unit_detail.html",
-            {
-                "request": request,
-                "unit_detail": unit_detail,
-                "performance_metrics": performance_metrics,
-                "reporting_structure": reporting_structure,
-                "change_history": change_history,
-                "page_title": f"Unità: {unit_detail['unit'].name}",
-                "page_icon": "building",
-                "breadcrumb": [
-                    {"name": "Organigramma", "url": "/orgchart"},
-                    {"name": "Struttura", "url": "/orgchart/tree"},
-                    {"name": unit_detail['unit'].name}
-                ]
-            }
+             context            
         )
+
+        return result
     except HTTPException:
         raise
     except Exception as e:

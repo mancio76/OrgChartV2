@@ -1,0 +1,97 @@
+{% extends "base/layout.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-code-slash me-2"></i>API Test Page
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Test the API endpoints directly from this page.</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Quick API Tests</h6>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary" onclick="testEndpoint('/api/health')">
+                                    <i class="bi bi-heart-pulse me-1"></i>Health Check
+                                </button>
+                                <button class="btn btn-outline-info" onclick="testEndpoint('/api/stats')">
+                                    <i class="bi bi-bar-chart me-1"></i>Global Statistics
+                                </button>
+                                <button class="btn btn-outline-success" onclick="testEndpoint('/api/units')">
+                                    <i class="bi bi-building me-1"></i>List Units
+                                </button>
+                                <button class="btn btn-outline-warning" onclick="testEndpoint('/api/persons')">
+                                    <i class="bi bi-people me-1"></i>List Persons
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="testEndpoint('/api/assignments')">
+                                    <i class="bi bi-person-badge me-1"></i>List Assignments
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>API Response</h6>
+                            <div id="api-response" class="border rounded p-3 bg-light" style="min-height: 300px; font-family: monospace; font-size: 0.9em;">
+                                Click a button to test an API endpoint...
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <h6>API Documentation Links</h6>
+                            <div class="d-flex gap-2">
+                                <a href="/docs" target="_blank" class="btn btn-primary">
+                                    <i class="bi bi-book me-1"></i>Swagger UI
+                                </a>
+                                <a href="/openapi.json" target="_blank" class="btn btn-outline-primary">
+                                    <i class="bi bi-file-code me-1"></i>OpenAPI JSON
+                                </a>
+                                <a href="/redoc" target="_blank" class="btn btn-outline-secondary">
+                                    <i class="bi bi-file-text me-1"></i>ReDoc
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function testEndpoint(endpoint) {
+    const responseDiv = document.getElementById('api-response');
+    responseDiv.innerHTML = '<div class="text-info">Loading...</div>';
+    
+    try {
+        const response = await fetch(endpoint);
+        const data = await response.json();
+        
+        responseDiv.innerHTML = `
+            <div class="mb-2">
+                <strong>Endpoint:</strong> <code>${endpoint}</code><br>
+                <strong>Status:</strong> <span class="badge bg-${response.ok ? 'success' : 'danger'}">${response.status}</span>
+            </div>
+            <pre class="mb-0">${JSON.stringify(data, null, 2)}</pre>
+        `;
+    } catch (error) {
+        responseDiv.innerHTML = `
+            <div class="text-danger">
+                <strong>Error:</strong> ${error.message}
+            </div>
+        `;
+    }
+}
+</script>
+{% endblock %}
+</content>

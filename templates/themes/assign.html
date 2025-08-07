@@ -24,6 +24,9 @@
     </div>
 
     <form method="post" id="assignmentForm">
+        <!-- CSRF Token -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+       
         <div class="row">
             <!-- Assignment Interface -->
             <div class="col-lg-8">

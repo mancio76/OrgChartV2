@@ -27,7 +27,7 @@
                                     {% for person in all_persons %}
                                     <option value="{{ person.id }}" 
                                             {{ 'selected' if (selected_person and selected_person.id == person.id) or (form_data and form_data.person_id == person.id|string) else '' }}>
-                                        {{ person.name }}
+                                        {{ person.last_name }}, {{ person.first_name }}
                                         {% if person.email %} - {{ person.email }}{% endif %}
                                     </option>
                                     {% endfor %}
@@ -47,7 +47,7 @@
                                     <option value="{{ unit.id }}" 
                                             data-type="{{ unit.unit_type_id }}"
                                             {{ 'selected' if (selected_unit and selected_unit.id == unit.id) or (form_data and form_data.unit_id == unit.id|string) else '' }}>
-                                        {{ unit.name }}
+                                        {{ unit.unit_type_short }} - {{ unit.name }}
                                         {% if unit.short_name %} ({{ unit.short_name }}){% endif %}
                                     </option>
                                     {% endfor %}
