@@ -245,7 +245,18 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (firstName || lastName) {
             const fullName = [firstName, lastName].filter(Boolean).join(' ');
+            const shortName = shortNameInput.value.trim();
+
             nameInput.value = fullName;
+            
+            if (shortName.length == 0)
+            {
+                if (firstName) {
+                    shortNameInput.value = ([lastName, firstName[0]].filter(Boolean).join(' ') + '.').toUpperCase();
+                } else {
+                    shortNameInput.value = lastName.toUpperCase();
+                }
+            }
             
             // Update suggested format (Requirement 2.1)
             if (firstName && lastName) {

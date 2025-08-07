@@ -181,6 +181,7 @@ def get_unit_css_variables(unit: Unit) -> Dict[str, str]:
             '--unit-text-color': theme.text_color,
             '--unit-border-color': theme.computed_border_color,
             '--unit-border-width': f"{theme.border_width}px",
+            '--unit-border-style': f"{theme.border_style}",
             '--unit-hover-shadow': theme.computed_hover_shadow_color,
         }
         
@@ -193,11 +194,12 @@ def get_unit_css_variables(unit: Unit) -> Dict[str, str]:
         logger.error(f"Error getting unit CSS variables: {e}")
         # Return fallback variables
         return {
-            '--unit-primary': '#6c757d',
-            '--unit-secondary': '#f8f9fa',
-            '--unit-text': '#495057',
-            '--unit-border': '#6c757d',
+            '--unit-primary-color': '#6c757d',
+            '--unit-secondary-color': '#f8f9fa',
+            '--unit-text-color': '#495057',
+            '--unit-border-color': '#6c757d',
             '--unit-border-width': '2px',
+            '--unit-border-style': 'solid',
             '--unit-hover-shadow': '#6c757d',
         }
 
@@ -213,14 +215,15 @@ def render_unit_css_variables(unit: Unit) -> str:
         CSS style attribute value string
     """
     css_vars = get_unit_css_variables(unit)
-    from app.model.unit_type_theme import UnitTypeTheme
-    from app.services.unit_type_theme import UnitTypeThemeService
 
-    # service = UnitTypeThemeService()
-    # model = UnitTypeTheme()
-    # model.
+    if unit and 'unit_type_id' in unit.keys():
+        from app.services.unit_type import UnitTypeService
+        from app.services.unit_type_theme import UnitTypeThemeService
+        unit_type = UnitTypeService().get_by_id(int(unit['unit_type_id']))
+        if unit_type and unit_type.theme_id:
+            unit_theme = UnitTypeThemeService().get_by_id(unit_type.theme_id)
+            css_vars['css_rules'] = unit_theme.get_css_rules()
 
-    css_vars.append('css_rules', )
     # Convert to CSS style string
     style_parts = [f"{key}: {value}" for key, value in css_vars.items()]
     
