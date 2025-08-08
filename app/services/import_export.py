@@ -2105,7 +2105,7 @@ class ImportExportService:
                 
                 try:
                     # Get service for entity type
-                    service = self._get_service_for_entity_type(entity_type)
+                    service = self._get_service_for_entity(entity_type)
                     
                     # Retrieve all records for the entity type
                     records = service.get_all()

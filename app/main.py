@@ -3,6 +3,7 @@ FastAPI main application entry point
 Organigramma Web App with Security-by-Design
 """
 import os
+from datetime import datetime as dt
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -292,7 +293,13 @@ async def api_test_page(request: Request):
 async def not_found_handler(request: Request, exc):
     return templates.TemplateResponse(
         "errors/404.html", 
-        {"request": request}, 
+        {
+            "request": request,
+            "error_id": exc.status_code if exc.status_code else 404,
+            "detail" : exc.detail if hasattr(exc, 'detail') and exc.detail else None,
+            "timestamp": dt.now().isoformat(),
+            "requested_url" : request.url.path
+        }, 
         status_code=404
     )
 
@@ -301,7 +308,13 @@ async def server_error_handler(request: Request, exc):
     logger.error(f"Server error: {exc}")
     return templates.TemplateResponse(
         "errors/500.html", 
-        {"request": request}, 
+        {
+            "request": request,
+            "error_id": exc.status_code if exc.status_code else 500,
+            "detail" : exc.detail if hasattr(exc, 'detail') and exc.detail else None,
+            "timestamp": dt.now().isoformat(),
+            "requested_url" : request.url.path
+        }, 
         status_code=500
     )
 

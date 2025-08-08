@@ -22,9 +22,6 @@
             <a href="/" class="btn btn-primary">
                 <i class="bi bi-house me-1"></i>Dashboard
             </a>
-            <a href="/persons" class="btn btn-secondary">
-                <i class="bi bi-people me-1"></i>Persone
-            </a>
             <a href="javascript:history.back()" class="btn btn-secondary">
                 <i class="bi bi-arrow-left me-1"></i>Indietro
             </a>
@@ -44,7 +41,7 @@
             <details>
                 <summary>Informazioni tecniche</summary>
                 <div class="tech-info">
-                    <p><strong>Errore:</strong> Not Found (404)</p>
+                    <p><strong>Errore:</strong> {{ detail if detail else 'Not Found (404)' }}</p>
                     <p><strong>ID Errore:</strong> {{ error_id if error_id else 'N/A' }}</p>
                     <p><strong>Timestamp:</strong> {{ timestamp if timestamp else 'N/A' }}</p>
                     <p><strong>URL:</strong> {{ requested_url if requested_url else 'N/A' }}</p>

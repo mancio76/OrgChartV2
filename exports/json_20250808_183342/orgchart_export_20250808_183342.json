@@ -1,0 +1,913 @@
+{
+  "metadata": {
+    "export_timestamp": "2025-08-08T18:33:42.562651",
+    "version": "1.0",
+    "format": "json",
+    "total_records": 99,
+    "entity_counts": {
+      "unit_types": 4,
+      "unit_type_themes": 4,
+      "job_titles": 21,
+      "persons": 22,
+      "units": 20,
+      "assignments": 28
+    },
+    "dependency_order": [
+      "unit_types",
+      "unit_type_themes",
+      "units",
+      "job_titles",
+      "persons",
+      "assignments"
+    ],
+    "exported_entities": [
+      "unit_types",
+      "unit_type_themes",
+      "job_titles",
+      "persons",
+      "units",
+      "assignments"
+    ],
+    "relationships": {
+      "unit_types": {
+        "foreign_keys": {
+          "theme_id": "unit_type_themes"
+        },
+        "dependencies": [],
+        "record_count": 4
+      },
+      "units": {
+        "foreign_keys": {
+          "unit_type_id": "unit_types",
+          "parent_unit_id": "units"
+        },
+        "dependencies": [
+          "unit_types",
+          "unit_type_themes"
+        ],
+        "record_count": 20
+      },
+      "assignments": {
+        "foreign_keys": {
+          "person_id": "persons",
+          "unit_id": "units",
+          "job_title_id": "job_titles"
+        },
+        "dependencies": [
+          "persons",
+          "units",
+          "job_titles"
+        ],
+        "record_count": 28
+      }
+    },
+    "export_options": {
+      "encoding": "utf-8",
+      "json_indent": 2,
+      "include_empty_fields": false
+    }
+  },
+  "unit_types": [
+    {
+      "id": 2,
+      "name": "Funzione",
+      "short_name": "FN",
+      "aliases": [],
+      "level": 2,
+      "theme_id": 1
+    },
+    {
+      "id": 4,
+      "name": "Team",
+      "short_name": "TEAM",
+      "aliases": [],
+      "level": 3,
+      "theme_id": 4
+    },
+    {
+      "id": 1,
+      "name": "Unità",
+      "short_name": "U",
+      "aliases": [],
+      "level": 1,
+      "theme_id": 3
+    },
+    {
+      "id": 3,
+      "name": "Unità Organizzativa",
+      "short_name": "UO",
+      "aliases": [],
+      "level": 3,
+      "theme_id": 2
+    }
+  ],
+  "unit_type_themes": [
+    {
+      "id": 1,
+      "name": "Function Theme",
+      "description": "Bold styling for organizational functions with primary blue colors",
+      "icon_class": "building",
+      "emoji_fallback": "🏢",
+      "primary_color": "#a6cbff",
+      "secondary_color": "#f8f9ff",
+      "text_color": "#193983",
+      "display_label": "Funzione",
+      "is_active": 1
+    },
+    {
+      "id": 3,
+      "name": "Company Unit Theme",
+      "description": "Company Unit Theme - Bold styling for organizational functions with primary blue colors",
+      "icon_class": "bag",
+      "emoji_fallback": "🧳​",
+      "primary_color": "#dec5ff",
+      "secondary_color": "#f5f4fa",
+      "text_color": "#402378",
+      "display_label": "Unità",
+      "is_active": 1
+    },
+    {
+      "id": 2,
+      "name": "Organizational Theme",
+      "description": "Standard styling for organizational units with info cyan colors",
+      "icon_class": "diagram-2",
+      "emoji_fallback": "🏛️",
+      "primary_color": "#d3f6fb",
+      "secondary_color": "#c9ebef",
+      "text_color": "#447187",
+      "display_label": "Unità Organizzativa",
+      "is_active": 1
+    },
+    {
+      "id": 4,
+      "name": "Team Theme",
+      "description": "Copia di Company Unit Theme - Company Unit Theme - Bold styling for organizational functions with primary blue colors",
+      "icon_class": "bookmark-tabs",
+      "emoji_fallback": "📑",
+      "primary_color": "#fac65f",
+      "secondary_color": "#f9f2d8",
+      "text_color": "#b2563a",
+      "display_label": "Team",
+      "is_active": 1
+    }
+  ],
+  "units": [
+    {
+      "id": 7,
+      "name": "Amministrazione Aziendale",
+      "short_name": "AA",
+      "aliases": [],
+      "unit_type_id": 1,
+      "parent_unit_id": 3
+    },
+    {
+      "id": 1,
+      "name": "Assemblea Dei Soci",
+      "short_name": "ADS",
+      "aliases": [],
+      "unit_type_id": 1
+    },
+    {
+      "id": 3,
+      "name": "Consiglio Di Amministrazione",
+      "short_name": "CDA",
+      "aliases": [],
+      "unit_type_id": 1,
+      "parent_unit_id": 1
+    },
+    {
+      "id": 6,
+      "name": "Data Protection Office",
+      "short_name": "DPO",
+      "aliases": [],
+      "unit_type_id": 1,
+      "parent_unit_id": 3
+    },
+    {
+      "id": 4,
+      "name": "Internal Auditing",
+      "short_name": "IA",
+      "aliases": [],
+      "unit_type_id": 1,
+      "parent_unit_id": 3
+    },
+    {
+      "id": 2,
+      "name": "Organo Di Vigilanza",
+      "short_name": "ODV",
+      "aliases": [],
+      "unit_type_id": 1,
+      "parent_unit_id": 3
+    },
+    {
+      "id": 5,
+      "name": "Sindaco",
+      "short_name": "SIN",
+      "aliases": [],
+      "unit_type_id": 1,
+      "parent_unit_id": 1
+    },
+    {
+      "id": 13,
+      "name": "Amministrazione Finanza E Controllo",
+      "short_name": "AFC",
+      "aliases": [],
+      "unit_type_id": 2,
+      "parent_unit_id": 7
+    },
+    {
+      "id": 10,
+      "name": "Commercial",
+      "short_name": "SELLS",
+      "aliases": [],
+      "unit_type_id": 2,
+      "parent_unit_id": 3
+    },
+    {
+      "id": 9,
+      "name": "Corporate Communications And Media Relations",
+      "short_name": "CCMR",
+      "aliases": [],
+      "unit_type_id": 2,
+      "parent_unit_id": 3
+    },
+    {
+      "id": 12,
+      "name": "Human Resources",
+      "short_name": "HR",
+      "aliases": [],
+      "unit_type_id": 2,
+      "parent_unit_id": 7
+    },
+    {
+      "id": 11,
+      "name": "IT And Security",
+      "short_name": "IAS",
+      "aliases": [],
+      "unit_type_id": 2,
+      "parent_unit_id": 7
+    },
+    {
+      "id": 14,
+      "name": "Product Design And Delivery",
+      "short_name": "PDD",
+      "aliases": [],
+      "unit_type_id": 2,
+      "parent_unit_id": 7
+    },
+    {
+      "id": 8,
+      "name": "Segreteria Di Direzione",
+      "short_name": "SDD",
+      "aliases": [],
+      "unit_type_id": 2,
+      "parent_unit_id": 3
+    },
+    {
+      "id": 18,
+      "name": "Product Owner Public Funding",
+      "short_name": "POPF",
+      "aliases": [],
+      "unit_type_id": 3,
+      "parent_unit_id": 14
+    },
+    {
+      "id": 16,
+      "name": "Product Strategy",
+      "short_name": "PS",
+      "aliases": [],
+      "unit_type_id": 3,
+      "parent_unit_id": 14
+    },
+    {
+      "id": 15,
+      "name": "Program Management Office",
+      "short_name": "PMO",
+      "aliases": [],
+      "unit_type_id": 3,
+      "parent_unit_id": 14
+    },
+    {
+      "id": 17,
+      "name": "Service And UX-UI Design",
+      "short_name": "SUD",
+      "aliases": [],
+      "unit_type_id": 3,
+      "parent_unit_id": 14
+    },
+    {
+      "id": 19,
+      "name": "Team Investor Relations And M-A",
+      "short_name": "TIRMA",
+      "aliases": [],
+      "unit_type_id": 3,
+      "parent_unit_id": 13
+    },
+    {
+      "id": 20,
+      "name": "Amministrazione Finanza And Procurement",
+      "short_name": "AFP",
+      "aliases": [],
+      "unit_type_id": 4,
+      "parent_unit_id": 13
+    }
+  ],
+  "job_titles": [
+    {
+      "id": 5,
+      "name": "Amministratore Delegato",
+      "short_name": "AD",
+      "aliases": []
+    },
+    {
+      "id": 10,
+      "name": "Chief",
+      "short_name": "CHIEF",
+      "aliases": []
+    },
+    {
+      "id": 12,
+      "name": "Chief Financial Officer",
+      "short_name": "CFO",
+      "aliases": []
+    },
+    {
+      "id": 11,
+      "name": "Chief Information Officer / Chief Technology Officer",
+      "short_name": "CIO/CTO",
+      "aliases": []
+    },
+    {
+      "id": 13,
+      "name": "Chief Product Officer",
+      "short_name": "CPO",
+      "aliases": []
+    },
+    {
+      "id": 6,
+      "name": "Data Protection Officer",
+      "short_name": "DPO",
+      "aliases": []
+    },
+    {
+      "id": 8,
+      "name": "Head",
+      "short_name": "HEAD",
+      "aliases": []
+    },
+    {
+      "id": 3,
+      "name": "Internal Auditor",
+      "short_name": "IA",
+      "aliases": []
+    },
+    {
+      "id": 18,
+      "name": "Manager",
+      "short_name": "MGR",
+      "aliases": []
+    },
+    {
+      "id": 9,
+      "name": "Media Relations Manager",
+      "short_name": "MRM",
+      "aliases": []
+    },
+    {
+      "id": 2,
+      "name": "Membro",
+      "short_name": "MEM",
+      "aliases": []
+    },
+    {
+      "id": 4,
+      "name": "Presidente",
+      "short_name": "PRES",
+      "aliases": []
+    },
+    {
+      "id": 20,
+      "name": "Product Operations Expert",
+      "short_name": "POE",
+      "aliases": []
+    },
+    {
+      "id": 19,
+      "name": "Product Operations Senior Expert",
+      "short_name": "POSE",
+      "aliases": []
+    },
+    {
+      "id": 17,
+      "name": "Product Owner Analytics",
+      "short_name": "POA",
+      "aliases": []
+    },
+    {
+      "id": 14,
+      "name": "Program Management Officer",
+      "short_name": "PMO",
+      "aliases": []
+    },
+    {
+      "id": 1,
+      "name": "Socio",
+      "short_name": "SOC",
+      "aliases": []
+    },
+    {
+      "id": 7,
+      "name": "Staff",
+      "short_name": "STAFF",
+      "aliases": []
+    },
+    {
+      "id": 21,
+      "name": "Team Investor Relations And M-A Manager",
+      "short_name": "TIRMAM",
+      "aliases": []
+    },
+    {
+      "id": 16,
+      "name": "UI Designer",
+      "short_name": "UID",
+      "aliases": []
+    },
+    {
+      "id": 15,
+      "name": "UX Designer",
+      "short_name": "UXD",
+      "aliases": []
+    }
+  ],
+  "persons": [
+    {
+      "id": 6,
+      "name": "Francesco Becchelli",
+      "short_name": "BECCHELLI F.",
+      "first_name": "Francesco",
+      "last_name": "Becchelli"
+    },
+    {
+      "id": 19,
+      "name": "Mohamad Bey El Merhabi",
+      "short_name": "BEY EL MERHABI M.",
+      "first_name": "Mohamad",
+      "last_name": "Bey El Merhabi"
+    },
+    {
+      "id": 4,
+      "name": "Gianluca Calvosa",
+      "short_name": "CALVOSA C.",
+      "first_name": "Gianluca",
+      "last_name": "Calvosa"
+    },
+    {
+      "id": 9,
+      "name": "Martina Casani",
+      "short_name": "CASANI M.",
+      "first_name": "Martina",
+      "last_name": "Casani"
+    },
+    {
+      "id": 20,
+      "name": "Guido Di Toro Mammarella",
+      "short_name": "DI TORO G.",
+      "first_name": "Guido",
+      "last_name": "Di Toro Mammarella"
+    },
+    {
+      "id": 7,
+      "name": "FINDATA Srl",
+      "short_name": "FINDATA",
+      "first_name": "FINDATA Srl"
+    },
+    {
+      "id": 15,
+      "name": "Fabrizio Ferrara",
+      "short_name": "FERRARA F.",
+      "first_name": "Fabrizio",
+      "last_name": "Ferrara"
+    },
+    {
+      "id": 16,
+      "name": "Valentina Frisotti",
+      "short_name": "FRISOTTI V.",
+      "first_name": "Valentina",
+      "last_name": "Frisotti"
+    },
+    {
+      "id": 13,
+      "name": "Silvio Longo",
+      "short_name": "LONGO S.",
+      "first_name": "Silvio",
+      "last_name": "Longo"
+    },
+    {
+      "id": 12,
+      "name": "Paolo Mancini",
+      "short_name": "MANCINI P.",
+      "email": "paolo.mancini@openeconomics.eu",
+      "first_name": "Paolo",
+      "last_name": "Mancini",
+      "profile_image": "profiles/mancini.paolo.png"
+    },
+    {
+      "id": 14,
+      "name": "Daniele Nardone",
+      "short_name": "NARDONE D.",
+      "first_name": "Daniele",
+      "last_name": "Nardone"
+    },
+    {
+      "id": 22,
+      "name": "Monica Nardone",
+      "short_name": "NARDONE M.",
+      "first_name": "Monica",
+      "last_name": "Nardone"
+    },
+    {
+      "id": 5,
+      "name": "Raffaele Nardone",
+      "short_name": "NARDONE R.",
+      "first_name": "Raffaele",
+      "last_name": "Nardone"
+    },
+    {
+      "id": 3,
+      "name": "F Orioli",
+      "short_name": "ORIOLI F.",
+      "first_name": "F",
+      "last_name": "Orioli"
+    },
+    {
+      "id": 2,
+      "name": "C Padovani",
+      "short_name": "PADOVANI C.",
+      "first_name": "C",
+      "last_name": "Padovani"
+    },
+    {
+      "id": 17,
+      "name": "Erica Prato",
+      "short_name": "PRATO E.",
+      "first_name": "Erica",
+      "last_name": "Prato"
+    },
+    {
+      "id": 21,
+      "name": "Alfredo Scermino",
+      "short_name": "SCERMINO A.",
+      "first_name": "Alfredo",
+      "last_name": "Scermino"
+    },
+    {
+      "id": 18,
+      "name": "Lorenzo Stalfieri",
+      "short_name": "STALFIERI L.",
+      "first_name": "Lorenzo",
+      "last_name": "Stalfieri"
+    },
+    {
+      "id": 11,
+      "name": "Giovanni Uboldi",
+      "short_name": "UBOLDI G.",
+      "first_name": "Giovanni",
+      "last_name": "Uboldi"
+    },
+    {
+      "id": 1,
+      "name": "Benedetto Verdino",
+      "short_name": "VERDINO B.",
+      "first_name": "Benedetto",
+      "last_name": "Verdino"
+    },
+    {
+      "id": 8,
+      "name": "Alessia Zanini",
+      "short_name": "ZANINI A.",
+      "first_name": "Alessia",
+      "last_name": "Zanini"
+    },
+    {
+      "id": 10,
+      "name": "Andrea Zanini",
+      "short_name": "ZANINI A.",
+      "first_name": "Andrea",
+      "last_name": "Zanini"
+    }
+  ],
+  "assignments": [
+    {
+      "id": 9,
+      "person_id": 8,
+      "unit_id": 8,
+      "job_title_id": 7,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 27,
+      "person_id": 21,
+      "unit_id": 19,
+      "job_title_id": 21,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": false,
+      "is_current": true
+    },
+    {
+      "id": 12,
+      "person_id": 10,
+      "unit_id": 9,
+      "job_title_id": 9,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": false,
+      "is_current": true
+    },
+    {
+      "id": 1,
+      "person_id": 1,
+      "unit_id": 4,
+      "job_title_id": 3,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 2,
+      "person_id": 2,
+      "unit_id": 2,
+      "job_title_id": 2,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 16,
+      "person_id": 14,
+      "unit_id": 13,
+      "job_title_id": 12,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 20,
+      "person_id": 17,
+      "unit_id": 17,
+      "job_title_id": 8,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 3,
+      "person_id": 3,
+      "unit_id": 5,
+      "job_title_id": 2,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 8,
+      "person_id": 7,
+      "unit_id": 6,
+      "job_title_id": 6,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 17,
+      "person_id": 15,
+      "unit_id": 14,
+      "job_title_id": 13,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 23,
+      "person_id": 15,
+      "unit_id": 14,
+      "job_title_id": 17,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": true,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 22,
+      "person_id": 15,
+      "unit_id": 16,
+      "job_title_id": 8,
+      "version": 2,
+      "percentage": 1.0,
+      "is_ad_interim": true,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 19,
+      "person_id": 15,
+      "unit_id": 16,
+      "job_title_id": 8,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "valid_to": "2025-08-07",
+      "is_current": false
+    },
+    {
+      "id": 6,
+      "person_id": 6,
+      "unit_id": 3,
+      "job_title_id": 2,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": false,
+      "is_current": true
+    },
+    {
+      "id": 4,
+      "person_id": 4,
+      "unit_id": 3,
+      "job_title_id": 4,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 13,
+      "person_id": 11,
+      "unit_id": 10,
+      "job_title_id": 10,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 26,
+      "person_id": 20,
+      "unit_id": 18,
+      "job_title_id": 18,
+      "version": 2,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 25,
+      "person_id": 20,
+      "unit_id": 18,
+      "job_title_id": 18,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "valid_to": "2025-08-07",
+      "is_current": false
+    },
+    {
+      "id": 24,
+      "person_id": 18,
+      "unit_id": 17,
+      "job_title_id": 16,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": false,
+      "is_current": true
+    },
+    {
+      "id": 11,
+      "person_id": 9,
+      "unit_id": 9,
+      "job_title_id": 8,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": true,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 10,
+      "person_id": 9,
+      "unit_id": 9,
+      "job_title_id": 2,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "valid_to": "2025-07-01",
+      "is_current": false
+    },
+    {
+      "id": 21,
+      "person_id": 19,
+      "unit_id": 17,
+      "job_title_id": 15,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": false,
+      "is_current": true
+    },
+    {
+      "id": 28,
+      "person_id": 22,
+      "unit_id": 20,
+      "job_title_id": 18,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 14,
+      "person_id": 12,
+      "unit_id": 11,
+      "job_title_id": 11,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 7,
+      "person_id": 5,
+      "unit_id": 7,
+      "job_title_id": 5,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 5,
+      "person_id": 5,
+      "unit_id": 3,
+      "job_title_id": 2,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": false,
+      "is_current": true
+    },
+    {
+      "id": 15,
+      "person_id": 13,
+      "unit_id": 12,
+      "job_title_id": 8,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "is_current": true
+    },
+    {
+      "id": 18,
+      "person_id": 16,
+      "unit_id": 15,
+      "job_title_id": 14,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "is_current": true
+    }
+  ]
+}

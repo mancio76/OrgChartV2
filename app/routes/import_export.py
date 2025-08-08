@@ -152,7 +152,7 @@ async def import_export_home(
                 "page_subtitle": "Gestione importazione ed esportazione dati organizzativi",
                 "csrf_token": csrf_token,
                 "breadcrumb": [
-                    {"name": "Home", "url": "/"},
+                    ##{"name": "Home", "url": "/"},
                     {"name": "Import/Export"}
                 ]
             }
@@ -635,33 +635,41 @@ async def process_export_operation(
         operation_status[operation_id]["message"] = "Esportazione in corso..."
         operation_status[operation_id]["progress"] = 20
         
-        # Process export (this would call the actual export method when implemented)
-        # For now, we'll simulate the process
-        await asyncio.sleep(3)  # Simulate processing time
-        
-        # TODO: Implement actual export processing when export_data method is available
-        # export_result = service.export_data(export_format, options)
+        ##await asyncio.sleep(1)
+        export_result = service.export_data(FileFormat[export_format.upper()], options)
         
         # Simulate successful export result with download URLs
         download_urls = []
-        if export_format == "json":
-            download_urls.append({
-                "filename": f"export_{operation_id}.json",
-                "url": f"/import-export/download/{operation_id}/export.json",
-                "size": "2.5 MB"
-            })
-        else:  # CSV
-            for entity_type in options.entity_types:
+
+        if export_result.success:
+            for exported_file in export_result.exported_files:
                 download_urls.append({
-                    "filename": f"{entity_type}_{operation_id}.csv",
-                    "url": f"/import-export/download/{operation_id}/{entity_type}.csv",
-                    "size": "1.2 MB"
+                    "filename": f"{Path(exported_file).name}",
+                    "url": f"/import-export/download/{operation_id}/{Path(exported_file).name}",
+                    "size": f"{export_result.file_sizes[exported_file]}"
                 })
+
+        # if export_format == "json":
+        #     download_urls.append({
+        #         "filename": f"export_{operation_id}.json",
+        #         "url": f"/import-export/download/{operation_id}/export.json",
+        #         "size": "2.5 MB"
+        #     })
+        # else:  # CSV
+        #     for entity_type in options.entity_types:
+        #         download_urls.append({
+        #             "filename": f"{entity_type}_{operation_id}.csv",
+        #             "url": f"/import-export/download/{operation_id}/{entity_type}.csv",
+        #             "size": "1.2 MB"
+        #         })
         
         operation_status[operation_id].update({
             "status": "completed",
             "progress": 100,
             "message": "Esportazione completata con successo",
+            "exported_records": export_result.records_exported if export_result.records_exported else [],
+            "errors": export_result.errors if export_result.errors else [],
+            "warnings": export_result.warnings if export_result.warnings else [],
             "download_urls": download_urls,
             "end_time": datetime.now().isoformat()
         })
@@ -744,7 +752,7 @@ async def operation_status_page(
                 "operation_id": operation_id,
                 "status_info": status_info,
                 "breadcrumb": [
-                    {"name": "Home", "url": "/"},
+                    ##{"name": "Home", "url": "/"},
                     {"name": "Import/Export", "url": "/import-export"},
                     {"name": "Stato Operazione"}
                 ]
@@ -878,7 +886,7 @@ async def operations_history(
                 "operation_type": operation_type or "all",
                 "status_filter": status_filter or "all",
                 "breadcrumb": [
-                    {"name": "Home", "url": "/"},
+                    ##{"name": "Home", "url": "/"},
                     {"name": "Import/Export", "url": "/import-export"},
                     {"name": "Storico Operazioni"}
                 ]
@@ -1158,7 +1166,7 @@ async def monitoring_dashboard(request: Request):
                 "page_title": "Monitoraggio Operazioni",
                 "page_subtitle": "Dashboard di monitoraggio in tempo reale",
                 "breadcrumb": [
-                    {"name": "Home", "url": "/"},
+                    ##{"name": "Home", "url": "/"},
                     {"name": "Import/Export", "url": "/import-export"},
                     {"name": "Monitoraggio"}
                 ]
