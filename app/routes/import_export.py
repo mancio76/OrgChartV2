@@ -615,7 +615,7 @@ async def generate_export(
         raise HTTPException(status_code=500, detail="Errore interno del server")
 
 
-async def process_export_operation(
+async def process_export_operation_old(
     operation_id: str,
     export_format: str,
     options: ExportOptions,
@@ -684,6 +684,68 @@ async def process_export_operation(
             "end_time": datetime.now().isoformat()
         })
 
+
+async def process_export_operation(
+    operation_id: str,
+    export_format: str,
+    options: ExportOptions,
+    service: ImportExportService
+):
+    """
+    Background task for processing export operation.
+    
+    Args:
+        operation_id: Unique operation identifier
+        export_format: Export format (json/csv)
+        options: Export options
+        service: Import/export service instance
+    """
+    try:
+        # Update status
+        operation_status[operation_id]["message"] = "Esportazione in corso..."
+        operation_status[operation_id]["progress"] = 20
+        
+        # Execute the export
+        export_result = service.export_data(FileFormat[export_format.upper()], options)
+        
+        # Build download URLs from the actual exported files
+        download_urls = []
+        
+        if export_result.success:
+            for exported_file in export_result.exported_files:
+                file_name = Path(exported_file).name
+                file_size = export_result.file_sizes.get(exported_file, 0)
+                
+                download_urls.append({
+                    "filename": file_name,
+                    "url": f"/import-export/download/{operation_id}/{file_name}",
+                    "size": f"{file_size / 1024:.2f} KB" if file_size < 1024*1024 else f"{file_size / (1024*1024):.2f} MB",
+                    "actual_size": f"{file_size}",
+                    "actual_path": exported_file  # Store the actual path for retrieval
+                })
+        
+        # Store the complete export result and file mappings
+        operation_status[operation_id].update({
+            "status": "completed" if export_result.success else "failed",
+            "progress": 100,
+            "message": "Esportazione completata con successo" if export_result.success else "Esportazione fallita",
+            "exported_records": export_result.records_exported if export_result.records_exported else {},
+            "errors": [str(e) for e in export_result.errors] if export_result.errors else [],
+            "warnings": [str(w) for w in export_result.warnings] if export_result.warnings else [],
+            "download_urls": download_urls,
+            "exported_files": export_result.exported_files,  # Store the actual file paths
+            "end_time": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in export operation processing: {e}")
+        operation_status[operation_id].update({
+            "status": "failed",
+            "progress": 0,
+            "message": f"Errore durante l'esportazione: {str(e)}",
+            "errors": [str(e)],
+            "end_time": datetime.now().isoformat()
+        })
 
 @router.get("/status/{operation_id}")
 async def get_operation_status(operation_id: str):
@@ -789,16 +851,42 @@ async def download_export_file(operation_id: str, filename: str):
         if status_info["status"] != "completed":
             raise HTTPException(status_code=400, detail="Operazione non completata")
         
+        # Get the actual file path from stored export results
+        exported_files = status_info.get("exported_files", [])
+        file_path = None
+        
+        # Find the file with matching filename
+        for exported_file in exported_files:
+            if Path(exported_file).name == filename:
+                file_path = exported_file
+                break
+        
+        if not file_path or not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File non trovato fra quelli esportati")
+
         # Validate filename is in allowed downloads
         download_urls = status_info.get("download_urls", [])
         valid_filenames = {url["filename"] for url in download_urls}
         
         if filename not in valid_filenames:
-            raise HTTPException(status_code=404, detail="File non trovato")
-        
-        # TODO: Implement actual file serving when export files are generated
-        # For now, return a placeholder response
-        raise HTTPException(status_code=501, detail="Download non ancora implementato")
+            raise HTTPException(status_code=404, detail="File non trovato o non autorizzato")
+
+        # Determine media type
+        file_extension = Path(filename).suffix.lower()
+        media_type = "application/octet-stream"
+
+        if file_extension == ".json":
+            media_type = "application/json"
+        elif file_extension == ".csv":
+            media_type = "text/csv; charset=utf-8"
+            
+
+        # Return the file
+        return FileResponse(
+            path=file_path,
+            filename=filename,
+            media_type=media_type
+        )
     
     except HTTPException:
         raise
