@@ -1,5 +1,39 @@
 {% extends "base/layout.html" %}
 
+{% block extra_css %}
+<style>
+/* Additional status-specific styles */
+.operation-status-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.status-badge-large {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+
+.progress-container {
+    position: relative;
+}
+
+.progress-text-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.collapsible-panel .card-body {
+    transition: all 0.3s ease;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <div class="row">
@@ -26,34 +60,50 @@
                         <h5 class="card-title mb-0">
                             <i class="bi bi-activity me-2"></i>
                             Stato Operazione
+                            <small class="text-muted ms-2">#{{ operation_id[:8] }}</small>
                         </h5>
-                        <span class="badge {% if status_info.status == 'completed' %}bg-success{% elif status_info.status == 'failed' %}bg-danger{% elif status_info.status == 'completed_with_errors' %}bg-warning{% else %}bg-primary{% endif %}">
-                            {% if status_info.status == 'completed' %}
-                                <i class="bi bi-check-circle me-1"></i>Completata
-                            {% elif status_info.status == 'failed' %}
-                                <i class="bi bi-x-circle me-1"></i>Fallita
-                            {% elif status_info.status == 'completed_with_errors' %}
-                                <i class="bi bi-exclamation-triangle me-1"></i>Completata con Errori
-                            {% elif status_info.status == 'processing' %}
-                                <i class="bi bi-hourglass-split me-1"></i>In Elaborazione
-                            {% else %}
-                                <i class="bi bi-clock me-1"></i>{{ status_info.status|title }}
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge {% if status_info.status == 'completed' %}bg-success{% elif status_info.status == 'failed' %}bg-danger{% elif status_info.status == 'completed_with_errors' %}bg-warning{% else %}bg-primary{% endif %}">
+                                {% if status_info.status == 'completed' %}
+                                    <i class="bi bi-check-circle me-1"></i>Completata
+                                {% elif status_info.status == 'failed' %}
+                                    <i class="bi bi-x-circle me-1"></i>Fallita
+                                {% elif status_info.status == 'completed_with_errors' %}
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Completata con Errori
+                                {% elif status_info.status == 'processing' %}
+                                    <i class="bi bi-hourglass-split me-1"></i>In Elaborazione
+                                {% else %}
+                                    <i class="bi bi-clock me-1"></i>{{ status_info.status|title }}
+                                {% endif %}
+                            </span>
+                            {% if status_info.status == 'processing' %}
+                            <button type="button" class="btn btn-outline-danger btn-sm" id="cancelOperationBtn">
+                                <i class="bi bi-x-circle me-1"></i>Annulla
+                            </button>
                             {% endif %}
-                        </span>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body">
                     <!-- Progress Bar -->
                     <div class="mb-4">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-muted">Progresso</span>
-                            <span class="fw-bold">{{ status_info.progress }}%</span>
+                            <span class="text-muted">Progresso Complessivo</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fw-bold">{{ status_info.progress }}%</span>
+                                {% if status_info.estimated_time_remaining %}
+                                <small class="text-muted">
+                                    <i class="bi bi-clock me-1"></i>{{ status_info.estimated_time_remaining }}
+                                </small>
+                                {% endif %}
+                            </div>
                         </div>
-                        <div class="progress">
+                        <div class="progress position-relative" style="height: 8px;">
                             <div class="progress-bar 
                                 {% if status_info.status == 'completed' %}bg-success
                                 {% elif status_info.status == 'failed' %}bg-danger
                                 {% elif status_info.status == 'completed_with_errors' %}bg-warning
+                                {% elif status_info.status == 'processing' %}bg-primary progress-bar-striped progress-bar-animated
                                 {% else %}bg-primary{% endif %}" 
                                 role="progressbar" 
                                 style="width: {{ status_info.progress }}%"
@@ -64,10 +114,96 @@
                         </div>
                     </div>
 
-                    <!-- Status Message -->
+                    <!-- Current Entity Progress -->
+                    {% if status_info.current_entity %}
                     <div class="mb-4">
-                        <h6 class="text-muted mb-2">Messaggio di Stato</h6>
-                        <p class="mb-0">{{ status_info.message }}</p>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted">Entità Corrente</span>
+                            <span class="badge bg-info">{{ status_info.current_entity }}</span>
+                        </div>
+                        <div class="progress" style="height: 4px;">
+                            <div class="progress-bar bg-info" 
+                                role="progressbar" 
+                                style="width: {{ status_info.entity_progress or 0 }}%"
+                                aria-valuenow="{{ status_info.entity_progress or 0 }}" 
+                                aria-valuemin="0" 
+                                aria-valuemax="100">
+                            </div>
+                        </div>
+                        {% if status_info.entity_records_processed and status_info.entity_total_records %}
+                        <div class="d-flex justify-content-between mt-1">
+                            <small class="text-muted">
+                                {{ status_info.entity_records_processed }} / {{ status_info.entity_total_records }} record
+                            </small>
+                            <small class="text-muted">
+                                {{ "%.1f"|format((status_info.entity_records_processed / status_info.entity_total_records * 100) if status_info.entity_total_records > 0 else 0) }}%
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Status Message and Activity Log -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="text-muted mb-0">Messaggio di Stato</h6>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="toggleActivityLogBtn">
+                                <i class="bi bi-list me-1"></i>Log Attività
+                            </button>
+                        </div>
+                        <div class="alert alert-info mb-3">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-info-circle me-2 mt-1"></i>
+                                <div>
+                                    <strong>{{ status_info.message }}</strong>
+                                    {% if status_info.last_updated %}
+                                    <div class="small text-muted mt-1">
+                                        Ultimo aggiornamento: {{ status_info.last_updated }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Activity Log -->
+                        <div id="activityLogPanel" class="d-none">
+                            <div class="card border-secondary">
+                                <div class="card-header bg-light">
+                                    <h6 class="card-title mb-0">
+                                        <i class="bi bi-clock-history me-2"></i>
+                                        Log Attività
+                                    </h6>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="activity-log" style="max-height: 300px; overflow-y: auto;">
+                                        {% if status_info.activity_log %}
+                                        {% for log_entry in status_info.activity_log %}
+                                        <div class="activity-log-entry p-3 border-bottom">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div class="activity-content">
+                                                    <div class="activity-message">{{ log_entry.message }}</div>
+                                                    {% if log_entry.details %}
+                                                    <div class="activity-details small text-muted mt-1">
+                                                        {{ log_entry.details }}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="activity-timestamp text-muted small">
+                                                    {{ log_entry.timestamp }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                        {% else %}
+                                        <div class="p-3 text-center text-muted">
+                                            <i class="bi bi-clock me-2"></i>
+                                            Nessuna attività registrata
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Operation Details -->
@@ -189,21 +325,90 @@
             {% if status_info.errors %}
             <div class="card border-danger mb-3">
                 <div class="card-header bg-danger text-white">
-                    <h6 class="card-title mb-0">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        Errori ({{ status_info.errors|length }})
-                    </h6>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Errori ({{ status_info.errors|length }})
+                        </h6>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-light btn-sm" id="exportErrorsBtn" title="Esporta errori">
+                                <i class="bi bi-download"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-light btn-sm" id="toggleErrorsBtn" title="Espandi/Comprimi">
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="list-group list-group-flush">
-                        {% for error in status_info.errors[:10] %}
-                        <div class="list-group-item px-0 py-2 border-0">
-                            <small class="text-danger">{{ error }}</small>
+                <div class="card-body" id="errorsCardBody">
+                    <div class="error-summary mb-3">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="error-stat">
+                                    <div class="error-stat-number text-danger">{{ status_info.critical_errors_count or 0 }}</div>
+                                    <div class="error-stat-label">Critici</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="error-stat">
+                                    <div class="error-stat-number text-warning">{{ status_info.validation_errors_count or 0 }}</div>
+                                    <div class="error-stat-label">Validazione</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="error-stat">
+                                    <div class="error-stat-number text-info">{{ status_info.processing_errors_count or 0 }}</div>
+                                    <div class="error-stat-label">Elaborazione</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="error-list" style="max-height: 300px; overflow-y: auto;">
+                        {% for error in status_info.errors[:20] %}
+                        <div class="error-item mb-2 p-2 bg-light rounded">
+                            <div class="d-flex align-items-start">
+                                <div class="error-icon me-2 mt-1">
+                                    {% if error.type == 'critical' %}
+                                    <i class="bi bi-x-circle text-danger"></i>
+                                    {% elif error.type == 'validation' %}
+                                    <i class="bi bi-exclamation-triangle text-warning"></i>
+                                    {% else %}
+                                    <i class="bi bi-info-circle text-info"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="error-content flex-grow-1">
+                                    <div class="error-message small">{{ error.message or error }}</div>
+                                    {% if error.context %}
+                                    <div class="error-context small text-muted mt-1">
+                                        {% if error.entity_type %}
+                                        <span class="badge bg-secondary me-1">{{ error.entity_type }}</span>
+                                        {% endif %}
+                                        {% if error.line_number %}
+                                        <span class="badge bg-info me-1">Linea {{ error.line_number }}</span>
+                                        {% endif %}
+                                        {% if error.field %}
+                                        <code class="small">{{ error.field }}</code>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% if error.resolution_suggestion %}
+                                <button type="button" class="btn btn-outline-info btn-sm ms-2" 
+                                        title="Suggerimento risoluzione"
+                                        onclick="showResolutionSuggestion('{{ error.id }}')">
+                                    <i class="bi bi-lightbulb"></i>
+                                </button>
+                                {% endif %}
+                            </div>
                         </div>
                         {% endfor %}
-                        {% if status_info.errors|length > 10 %}
-                        <div class="list-group-item px-0 py-2 border-0">
-                            <small class="text-muted">... e altri {{ status_info.errors|length - 10 }} errori</small>
+                        {% if status_info.errors|length > 20 %}
+                        <div class="text-center py-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="loadMoreErrorsBtn">
+                                <i class="bi bi-three-dots me-1"></i>
+                                Carica altri {{ status_info.errors|length - 20 }} errori
+                            </button>
                         </div>
                         {% endif %}
                     </div>
@@ -214,23 +419,91 @@
             {% if status_info.warnings %}
             <div class="card border-warning mb-3">
                 <div class="card-header bg-warning text-dark">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-exclamation-circle me-2"></i>
+                            Avvisi ({{ status_info.warnings|length }})
+                        </h6>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-dark btn-sm" id="exportWarningsBtn" title="Esporta avvisi">
+                                <i class="bi bi-download"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-dark btn-sm" id="toggleWarningsBtn" title="Espandi/Comprimi">
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body" id="warningsCardBody">
+                    <div class="warning-list" style="max-height: 250px; overflow-y: auto;">
+                        {% for warning in status_info.warnings[:15] %}
+                        <div class="warning-item mb-2 p-2 bg-light rounded">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-exclamation-circle text-warning me-2 mt-1"></i>
+                                <div class="warning-content flex-grow-1">
+                                    <div class="warning-message small">{{ warning.message or warning }}</div>
+                                    {% if warning.context %}
+                                    <div class="warning-context small text-muted mt-1">
+                                        {% if warning.entity_type %}
+                                        <span class="badge bg-secondary me-1">{{ warning.entity_type }}</span>
+                                        {% endif %}
+                                        {% if warning.line_number %}
+                                        <span class="badge bg-info me-1">Linea {{ warning.line_number }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% if status_info.warnings|length > 15 %}
+                        <div class="text-center py-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="loadMoreWarningsBtn">
+                                <i class="bi bi-three-dots me-1"></i>
+                                Carica altri {{ status_info.warnings|length - 15 }} avvisi
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Operation Performance Metrics -->
+            {% if status_info.performance_metrics %}
+            <div class="card border-info mb-3">
+                <div class="card-header bg-light">
                     <h6 class="card-title mb-0">
-                        <i class="bi bi-exclamation-circle me-2"></i>
-                        Avvisi ({{ status_info.warnings|length }})
+                        <i class="bi bi-speedometer2 text-info me-2"></i>
+                        Metriche Prestazioni
                     </h6>
                 </div>
                 <div class="card-body">
-                    <div class="list-group list-group-flush">
-                        {% for warning in status_info.warnings[:10] %}
-                        <div class="list-group-item px-0 py-2 border-0">
-                            <small class="text-warning">{{ warning }}</small>
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="metric-item">
+                                <div class="metric-value text-primary">{{ status_info.performance_metrics.records_per_second or 0 }}</div>
+                                <div class="metric-label small text-muted">Record/sec</div>
+                            </div>
                         </div>
-                        {% endfor %}
-                        {% if status_info.warnings|length > 10 %}
-                        <div class="list-group-item px-0 py-2 border-0">
-                            <small class="text-muted">... e altri {{ status_info.warnings|length - 10 }} avvisi</small>
+                        <div class="col-6 mb-3">
+                            <div class="metric-item">
+                                <div class="metric-value text-success">{{ status_info.performance_metrics.memory_usage or 0 }}MB</div>
+                                <div class="metric-label small text-muted">Memoria</div>
+                            </div>
                         </div>
-                        {% endif %}
+                        <div class="col-6">
+                            <div class="metric-item">
+                                <div class="metric-value text-warning">{{ status_info.performance_metrics.cpu_usage or 0 }}%</div>
+                                <div class="metric-label small text-muted">CPU</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="metric-item">
+                                <div class="metric-value text-info">{{ status_info.performance_metrics.elapsed_time or 0 }}s</div>
+                                <div class="metric-label small text-muted">Tempo</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -296,13 +569,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentStatus = '{{ status_info.status }}';
     
     // Auto-refresh for active operations
+    let refreshInterval = null;
     if (currentStatus === 'processing') {
-        const refreshInterval = setInterval(() => {
+        refreshInterval = setInterval(() => {
             fetch(`/import-export/status/${operationId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.status !== 'processing') {
                         // Operation completed, reload page to show final results
+                        clearInterval(refreshInterval);
                         window.location.reload();
                     } else {
                         // Update progress if still processing
@@ -322,7 +597,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function updateProgressDisplay(data) {
-        // Update progress bar
+        // Update main progress bar
         const progressBar = document.querySelector('.progress-bar');
         if (progressBar) {
             progressBar.style.width = data.progress + '%';
@@ -335,12 +610,261 @@ document.addEventListener('DOMContentLoaded', function() {
             progressText.textContent = data.progress + '%';
         }
         
+        // Update entity progress
+        if (data.current_entity) {
+            const currentEntityBadge = document.querySelector('.badge.bg-info');
+            if (currentEntityBadge) {
+                currentEntityBadge.textContent = data.current_entity;
+            }
+            
+            const entityProgressBar = document.querySelector('.progress .bg-info');
+            if (entityProgressBar && data.entity_progress) {
+                entityProgressBar.style.width = data.entity_progress + '%';
+            }
+        }
+        
         // Update status message
-        const messageElement = document.querySelector('.card-body p');
+        const messageElement = document.querySelector('.alert-info strong');
         if (messageElement && data.message) {
             messageElement.textContent = data.message;
         }
+        
+        // Update last updated timestamp
+        const lastUpdatedElement = document.querySelector('.small.text-muted');
+        if (lastUpdatedElement) {
+            lastUpdatedElement.textContent = 'Ultimo aggiornamento: ' + new Date().toLocaleTimeString();
+        }
     }
+
+    // Cancel operation handler
+    const cancelBtn = document.getElementById('cancelOperationBtn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function() {
+            if (confirm('Sei sicuro di voler annullare questa operazione?')) {
+                fetch(`/import-export/cancel/${operationId}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (refreshInterval) clearInterval(refreshInterval);
+                        window.location.reload();
+                    } else {
+                        alert('Errore nell\'annullamento: ' + (data.message || 'Errore sconosciuto'));
+                    }
+                })
+                .catch(error => {
+                    alert('Errore nell\'annullamento: ' + error.message);
+                });
+            }
+        });
+    }
+
+    // Activity log toggle
+    const toggleActivityLogBtn = document.getElementById('toggleActivityLogBtn');
+    const activityLogPanel = document.getElementById('activityLogPanel');
+    
+    if (toggleActivityLogBtn && activityLogPanel) {
+        toggleActivityLogBtn.addEventListener('click', function() {
+            activityLogPanel.classList.toggle('d-none');
+            const isVisible = !activityLogPanel.classList.contains('d-none');
+            this.innerHTML = isVisible ? 
+                '<i class="bi bi-eye-slash me-1"></i>Nascondi Log' :
+                '<i class="bi bi-list me-1"></i>Log Attività';
+        });
+    }
+
+    // Error panel toggle
+    const toggleErrorsBtn = document.getElementById('toggleErrorsBtn');
+    const errorsCardBody = document.getElementById('errorsCardBody');
+    
+    if (toggleErrorsBtn && errorsCardBody) {
+        toggleErrorsBtn.addEventListener('click', function() {
+            const isCollapsed = errorsCardBody.style.display === 'none';
+            errorsCardBody.style.display = isCollapsed ? 'block' : 'none';
+            this.querySelector('i').className = isCollapsed ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
+        });
+    }
+
+    // Warning panel toggle
+    const toggleWarningsBtn = document.getElementById('toggleWarningsBtn');
+    const warningsCardBody = document.getElementById('warningsCardBody');
+    
+    if (toggleWarningsBtn && warningsCardBody) {
+        toggleWarningsBtn.addEventListener('click', function() {
+            const isCollapsed = warningsCardBody.style.display === 'none';
+            warningsCardBody.style.display = isCollapsed ? 'block' : 'none';
+            this.querySelector('i').className = isCollapsed ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
+        });
+    }
+
+    // Export errors functionality
+    const exportErrorsBtn = document.getElementById('exportErrorsBtn');
+    if (exportErrorsBtn) {
+        exportErrorsBtn.addEventListener('click', function() {
+            window.location.href = `/import-export/export-errors/${operationId}`;
+        });
+    }
+
+    // Export warnings functionality
+    const exportWarningsBtn = document.getElementById('exportWarningsBtn');
+    if (exportWarningsBtn) {
+        exportWarningsBtn.addEventListener('click', function() {
+            window.location.href = `/import-export/export-warnings/${operationId}`;
+        });
+    }
+
+    // Load more errors
+    const loadMoreErrorsBtn = document.getElementById('loadMoreErrorsBtn');
+    if (loadMoreErrorsBtn) {
+        loadMoreErrorsBtn.addEventListener('click', function() {
+            fetch(`/import-export/errors/${operationId}?offset=20`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.errors && data.errors.length > 0) {
+                        const errorList = document.querySelector('.error-list');
+                        data.errors.forEach(error => {
+                            const errorElement = createErrorElement(error);
+                            errorList.insertBefore(errorElement, this.parentElement);
+                        });
+                        
+                        if (data.has_more) {
+                            this.textContent = `Carica altri ${data.remaining} errori`;
+                        } else {
+                            this.style.display = 'none';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading more errors:', error);
+                });
+        });
+    }
+
+    // Load more warnings
+    const loadMoreWarningsBtn = document.getElementById('loadMoreWarningsBtn');
+    if (loadMoreWarningsBtn) {
+        loadMoreWarningsBtn.addEventListener('click', function() {
+            fetch(`/import-export/warnings/${operationId}?offset=15`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.warnings && data.warnings.length > 0) {
+                        const warningList = document.querySelector('.warning-list');
+                        data.warnings.forEach(warning => {
+                            const warningElement = createWarningElement(warning);
+                            warningList.insertBefore(warningElement, this.parentElement);
+                        });
+                        
+                        if (data.has_more) {
+                            this.textContent = `Carica altri ${data.remaining} avvisi`;
+                        } else {
+                            this.style.display = 'none';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading more warnings:', error);
+                });
+        });
+    }
+
+    function createErrorElement(error) {
+        const div = document.createElement('div');
+        div.className = 'error-item mb-2 p-2 bg-light rounded';
+        div.innerHTML = `
+            <div class="d-flex align-items-start">
+                <div class="error-icon me-2 mt-1">
+                    <i class="bi bi-x-circle text-danger"></i>
+                </div>
+                <div class="error-content flex-grow-1">
+                    <div class="error-message small">${error.message}</div>
+                    ${error.context ? `
+                    <div class="error-context small text-muted mt-1">
+                        ${error.entity_type ? `<span class="badge bg-secondary me-1">${error.entity_type}</span>` : ''}
+                        ${error.line_number ? `<span class="badge bg-info me-1">Linea ${error.line_number}</span>` : ''}
+                        ${error.field ? `<code class="small">${error.field}</code>` : ''}
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        return div;
+    }
+
+    function createWarningElement(warning) {
+        const div = document.createElement('div');
+        div.className = 'warning-item mb-2 p-2 bg-light rounded';
+        div.innerHTML = `
+            <div class="d-flex align-items-start">
+                <i class="bi bi-exclamation-circle text-warning me-2 mt-1"></i>
+                <div class="warning-content flex-grow-1">
+                    <div class="warning-message small">${warning.message}</div>
+                    ${warning.context ? `
+                    <div class="warning-context small text-muted mt-1">
+                        ${warning.entity_type ? `<span class="badge bg-secondary me-1">${warning.entity_type}</span>` : ''}
+                        ${warning.line_number ? `<span class="badge bg-info me-1">Linea ${warning.line_number}</span>` : ''}
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        return div;
+    }
+
+    // Resolution suggestion modal
+    window.showResolutionSuggestion = function(errorId) {
+        fetch(`/import-export/error-resolution/${errorId}`)
+            .then(response => response.json())
+            .then(data => {
+                const modal = document.createElement('div');
+                modal.className = 'modal fade';
+                modal.innerHTML = `
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="bi bi-lightbulb me-2"></i>Suggerimento Risoluzione
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-info">
+                                    <h6 class="alert-heading">Problema:</h6>
+                                    <p class="mb-0">${data.error_description}</p>
+                                </div>
+                                <div class="alert alert-success">
+                                    <h6 class="alert-heading">Soluzione Suggerita:</h6>
+                                    <p class="mb-0">${data.resolution_suggestion}</p>
+                                </div>
+                                ${data.example ? `
+                                <div class="alert alert-light">
+                                    <h6 class="alert-heading">Esempio:</h6>
+                                    <pre><code>${data.example}</code></pre>
+                                </div>
+                                ` : ''}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                const bsModal = new bootstrap.Modal(modal);
+                bsModal.show();
+
+                modal.addEventListener('hidden.bs.modal', () => {
+                    document.body.removeChild(modal);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading resolution suggestion:', error);
+                alert('Errore nel caricamento del suggerimento');
+            });
+    };
 });
 </script>
 {% endblock %}

@@ -1,0 +1,372 @@
+/* Import/Export System Styles */
+
+/* Preview Template Styles */
+.preview-summary-card {
+    transition: transform 0.2s ease;
+}
+
+.preview-summary-card:hover {
+    transform: translateY(-2px);
+}
+
+.validation-summary-card {
+    transition: all 0.3s ease;
+}
+
+.validation-summary-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.validation-summary-icon {
+    font-size: 2rem;
+}
+
+.validation-error-row.error {
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+.validation-error-row.warning {
+    background-color: rgba(255, 193, 7, 0.05);
+}
+
+.error-message {
+    line-height: 1.4;
+}
+
+.dependency-flow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.dependency-step {
+    background: var(--bs-primary);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.dependency-arrow {
+    color: var(--bs-secondary);
+    font-size: 1.2rem;
+}
+
+.fk-relationship-card {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+    background: var(--bs-light);
+}
+
+.fk-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.fk-stat-item {
+    text-align: center;
+}
+
+.fk-stat-value {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.fk-stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.preview-data-table {
+    font-size: 0.85rem;
+}
+
+.preview-data-table td {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.preview-actions {
+    background: var(--bs-light);
+    padding: 1.5rem;
+    border-radius: 0.375rem;
+    margin-top: 2rem;
+}
+
+.resolution-tips {
+    background: rgba(13, 202, 240, 0.1);
+    border-radius: 0.375rem;
+    padding: 1rem;
+}
+
+.tip-item {
+    padding-left: 1rem;
+    position: relative;
+}
+
+.tip-item::before {
+    content: "•";
+    color: var(--bs-info);
+    font-weight: bold;
+    position: absolute;
+    left: 0;
+}
+
+/* Status Template Styles */
+.activity-log {
+    background: var(--bs-light);
+}
+
+.activity-log-entry {
+    transition: background-color 0.2s ease;
+}
+
+.activity-log-entry:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.activity-content {
+    flex-grow: 1;
+}
+
+.activity-message {
+    font-weight: 500;
+}
+
+.activity-details {
+    color: var(--bs-secondary);
+}
+
+.activity-timestamp {
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.error-stat {
+    padding: 0.5rem;
+}
+
+.error-stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.error-stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.error-item, .warning-item {
+    transition: all 0.2s ease;
+}
+
+.error-item:hover, .warning-item:hover {
+    background-color: var(--bs-gray-200) !important;
+    transform: translateX(2px);
+}
+
+.error-icon, .warning-icon {
+    flex-shrink: 0;
+}
+
+.error-content, .warning-content {
+    min-width: 0;
+}
+
+.error-message, .warning-message {
+    word-break: break-word;
+}
+
+.error-context, .warning-context {
+    margin-top: 0.25rem;
+}
+
+.metric-item {
+    padding: 0.75rem;
+    background: var(--bs-light);
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+}
+
+.metric-item:hover {
+    background: var(--bs-gray-200);
+    transform: translateY(-1px);
+}
+
+.metric-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.metric-label {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Progress Indicators */
+.entity-progress-indicator {
+    transition: width 0.3s ease;
+}
+
+.import-progress-stats, .export-progress-stats {
+    margin-bottom: 1rem;
+}
+
+.import-status-card, .export-status-card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.import-status-card:hover, .export-status-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.import-status-number, .export-status-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.import-status-label, .export-status-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Processing Log */
+.processing-log {
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .dependency-flow {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .dependency-step {
+        text-align: center;
+    }
+    
+    .dependency-arrow {
+        transform: rotate(90deg);
+        align-self: center;
+    }
+    
+    .fk-stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .preview-data-table {
+        font-size: 0.75rem;
+    }
+    
+    .preview-data-table td {
+        max-width: 120px;
+    }
+}
+
+/* Animation Classes */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-in {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(-20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Loading States */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.loading-spinner {
+    width: 2rem;
+    height: 2rem;
+}
+
+/* Accessibility Improvements */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Focus States */
+.btn:focus,
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .validation-error-row.error {
+        background-color: rgba(220, 53, 69, 0.2);
+        border-left: 3px solid var(--bs-danger);
+    }
+    
+    .validation-error-row.warning {
+        background-color: rgba(255, 193, 7, 0.2);
+        border-left: 3px solid var(--bs-warning);
+    }
+}
+
+/* Print Styles */
+@media print {
+    .btn, .modal, .tooltip, .popover {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #000;
+        box-shadow: none;
+    }
+    
+    .table {
+        border-collapse: collapse;
+    }
+    
+    .table th, .table td {
+        border: 1px solid #000;
+    }
+}

@@ -2,6 +2,29 @@
 
 {% block title %}Anteprima Import Dati{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Additional preview-specific styles */
+.validation-results-table tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.error-checkbox:checked + td {
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+.bulk-actions-bar {
+    position: sticky;
+    bottom: 0;
+    background: white;
+    border-top: 1px solid var(--bs-border-color);
+    padding: 1rem;
+    margin: -1rem;
+    margin-top: 1rem;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <div class="row">
@@ -62,48 +85,142 @@
             {% if preview_result.validation_results %}
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-shield-check me-2"></i>
-                        Risultati Validazione
-                        {% set error_count = preview_result.validation_results | selectattr('error_type.value', 'in', ['missing_required_field', 'invalid_data_type', 'foreign_key_violation']) | list | length %}
-                        {% set warning_count = preview_result.validation_results | length - error_count %}
-                        {% if error_count > 0 %}
-                        <span class="badge bg-danger ms-2">{{ error_count }} Errori</span>
-                        {% endif %}
-                        {% if warning_count > 0 %}
-                        <span class="badge bg-warning ms-2">{{ warning_count }} Avvisi</span>
-                        {% endif %}
-                    </h5>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-shield-check me-2"></i>
+                            Risultati Validazione
+                            {% set error_count = preview_result.validation_results | selectattr('error_type.value', 'in', ['missing_required_field', 'invalid_data_type', 'foreign_key_violation']) | list | length %}
+                            {% set warning_count = preview_result.validation_results | length - error_count %}
+                            {% if error_count > 0 %}
+                            <span class="badge bg-danger ms-2">{{ error_count }} Errori</span>
+                            {% endif %}
+                            {% if warning_count > 0 %}
+                            <span class="badge bg-warning ms-2">{{ warning_count }} Avvisi</span>
+                            {% endif %}
+                        </h5>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary" id="filterAllErrors">
+                                <i class="bi bi-list me-1"></i>Tutti
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" id="filterCriticalErrors">
+                                <i class="bi bi-exclamation-triangle me-1"></i>Errori
+                            </button>
+                            <button type="button" class="btn btn-outline-warning" id="filterWarnings">
+                                <i class="bi bi-exclamation-circle me-1"></i>Avvisi
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body">
                     {% if error_count > 0 %}
                     <div class="alert alert-danger" role="alert">
-                        <h6 class="alert-heading">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                            Errori Critici Rilevati
-                        </h6>
-                        <p class="mb-0">
-                            Sono stati rilevati <strong>{{ error_count }}</strong> errori critici che impediscono l'importazione.
-                            Correggi questi errori prima di procedere.
-                        </p>
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-exclamation-triangle-fill me-2 mt-1"></i>
+                            <div>
+                                <h6 class="alert-heading mb-2">Errori Critici Rilevati</h6>
+                                <p class="mb-2">
+                                    Sono stati rilevati <strong>{{ error_count }}</strong> errori critici che impediscono l'importazione.
+                                    Correggi questi errori prima di procedere.
+                                </p>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-danger" id="exportErrorsBtn">
+                                        <i class="bi bi-download me-1"></i>Esporta Errori
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-info" id="showResolutionTipsBtn">
+                                        <i class="bi bi-lightbulb me-1"></i>Suggerimenti Risoluzione
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     {% endif %}
 
+                    <!-- Error Resolution Tips Panel -->
+                    <div id="resolutionTipsPanel" class="alert alert-info d-none mb-3">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-lightbulb me-2"></i>Suggerimenti per la Risoluzione
+                        </h6>
+                        <div class="resolution-tips">
+                            <div class="tip-item mb-2">
+                                <strong>Campi Obbligatori Mancanti:</strong> Verifica che tutti i campi richiesti siano presenti e non vuoti.
+                            </div>
+                            <div class="tip-item mb-2">
+                                <strong>Tipo Dati Non Valido:</strong> Controlla che date, numeri e valori booleani siano nel formato corretto.
+                            </div>
+                            <div class="tip-item mb-2">
+                                <strong>Violazioni Chiavi Esterne:</strong> Assicurati che tutti i riferimenti esistano o siano inclusi nell'importazione.
+                            </div>
+                            <div class="tip-item mb-0">
+                                <strong>Riferimenti Circolari:</strong> Rimuovi dipendenze circolari tra record correlati.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Validation Summary Cards -->
+                    <div class="row mb-4">
+                        {% set error_types = {} %}
+                        {% for error in preview_result.validation_results %}
+                            {% set error_type = error.error_type.value %}
+                            {% if error_type not in error_types %}
+                                {% set _ = error_types.update({error_type: []}) %}
+                            {% endif %}
+                            {% set _ = error_types[error_type].append(error) %}
+                        {% endfor %}
+                        
+                        {% for error_type, errors in error_types.items() %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card validation-summary-card h-100 border-{{ 'danger' if error_type in ['missing_required_field', 'invalid_data_type', 'foreign_key_violation', 'file_format_error', 'circular_reference'] else 'warning' }}">
+                                <div class="card-body text-center">
+                                    <div class="validation-summary-icon mb-2">
+                                        {% if error_type == 'missing_required_field' %}
+                                        <i class="bi bi-exclamation-triangle text-danger"></i>
+                                        {% elif error_type == 'invalid_data_type' %}
+                                        <i class="bi bi-x-circle text-danger"></i>
+                                        {% elif error_type == 'foreign_key_violation' %}
+                                        <i class="bi bi-link-45deg text-danger"></i>
+                                        {% elif error_type == 'duplicate_record' %}
+                                        <i class="bi bi-files text-warning"></i>
+                                        {% else %}
+                                        <i class="bi bi-info-circle text-secondary"></i>
+                                        {% endif %}
+                                    </div>
+                                    <h6 class="card-title">{{ error_type.replace('_', ' ').title() }}</h6>
+                                    <div class="h4 mb-1 text-{{ 'danger' if error_type in ['missing_required_field', 'invalid_data_type', 'foreign_key_violation', 'file_format_error', 'circular_reference'] else 'warning' }}">
+                                        {{ errors|length }}
+                                    </div>
+                                    <small class="text-muted">occorrenze</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
                     <div class="table-responsive">
-                        <table class="table table-striped table-hover">
+                        <table class="table table-striped table-hover" id="validationResultsTable">
                             <thead class="table-dark">
                                 <tr>
+                                    <th>
+                                        <input type="checkbox" class="form-check-input" id="selectAllErrors">
+                                    </th>
                                     <th>Tipo</th>
                                     <th>Entità</th>
                                     <th>Linea</th>
                                     <th>Campo</th>
                                     <th>Messaggio</th>
                                     <th>Severità</th>
+                                    <th>Azioni</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for validation_error in preview_result.validation_results %}
-                                <tr class="validation-error-row {{ 'error' if validation_error.error_type.value in ['missing_required_field', 'invalid_data_type', 'foreign_key_violation', 'file_format_error', 'circular_reference'] else 'warning' }}">
+                                <tr class="validation-error-row {{ 'error' if validation_error.error_type.value in ['missing_required_field', 'invalid_data_type', 'foreign_key_violation', 'file_format_error', 'circular_reference'] else 'warning' }}" 
+                                    data-error-type="{{ validation_error.error_type.value }}"
+                                    data-entity-type="{{ validation_error.entity_type or '' }}"
+                                    data-line-number="{{ validation_error.line_number or '' }}">
+                                    <td>
+                                        <input type="checkbox" class="form-check-input error-checkbox" 
+                                               value="{{ loop.index0 }}">
+                                    </td>
                                     <td>
                                         {% set error_type_class = {
                                             'file_format_error': 'danger',
@@ -139,7 +256,19 @@
                                         <span class="text-muted">N/A</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ validation_error.message }}</td>
+                                    <td>
+                                        <div class="error-message">
+                                            {{ validation_error.message }}
+                                            {% if validation_error.suggested_value %}
+                                            <div class="mt-1">
+                                                <small class="text-info">
+                                                    <i class="bi bi-lightbulb me-1"></i>
+                                                    Suggerito: <code>{{ validation_error.suggested_value }}</code>
+                                                </small>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </td>
                                     <td>
                                         {% if validation_error.error_type.value in ['missing_required_field', 'invalid_data_type', 'foreign_key_violation', 'file_format_error', 'circular_reference'] %}
                                         <span class="badge bg-danger">Errore</span>
@@ -147,10 +276,43 @@
                                         <span class="badge bg-warning">Avviso</span>
                                         {% endif %}
                                     </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            {% if validation_error.error_type.value == 'duplicate_record' %}
+                                            <button type="button" class="btn btn-outline-info btn-sm resolve-duplicate-btn" 
+                                                    data-error-index="{{ loop.index0 }}"
+                                                    title="Risolvi duplicato">
+                                                <i class="bi bi-arrow-repeat"></i>
+                                            </button>
+                                            {% endif %}
+                                            <button type="button" class="btn btn-outline-secondary btn-sm view-context-btn" 
+                                                    data-error-index="{{ loop.index0 }}"
+                                                    title="Visualizza contesto">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Bulk Actions -->
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div>
+                            <span class="text-muted">
+                                <span id="selectedErrorsCount">0</span> errori selezionati
+                            </span>
+                        </div>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-danger btn-sm" id="bulkIgnoreBtn" disabled>
+                                <i class="bi bi-eye-slash me-1"></i>Ignora Selezionati
+                            </button>
+                            <button type="button" class="btn btn-outline-info btn-sm" id="bulkExportBtn" disabled>
+                                <i class="bi bi-download me-1"></i>Esporta Selezionati
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -451,6 +613,209 @@ document.addEventListener('DOMContentLoaded', function() {
                     confirmBtn.disabled = false;
                 });
             }
+        });
+    }
+
+    // Validation results filtering
+    const filterAllBtn = document.getElementById('filterAllErrors');
+    const filterCriticalBtn = document.getElementById('filterCriticalErrors');
+    const filterWarningsBtn = document.getElementById('filterWarnings');
+    const validationTable = document.getElementById('validationResultsTable');
+
+    if (filterAllBtn && validationTable) {
+        filterAllBtn.addEventListener('click', () => filterValidationResults('all'));
+        filterCriticalBtn.addEventListener('click', () => filterValidationResults('critical'));
+        filterWarningsBtn.addEventListener('click', () => filterValidationResults('warnings'));
+    }
+
+    function filterValidationResults(type) {
+        const rows = validationTable.querySelectorAll('tbody tr');
+        const buttons = [filterAllBtn, filterCriticalBtn, filterWarningsBtn];
+        
+        // Update button states
+        buttons.forEach(btn => btn.classList.remove('active'));
+        if (type === 'all') filterAllBtn.classList.add('active');
+        else if (type === 'critical') filterCriticalBtn.classList.add('active');
+        else if (type === 'warnings') filterWarningsBtn.classList.add('active');
+
+        // Filter rows
+        rows.forEach(row => {
+            const isError = row.classList.contains('error');
+            const isWarning = row.classList.contains('warning');
+            
+            let show = false;
+            if (type === 'all') show = true;
+            else if (type === 'critical' && isError) show = true;
+            else if (type === 'warnings' && isWarning) show = true;
+            
+            row.style.display = show ? '' : 'none';
+        });
+    }
+
+    // Error selection and bulk actions
+    const selectAllCheckbox = document.getElementById('selectAllErrors');
+    const errorCheckboxes = document.querySelectorAll('.error-checkbox');
+    const selectedCountSpan = document.getElementById('selectedErrorsCount');
+    const bulkIgnoreBtn = document.getElementById('bulkIgnoreBtn');
+    const bulkExportBtn = document.getElementById('bulkExportBtn');
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            const visibleCheckboxes = Array.from(errorCheckboxes).filter(cb => 
+                cb.closest('tr').style.display !== 'none'
+            );
+            visibleCheckboxes.forEach(cb => cb.checked = this.checked);
+            updateBulkActionButtons();
+        });
+    }
+
+    errorCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActionButtons);
+    });
+
+    function updateBulkActionButtons() {
+        const selectedCount = Array.from(errorCheckboxes).filter(cb => cb.checked).length;
+        if (selectedCountSpan) selectedCountSpan.textContent = selectedCount;
+        
+        const hasSelection = selectedCount > 0;
+        if (bulkIgnoreBtn) bulkIgnoreBtn.disabled = !hasSelection;
+        if (bulkExportBtn) bulkExportBtn.disabled = !hasSelection;
+    }
+
+    // Resolution tips toggle
+    const showResolutionTipsBtn = document.getElementById('showResolutionTipsBtn');
+    const resolutionTipsPanel = document.getElementById('resolutionTipsPanel');
+    
+    if (showResolutionTipsBtn && resolutionTipsPanel) {
+        showResolutionTipsBtn.addEventListener('click', function() {
+            resolutionTipsPanel.classList.toggle('d-none');
+            const isVisible = !resolutionTipsPanel.classList.contains('d-none');
+            this.innerHTML = isVisible ? 
+                '<i class="bi bi-eye-slash me-1"></i>Nascondi Suggerimenti' :
+                '<i class="bi bi-lightbulb me-1"></i>Suggerimenti Risoluzione';
+        });
+    }
+
+    // Export errors functionality
+    const exportErrorsBtn = document.getElementById('exportErrorsBtn');
+    if (exportErrorsBtn) {
+        exportErrorsBtn.addEventListener('click', function() {
+            const errors = Array.from(document.querySelectorAll('.validation-error-row')).map(row => {
+                return {
+                    type: row.querySelector('.badge').textContent.trim(),
+                    entity: row.cells[2].textContent.trim(),
+                    line: row.cells[3].textContent.trim(),
+                    field: row.cells[4].textContent.trim(),
+                    message: row.cells[5].textContent.trim(),
+                    severity: row.cells[6].textContent.trim()
+                };
+            });
+
+            const csvContent = [
+                ['Tipo', 'Entità', 'Linea', 'Campo', 'Messaggio', 'Severità'],
+                ...errors.map(error => [error.type, error.entity, error.line, error.field, error.message, error.severity])
+            ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'validation_errors.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        });
+    }
+
+    // Duplicate resolution handlers
+    document.querySelectorAll('.resolve-duplicate-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const errorIndex = this.dataset.errorIndex;
+            showDuplicateResolutionModal(errorIndex);
+        });
+    });
+
+    // Context view handlers
+    document.querySelectorAll('.view-context-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const errorIndex = this.dataset.errorIndex;
+            showErrorContextModal(errorIndex);
+        });
+    });
+
+    function showDuplicateResolutionModal(errorIndex) {
+        // Create and show modal for duplicate resolution
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.innerHTML = `
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-files me-2"></i>Risoluzione Duplicato
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Come vuoi gestire questo record duplicato?</p>
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-outline-secondary" data-action="skip">
+                                <i class="bi bi-skip-forward me-2"></i>Salta (mantieni esistente)
+                            </button>
+                            <button type="button" class="btn btn-outline-warning" data-action="update">
+                                <i class="bi bi-arrow-clockwise me-2"></i>Aggiorna esistente
+                            </button>
+                            <button type="button" class="btn btn-outline-success" data-action="create_version">
+                                <i class="bi bi-plus-circle me-2"></i>Crea nuova versione
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+
+        modal.addEventListener('hidden.bs.modal', () => {
+            document.body.removeChild(modal);
+        });
+    }
+
+    function showErrorContextModal(errorIndex) {
+        // Create and show modal for error context
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-eye me-2"></i>Contesto Errore
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Visualizzazione del contesto dell'errore per facilitare la risoluzione.
+                        </div>
+                        <div id="errorContextContent">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Caricamento...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+
+        modal.addEventListener('hidden.bs.modal', () => {
+            document.body.removeChild(modal);
         });
     }
     
