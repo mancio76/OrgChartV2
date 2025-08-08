@@ -36,6 +36,38 @@ class FileFormat(Enum):
     CSV = "csv"
     JSON = "json"
 
+    @staticmethod
+    def items() -> list['FileFormat']:
+        return list(FileFormat)
+
+    @staticmethod
+    def values() -> list[str]:
+        return [enum.value for enum in RetentionPolicy]
+    
+    @staticmethod
+    def names() -> list[str]:
+        return [enum.name for enum in RetentionPolicy]
+
+    @staticmethod
+    def extensions() -> list[str]:
+        return ['.' + enum.name.lower() for enum in RetentionPolicy]
+
+    def label(self) -> str:
+        return self.name
+
+    def value(self) -> str:
+        return self.name.upper()
+
+    def description(self) -> str:
+        if self == FileFormat.CSV:
+            return "Formato CSV (file separati per tipo)"
+        elif self == FileFormat.JSON:
+            return "Formato JSON strutturato (file singolo)"
+        else:
+            raise Exception(f"{name(FileFormat)} with value {self} is not supported.")
+
+    def extension(self) -> str:
+        return '.' + self.name.lower()
 
 @dataclass
 class ImportExportValidationError(BaseValidationError):

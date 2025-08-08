@@ -31,13 +31,28 @@ class RetentionPolicy(Enum):
     DAYS = "days"
     COUNT = "count"
     SIZE = "size"
-
+    
+    @staticmethod
+    def values() -> list[str]:
+        return [enum.value for enum in RetentionPolicy]
+    
+    @staticmethod
+    def names() -> list[str]:
+        return [enum.name for enum in RetentionPolicy]
 
 class CompressionType(Enum):
     """Supported compression types for file archiving."""
     NONE = "none"
     ZIP = "zip"
     TAR_GZ = "tar.gz"
+    
+    @staticmethod
+    def values() -> list[str]:
+        return [enum.value for enum in CompressionType]
+    
+    @staticmethod
+    def names() -> list[str]:
+        return [enum.name for enum in CompressionType]
 
 
 class NotificationType(Enum):
@@ -46,6 +61,14 @@ class NotificationType(Enum):
     ERROR = "error"
     WARNING = "warning"
     CLEANUP = "cleanup"
+    
+    @staticmethod
+    def values() -> list[str]:
+        return [enum.value for enum in NotificationType]
+    
+    @staticmethod
+    def names() -> list[str]:
+        return [enum.name for enum in NotificationType]
 
 
 @dataclass

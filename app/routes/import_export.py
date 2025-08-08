@@ -480,12 +480,15 @@ async def export_form(
             {"value": "assignments", "label": "Incarichi", "description": "Assegnazioni di persone a unità e ruoli"}
         ]
         
-        # Export formats
-        export_formats = [
-            {"value": "json", "label": "JSON", "description": "Formato JSON strutturato (file singolo)"},
-            {"value": "csv", "label": "CSV", "description": "Formato CSV (file separati per tipo)"}
-        ]
-        
+        export_formats = []
+        for file_format in FileFormat.items():
+            export_formats.append({
+                "value": f"{file_format.value().lower()}",
+                "label": f"{file_format.label()}",
+                "description": f"{file_format.description()}",
+                "extension": f"{file_format.extension()}"
+            })
+
         return templates.TemplateResponse(
             "import_export/export.html",
             {
@@ -496,7 +499,7 @@ async def export_form(
                 "export_formats": export_formats,
                 "csrf_token": csrf_token,
                 "breadcrumb": [
-                    {"name": "Home", "url": "/"},
+                    ##{"name": "Home", "url": "/"},
                     {"name": "Import/Export", "url": "/import-export"},
                     {"name": "Esporta"}
                 ]

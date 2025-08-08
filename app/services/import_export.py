@@ -490,7 +490,7 @@ class ImportExportService:
     
     def get_supported_formats(self) -> List[FileFormat]:
         """Get list of supported file formats."""
-        return [FileFormat.JSON, FileFormat.CSV]
+        return FileFormat.items() ##[FileFormat.JSON, FileFormat.CSV]
     
     def get_transaction_status(self, operation_id: str) -> Dict[str, Any]:
         """
