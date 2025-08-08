@@ -1,0 +1,309 @@
+{% extends "base/layout.html" %}
+
+{% block title %}Risoluzione Conflitti - Import Dati{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
+                    Risoluzione Conflitti
+                </h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a href="/">Home</a></li>
+                        <li class="breadcrumb-item"><a href="/import">Import Dati</a></li>
+                        <li class="breadcrumb-item active">Risoluzione Conflitti</li>
+                    </ol>
+                </nav>
+            </div>
+
+            {% if conflicts %}
+            <div class="alert alert-warning" role="alert">
+                <h5 class="alert-heading">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Conflitti Rilevati
+                </h5>
+                <p class="mb-0">
+                    Sono stati rilevati <strong>{{ conflicts|length }}</strong> conflitti nei dati da importare.
+                    Seleziona una strategia di risoluzione per procedere con l'importazione.
+                </p>
+            </div>
+
+            <!-- Conflict Resolution Strategy Selection -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-gear me-2"></i>
+                        Strategia di Risoluzione
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="conflictResolutionForm" method="post">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="resolution_strategy" 
+                                           id="strategy_skip" value="skip" checked>
+                                    <label class="form-check-label" for="strategy_skip">
+                                        <strong>Salta Duplicati</strong>
+                                        <small class="d-block text-muted">
+                                            Ignora i record duplicati e mantieni quelli esistenti
+                                        </small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="resolution_strategy" 
+                                           id="strategy_update" value="update">
+                                    <label class="form-check-label" for="strategy_update">
+                                        <strong>Aggiorna Esistenti</strong>
+                                        <small class="d-block text-muted">
+                                            Aggiorna i record esistenti con i nuovi dati
+                                        </small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="resolution_strategy" 
+                                           id="strategy_version" value="create_version">
+                                    <label class="form-check-label" for="strategy_version">
+                                        <strong>Crea Nuova Versione</strong>
+                                        <small class="d-block text-muted">
+                                            Crea nuove versioni per gli incarichi (solo assignments)
+                                        </small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>
+                                Applica Strategia e Continua Import
+                            </button>
+                            <a href="/import" class="btn btn-secondary ms-2">
+                                <i class="bi bi-arrow-left me-2"></i>
+                                Annulla Import
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Conflicts Details -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-list-ul me-2"></i>
+                        Dettagli Conflitti
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Conflict Summary -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-warning mb-1">{{ conflict_summary.total_conflicts }}</div>
+                                <div class="text-muted small">Conflitti Totali</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-info mb-1">{{ conflict_summary.by_type|length }}</div>
+                                <div class="text-muted small">Tipi di Conflitto</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-primary mb-1">{{ conflict_summary.by_entity|length }}</div>
+                                <div class="text-muted small">Entità Coinvolte</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-success mb-1">{{ conflict_summary.suggested_strategies|length }}</div>
+                                <div class="text-muted small">Strategie Suggerite</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conflicts Table -->
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Linea</th>
+                                    <th>Entità</th>
+                                    <th>Tipo Conflitto</th>
+                                    <th>Campo</th>
+                                    <th>Valore Conflitto</th>
+                                    <th>Strategia Suggerita</th>
+                                    <th>Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for conflict in conflicts %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ conflict.line_number or 'N/A' }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ conflict.entity_type }}</span>
+                                    </td>
+                                    <td>
+                                        {% set conflict_type_class = {
+                                            'duplicate_primary_key': 'danger',
+                                            'duplicate_unique_field': 'warning',
+                                            'duplicate_business_key': 'info',
+                                            'version_conflict': 'secondary',
+                                            'reference_conflict': 'dark'
+                                        } %}
+                                        <span class="badge bg-{{ conflict_type_class.get(conflict.conflict_type.value, 'secondary') }}">
+                                            {{ conflict.conflict_type.value.replace('_', ' ').title() }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <code>{{ conflict.field_name }}</code>
+                                    </td>
+                                    <td>
+                                        <span class="text-truncate d-inline-block" style="max-width: 200px;" 
+                                              title="{{ conflict.conflicting_value }}">
+                                            {{ conflict.conflicting_value }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if conflict.suggested_resolution %}
+                                        {% set strategy_class = {
+                                            'skip': 'secondary',
+                                            'update': 'warning',
+                                            'create_version': 'success'
+                                        } %}
+                                        <span class="badge bg-{{ strategy_class.get(conflict.suggested_resolution.value, 'secondary') }}">
+                                            {{ conflict.suggested_resolution.value.replace('_', ' ').title() }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">Nessuna</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-info" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#conflictModal{{ loop.index }}">
+                                            <i class="bi bi-eye"></i>
+                                            Dettagli
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-success" role="alert">
+                <h5 class="alert-heading">
+                    <i class="bi bi-check-circle me-2"></i>
+                    Nessun Conflitto Rilevato
+                </h5>
+                <p class="mb-0">
+                    I dati sono pronti per l'importazione senza conflitti.
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Conflict Detail Modals -->
+{% for conflict in conflicts %}
+<div class="modal fade" id="conflictModal{{ loop.index }}" tabindex="-1" 
+     aria-labelledby="conflictModalLabel{{ loop.index }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="conflictModalLabel{{ loop.index }}">
+                    Dettagli Conflitto - Linea {{ conflict.line_number or 'N/A' }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Record Esistente</h6>
+                        <div class="bg-light p-3 rounded">
+                            <pre class="mb-0"><code>{{ conflict.existing_record | tojson(indent=2) }}</code></pre>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Nuovo Record</h6>
+                        <div class="bg-light p-3 rounded">
+                            <pre class="mb-0"><code>{{ conflict.new_record | tojson(indent=2) }}</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle form submission
+    const form = document.getElementById('conflictResolutionForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            const strategy = formData.get('resolution_strategy');
+            
+            // Show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Applicando Strategia...';
+            submitBtn.disabled = true;
+            
+            // Submit form
+            fetch(form.action || window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error('Errore nella risoluzione dei conflitti');
+            })
+            .then(data => {
+                if (data.success) {
+                    window.location.href = data.redirect_url || '/import/status/' + data.operation_id;
+                } else {
+                    throw new Error(data.message || 'Errore sconosciuto');
+                }
+            })
+            .catch(error => {
+                alert('Errore: ' + error.message);
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+    }
+    
+    // Enable tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,476 @@
+{% extends "base/layout.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-1">{{ page_title }}</h1>
+                    <p class="text-muted mb-0">{{ page_subtitle }}</p>
+                </div>
+                <a href="/import-export" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>
+                    Torna a Import/Export
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="operation_type" class="form-label">Tipo Operazione</label>
+                            <select class="form-select" id="operation_type" name="operation_type">
+                                <option value="all" {% if operation_type == 'all' %}selected{% endif %}>Tutte</option>
+                                <option value="import" {% if operation_type == 'import' %}selected{% endif %}>Import</option>
+                                <option value="export" {% if operation_type == 'export' %}selected{% endif %}>Export</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="status_filter" class="form-label">Stato</label>
+                            <select class="form-select" id="status_filter" name="status_filter">
+                                <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Tutti</option>
+                                <option value="processing" {% if status_filter == 'processing' %}selected{% endif %}>In Elaborazione</option>
+                                <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completate</option>
+                                <option value="completed_with_errors" {% if status_filter == 'completed_with_errors' %}selected{% endif %}>Completate con Errori</option>
+                                <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Fallite</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-funnel me-2"></i>
+                                    Filtra
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <a href="/import-export/operations" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>
+                                    Reset
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operations List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-list-ul me-2"></i>
+                            Operazioni ({{ total_operations }} totali)
+                        </h5>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-primary btn-sm" id="refreshBtn">
+                                <i class="bi bi-arrow-clockwise me-1"></i>
+                                Aggiorna
+                            </button>
+                            <a href="/import-export/monitoring" class="btn btn-outline-info btn-sm">
+                                <i class="bi bi-graph-up me-1"></i>
+                                Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if operations %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tipo</th>
+                                    <th>Stato</th>
+                                    <th>Inizio</th>
+                                    <th>Fine</th>
+                                    <th>Progresso</th>
+                                    <th>Entità</th>
+                                    <th>File/Formato</th>
+                                    <th>Errori</th>
+                                    <th>Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for operation in operations %}
+                                <tr>
+                                    <td>
+                                        <code class="small">{{ operation.id[:8] }}...</code>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if operation.type == 'import' %}bg-primary{% else %}bg-success{% endif %}">
+                                            <i class="bi bi-{% if operation.type == 'import' %}upload{% else %}download{% endif %} me-1"></i>
+                                            {{ operation.type|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if operation.status == 'completed' %}bg-success
+                                            {% elif operation.status == 'failed' %}bg-danger
+                                            {% elif operation.status == 'completed_with_errors' %}bg-warning
+                                            {% elif operation.status == 'processing' %}bg-primary
+                                            {% else %}bg-secondary{% endif %}">
+                                            {% if operation.status == 'completed' %}
+                                                <i class="bi bi-check-circle me-1"></i>Completata
+                                            {% elif operation.status == 'failed' %}
+                                                <i class="bi bi-x-circle me-1"></i>Fallita
+                                            {% elif operation.status == 'completed_with_errors' %}
+                                                <i class="bi bi-exclamation-triangle me-1"></i>Con Errori
+                                            {% elif operation.status == 'processing' %}
+                                                <i class="bi bi-hourglass-split me-1"></i>In Corso
+                                            {% else %}
+                                                {{ operation.status|title }}
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if operation.start_time %}
+                                        <small>{{ operation.start_time[:19]|replace('T', ' ') }}</small>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if operation.end_time %}
+                                        <small>{{ operation.end_time[:19]|replace('T', ' ') }}</small>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress me-2" style="width: 60px; height: 8px;">
+                                                <div class="progress-bar 
+                                                    {% if operation.status == 'completed' %}bg-success
+                                                    {% elif operation.status == 'failed' %}bg-danger
+                                                    {% elif operation.status == 'completed_with_errors' %}bg-warning
+                                                    {% else %}bg-primary{% endif %}" 
+                                                    style="width: {{ operation.progress }}%"></div>
+                                            </div>
+                                            <small>{{ operation.progress }}%</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if operation.entity_types %}
+                                        <div class="d-flex flex-wrap gap-1">
+                                            {% for entity_type in operation.entity_types[:3] %}
+                                            <span class="badge bg-light text-dark small">{{ entity_type }}</span>
+                                            {% endfor %}
+                                            {% if operation.entity_types|length > 3 %}
+                                            <span class="badge bg-light text-dark small">+{{ operation.entity_types|length - 3 }}</span>
+                                            {% endif %}
+                                        </div>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if operation.filename %}
+                                        <small title="{{ operation.filename }}">{{ operation.filename[:20] }}{% if operation.filename|length > 20 %}...{% endif %}</small>
+                                        {% elif operation.export_format %}
+                                        <span class="badge bg-info">{{ operation.export_format|upper }}</span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if operation.error_count > 0 %}
+                                        <span class="badge bg-danger">{{ operation.error_count }}</span>
+                                        {% endif %}
+                                        {% if operation.warning_count > 0 %}
+                                        <span class="badge bg-warning">{{ operation.warning_count }}</span>
+                                        {% endif %}
+                                        {% if operation.error_count == 0 and operation.warning_count == 0 %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="/import-export/status/{{ operation.id }}/page" 
+                                               class="btn btn-outline-primary" title="Visualizza Dettagli">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <button class="btn btn-outline-info" 
+                                                    onclick="viewLogs('{{ operation.id }}')" 
+                                                    title="Visualizza Log">
+                                                <i class="bi bi-file-text"></i>
+                                            </button>
+                                            {% if operation.status in ['completed', 'failed', 'completed_with_errors'] %}
+                                            <button class="btn btn-outline-danger" 
+                                                    onclick="deleteOperation('{{ operation.id }}')" 
+                                                    title="Elimina">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-inbox display-4 text-muted mb-3"></i>
+                        <h5 class="text-muted">Nessuna operazione trovata</h5>
+                        <p class="text-muted">Non ci sono operazioni che corrispondono ai filtri selezionati.</p>
+                        <a href="/import-export" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i>
+                            Nuova Operazione
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Pagination -->
+                {% if total_pages > 1 %}
+                <div class="card-footer">
+                    <nav aria-label="Paginazione operazioni">
+                        <ul class="pagination justify-content-center mb-0">
+                            {% if has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ current_page - 1 }}&operation_type={{ operation_type }}&status_filter={{ status_filter }}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for page_num in range(1, total_pages + 1) %}
+                            {% if page_num == current_page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                            {% elif page_num <= 3 or page_num > total_pages - 3 or (page_num >= current_page - 1 and page_num <= current_page + 1) %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_num }}&operation_type={{ operation_type }}&status_filter={{ status_filter }}">{{ page_num }}</a>
+                            </li>
+                            {% elif page_num == 4 or page_num == total_pages - 3 %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                            {% endif %}
+                            {% endfor %}
+                            
+                            {% if has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ current_page + 1 }}&operation_type={{ operation_type }}&status_filter={{ status_filter }}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Logs Modal -->
+<div class="modal fade" id="logsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-file-text me-2"></i>
+                    Log Operazione
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="logsContent">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Caricamento...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const logsModal = new bootstrap.Modal(document.getElementById('logsModal'));
+    
+    // Refresh button
+    document.getElementById('refreshBtn').addEventListener('click', function() {
+        window.location.reload();
+    });
+    
+    // Auto-refresh for processing operations
+    const processingOperations = document.querySelectorAll('tr:has(.badge.bg-primary)');
+    if (processingOperations.length > 0) {
+        setTimeout(() => {
+            window.location.reload();
+        }, 5000); // Refresh every 5 seconds if there are processing operations
+    }
+});
+
+function viewLogs(operationId) {
+    const logsModal = new bootstrap.Modal(document.getElementById('logsModal'));
+    const logsContent = document.getElementById('logsContent');
+    
+    // Show loading
+    logsContent.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Caricamento...</span>
+            </div>
+        </div>
+    `;
+    
+    logsModal.show();
+    
+    // Fetch logs
+    fetch(`/import-export/operations/${operationId}/logs`)
+        .then(response => response.json())
+        .then(data => {
+            displayLogs(data);
+        })
+        .catch(error => {
+            logsContent.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Errore nel caricamento dei log: ${error.message}
+                </div>
+            `;
+        });
+}
+
+function displayLogs(logs) {
+    const logsContent = document.getElementById('logsContent');
+    
+    let html = `
+        <div class="mb-3">
+            <h6>Informazioni Operazione</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <small><strong>ID:</strong> ${logs.operation_id}</small><br>
+                    <small><strong>Tipo:</strong> ${logs.operation_type}</small><br>
+                    <small><strong>Stato:</strong> ${logs.status}</small>
+                </div>
+                <div class="col-md-6">
+                    <small><strong>Inizio:</strong> ${logs.start_time || '-'}</small><br>
+                    <small><strong>Fine:</strong> ${logs.end_time || '-'}</small><br>
+                    ${logs.duration ? `<small><strong>Durata:</strong> ${logs.duration.toFixed(2)}s</small>` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Progress log
+    if (logs.progress_log && logs.progress_log.length > 0) {
+        html += `
+            <div class="mb-3">
+                <h6>Log Progresso</h6>
+                <div class="list-group list-group-flush">
+        `;
+        
+        logs.progress_log.forEach(entry => {
+            const levelClass = entry.level === 'error' ? 'text-danger' : 
+                              entry.level === 'warning' ? 'text-warning' : 'text-info';
+            html += `
+                <div class="list-group-item px-0 py-2">
+                    <div class="d-flex justify-content-between">
+                        <small class="${levelClass}">${entry.message}</small>
+                        <small class="text-muted">${entry.progress}%</small>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+    }
+    
+    // Errors
+    if (logs.errors && logs.errors.length > 0) {
+        html += `
+            <div class="mb-3">
+                <h6 class="text-danger">Errori (${logs.errors.length})</h6>
+                <div class="list-group list-group-flush">
+        `;
+        
+        logs.errors.forEach(error => {
+            html += `
+                <div class="list-group-item px-0 py-2 border-0">
+                    <small class="text-danger">${error.message}</small>
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+    }
+    
+    // Warnings
+    if (logs.warnings && logs.warnings.length > 0) {
+        html += `
+            <div class="mb-3">
+                <h6 class="text-warning">Avvisi (${logs.warnings.length})</h6>
+                <div class="list-group list-group-flush">
+        `;
+        
+        logs.warnings.forEach(warning => {
+            html += `
+                <div class="list-group-item px-0 py-2 border-0">
+                    <small class="text-warning">${warning.message}</small>
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+    }
+    
+    logsContent.innerHTML = html;
+}
+
+function deleteOperation(operationId) {
+    if (confirm('Sei sicuro di voler eliminare questa operazione? Questa azione non può essere annullata.')) {
+        fetch(`/import-export/operations/${operationId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Errore nell\'eliminazione dell\'operazione: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Errore nell\'eliminazione dell\'operazione: ' + error.message);
+        });
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,760 @@
+{% extends "base/layout.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-1">{{ page_title }}</h1>
+                    <p class="text-muted mb-0">{{ page_subtitle }}</p>
+                </div>
+                <a href="/import-export" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>
+                    Torna Indietro
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Form -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-upload me-2"></i>
+                        Configurazione Importazione
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="importForm" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        
+                        <!-- File Upload -->
+                        <div class="mb-4">
+                            <label for="file" class="form-label">
+                                <i class="bi bi-file-earmark-arrow-up me-2"></i>
+                                File da Importare
+                            </label>
+                            <input type="file" class="form-control" id="file" name="file" 
+                                   accept=".csv,.json" required>
+                            <div class="form-text">
+                                Formati supportati: CSV, JSON. Dimensione massima: 100MB.
+                            </div>
+                            <div id="formatInfo" class="mt-2 p-2 bg-light rounded d-none format-detection-info">
+                                <small class="text-info">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    <span id="formatInfoText"></span>
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Entity Types Selection -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0">
+                                    <i class="bi bi-diagram-3 me-2"></i>
+                                    Tipi di Entità da Importare
+                                </label>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-secondary" id="selectAllEntities">
+                                        <i class="bi bi-check-all me-1"></i>
+                                        Tutti
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" id="selectNoneEntities">
+                                        <i class="bi bi-x me-1"></i>
+                                        Nessuno
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="row entity-selection-grid">
+                                {% for entity in entity_types %}
+                                <div class="col-md-6">
+                                    <div class="form-check import-entity-checkbox">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="entity_types" value="{{ entity.value }}" 
+                                               id="entity_{{ entity.value }}">
+                                        <label class="form-check-label" for="entity_{{ entity.value }}">
+                                            <strong>{{ entity.label }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ entity.description }}</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="form-text">
+                                Seleziona almeno un tipo di entità da importare. L'ordine di elaborazione rispetterà le dipendenze.
+                            </div>
+                        </div>
+
+                        <!-- Conflict Resolution -->
+                        <div class="mb-4">
+                            <label for="conflict_resolution" class="form-label">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                Gestione Conflitti
+                            </label>
+                            <select class="form-select" id="conflict_resolution" name="conflict_resolution">
+                                {% for strategy in conflict_strategies %}
+                                <option value="{{ strategy.value }}" 
+                                        {% if strategy.value == 'skip' %}selected{% endif %}>
+                                    {{ strategy.label }} - {{ strategy.description }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                Scegli come gestire i record duplicati durante l'importazione.
+                            </div>
+                        </div>
+
+                        <!-- Advanced Options -->
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" 
+                                       id="validate_only" name="validate_only">
+                                <label class="form-check-label" for="validate_only">
+                                    <strong>Solo Validazione (Anteprima)</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        Analizza il file senza importare i dati
+                                    </small>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Batch Size -->
+                        <div class="mb-4">
+                            <label for="batch_size" class="form-label">
+                                <i class="bi bi-stack me-2"></i>
+                                Dimensione Batch
+                            </label>
+                            <input type="number" class="form-control" id="batch_size" 
+                                   name="batch_size" value="100" min="1" max="1000">
+                            <div class="form-text">
+                                Numero di record da elaborare per volta (1-1000).
+                            </div>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="button" class="btn btn-outline-primary" id="previewBtn">
+                                <i class="bi bi-eye me-2"></i>
+                                Anteprima
+                            </button>
+                            <button type="submit" class="btn btn-primary" id="importBtn">
+                                <i class="bi bi-upload me-2"></i>
+                                Importa Dati
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Panel -->
+        <div class="col-lg-4">
+            <div class="card border-info">
+                <div class="card-header bg-light">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-info-circle text-info me-2"></i>
+                        Guida Importazione
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary">Ordine di Elaborazione</h6>
+                    <ol class="small mb-3">
+                        <li>Tipi di Unità</li>
+                        <li>Temi Tipi Unità</li>
+                        <li>Unità</li>
+                        <li>Titoli Lavorativi</li>
+                        <li>Persone</li>
+                        <li>Incarichi</li>
+                    </ol>
+
+                    <h6 class="text-primary">Formato CSV</h6>
+                    <p class="small mb-3">
+                        Per CSV, carica file separati per ogni tipo di entità. 
+                        I nomi dei file devono corrispondere ai tipi selezionati.
+                    </p>
+
+                    <h6 class="text-primary">Formato JSON</h6>
+                    <p class="small mb-3">
+                        Per JSON, usa un file strutturato con sezioni per ogni 
+                        tipo di entità e metadati di esportazione.
+                    </p>
+
+                    <h6 class="text-primary">Validazione</h6>
+                    <p class="small mb-0">
+                        Tutti i dati vengono validati per tipo, vincoli di chiave 
+                        esterna e regole di business prima dell'importazione.
+                    </p>
+                </div>
+            </div>
+
+            <!-- File Format Examples -->
+            <div class="card mt-3 border-secondary import-help-panel">
+                <div class="card-header bg-light">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-file-earmark-code text-secondary me-2"></i>
+                        Esempi Formato
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="formatExamples">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" 
+                                        data-bs-toggle="collapse" data-bs-target="#csvExample">
+                                    <i class="bi bi-filetype-csv me-2"></i>
+                                    Esempio CSV
+                                </button>
+                            </h2>
+                            <div id="csvExample" class="accordion-collapse collapse" 
+                                 data-bs-parent="#formatExamples">
+                                <div class="accordion-body">
+                                    <p class="small mb-2">File: <code>units.csv</code></p>
+                                    <pre><code>id,name,short_name,aliases,unit_type_id,parent_unit_id
+1,"Direzione Generale","DG","[]",1,
+2,"Ufficio Personale","UP","[]",2,1</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" 
+                                        data-bs-toggle="collapse" data-bs-target="#jsonExample">
+                                    <i class="bi bi-filetype-json me-2"></i>
+                                    Esempio JSON
+                                </button>
+                            </h2>
+                            <div id="jsonExample" class="accordion-collapse collapse" 
+                                 data-bs-parent="#formatExamples">
+                                <div class="accordion-body">
+                                    <p class="small mb-2">File: <code>export.json</code></p>
+                                    <pre><code>{
+  "metadata": {
+    "export_date": "2024-01-15T10:30:00Z",
+    "version": "1.0"
+  },
+  "units": [
+    {
+      "id": 1,
+      "name": "Direzione Generale",
+      "short_name": "DG",
+      "unit_type_id": 1
+    }
+  ]
+}</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Modal -->
+<div class="modal fade" id="progressModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-hourglass-split me-2"></i>
+                    Elaborazione in Corso
+                </h5>
+            </div>
+            <div class="modal-body">
+                <!-- Main Progress Section -->
+                <div class="text-center mb-4">
+                    <div class="spinner-border text-primary mb-3" role="status" id="progressSpinner">
+                        <span class="visually-hidden">Caricamento...</span>
+                    </div>
+                    <div class="progress mb-3" style="height: 8px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%" 
+                             id="progressBar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+                             aria-label="Progresso operazione">
+                        </div>
+                    </div>
+                    <h6 class="mb-2" id="progressMessage">Inizializzazione...</h6>
+                    <small class="text-muted" id="progressDetails"></small>
+                </div>
+
+                <!-- Status Details Section -->
+                <div id="statusDetails" class="d-none">
+                    <div class="row text-center mb-3 import-progress-stats">
+                        <div class="col-3">
+                            <div class="card import-status-card">
+                                <div class="card-body py-2">
+                                    <div class="import-status-number text-primary" id="recordsProcessed">0</div>
+                                    <div class="import-status-label text-muted">Elaborati</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="card import-status-card">
+                                <div class="card-body py-2">
+                                    <div class="import-status-number text-success" id="recordsCreated">0</div>
+                                    <div class="import-status-label text-muted">Creati</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="card import-status-card">
+                                <div class="card-body py-2">
+                                    <div class="import-status-number text-info" id="recordsUpdated">0</div>
+                                    <div class="import-status-label text-muted">Aggiornati</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="card import-status-card">
+                                <div class="card-body py-2">
+                                    <div class="import-status-number text-warning" id="recordsSkipped">0</div>
+                                    <div class="import-status-label text-muted">Saltati</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Current Entity Processing -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-medium">Entità Corrente:</span>
+                            <span class="badge bg-primary" id="currentEntity">-</span>
+                        </div>
+                        <div class="progress" style="height: 4px;">
+                            <div class="progress-bar bg-info entity-progress-indicator" role="progressbar" 
+                                 style="width: 0%" id="entityProgress"
+                                 aria-label="Progresso entità corrente">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Processing Log -->
+                    <div class="mb-3">
+                        <h6 class="mb-2">Log Elaborazione:</h6>
+                        <div class="border rounded p-2 bg-light processing-log" style="height: 120px; overflow-y: auto;">
+                            <div id="processingLog" class="small text-muted">
+                                Avvio elaborazione...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error/Warning Summary -->
+                <div id="errorSummary" class="d-none">
+                    <div class="alert alert-warning mb-0">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Attenzione</strong>
+                        </div>
+                        <div class="row">
+                            <div class="col-6">
+                                <small>Errori: <span class="fw-bold text-danger" id="errorCount">0</span></small>
+                            </div>
+                            <div class="col-6">
+                                <small>Avvisi: <span class="fw-bold text-warning" id="warningCount">0</span></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" id="cancelBtn">
+                    <i class="bi bi-x-circle me-2"></i>
+                    Annulla
+                </button>
+                <button type="button" class="btn btn-secondary d-none" id="viewStatusBtn">
+                    <i class="bi bi-eye me-2"></i>
+                    Visualizza Dettagli
+                </button>
+                <button type="button" class="btn btn-primary d-none" id="continueBtn">
+                    <i class="bi bi-check-circle me-2"></i>
+                    Continua
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const importForm = document.getElementById('importForm');
+    const previewBtn = document.getElementById('previewBtn');
+    const importBtn = document.getElementById('importBtn');
+    const progressModal = new bootstrap.Modal(document.getElementById('progressModal'));
+    const progressBar = document.getElementById('progressBar');
+    const progressMessage = document.getElementById('progressMessage');
+    const progressDetails = document.getElementById('progressDetails');
+    const progressSpinner = document.getElementById('progressSpinner');
+    const statusDetails = document.getElementById('statusDetails');
+    const errorSummary = document.getElementById('errorSummary');
+    const viewStatusBtn = document.getElementById('viewStatusBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const continueBtn = document.getElementById('continueBtn');
+    
+    // Status detail elements
+    const recordsProcessed = document.getElementById('recordsProcessed');
+    const recordsCreated = document.getElementById('recordsCreated');
+    const recordsUpdated = document.getElementById('recordsUpdated');
+    const recordsSkipped = document.getElementById('recordsSkipped');
+    const currentEntity = document.getElementById('currentEntity');
+    const entityProgress = document.getElementById('entityProgress');
+    const processingLog = document.getElementById('processingLog');
+    const errorCount = document.getElementById('errorCount');
+    const warningCount = document.getElementById('warningCount');
+    
+    let currentOperationId = null;
+    let statusCheckInterval = null;
+    let isPreviewMode = false;
+
+    // Preview button handler
+    previewBtn.addEventListener('click', function() {
+        document.getElementById('validate_only').checked = true;
+        isPreviewMode = true;
+        submitForm();
+    });
+
+    // Import button handler
+    importBtn.addEventListener('click', function() {
+        document.getElementById('validate_only').checked = false;
+        isPreviewMode = false;
+    });
+
+    // Form submission
+    importForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        isPreviewMode = false;
+        submitForm();
+    });
+
+    // Cancel button handler
+    cancelBtn.addEventListener('click', function() {
+        if (statusCheckInterval) {
+            clearInterval(statusCheckInterval);
+        }
+        progressModal.hide();
+        resetProgress();
+    });
+
+    // Continue button handler (for preview mode)
+    continueBtn.addEventListener('click', function() {
+        progressModal.hide();
+        // If preview was successful, show option to proceed with import
+        if (isPreviewMode && currentOperationId) {
+            const confirmImport = confirm('Anteprima completata. Vuoi procedere con l\'importazione?');
+            if (confirmImport) {
+                document.getElementById('validate_only').checked = false;
+                isPreviewMode = false;
+                submitForm();
+            }
+        }
+    });
+
+    function submitForm() {
+        // Validate form
+        if (!validateForm()) {
+            return;
+        }
+
+        // Show progress modal
+        progressModal.show();
+        resetProgress();
+
+        // Prepare form data
+        const formData = new FormData(importForm);
+        
+        // Get selected entity types
+        const selectedEntities = Array.from(document.querySelectorAll('input[name="entity_types"]:checked'))
+            .map(cb => cb.value);
+        formData.set('entity_types', selectedEntities.join(','));
+
+        // Update UI for preview vs import mode
+        if (isPreviewMode) {
+            progressMessage.textContent = 'Analisi file in corso...';
+            progressDetails.textContent = 'Validazione dati senza modifiche al database';
+        } else {
+            progressMessage.textContent = 'Importazione in corso...';
+            progressDetails.textContent = 'Elaborazione e salvataggio dati';
+        }
+
+        // Submit form
+        fetch('/import-export/import/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentOperationId = data.operation_id;
+                addLogEntry('Operazione avviata con ID: ' + data.operation_id);
+                startStatusCheck();
+            } else {
+                throw new Error(data.message || 'Errore durante il caricamento');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showError('Errore: ' + error.message);
+            addLogEntry('ERRORE: ' + error.message, 'error');
+        });
+    }
+
+    function validateForm() {
+        // Check file selection
+        const fileInput = document.getElementById('file');
+        if (!fileInput.files.length) {
+            alert('Seleziona un file da importare');
+            return false;
+        }
+
+        // Check file size (client-side check)
+        const maxSize = 100 * 1024 * 1024; // 100MB
+        if (fileInput.files[0].size > maxSize) {
+            alert('File troppo grande. Dimensione massima: 100MB');
+            return false;
+        }
+
+        // Check entity types selection
+        const selectedEntities = document.querySelectorAll('input[name="entity_types"]:checked');
+        if (selectedEntities.length === 0) {
+            alert('Seleziona almeno un tipo di entità da importare');
+            return false;
+        }
+
+        return true;
+    }
+
+    function startStatusCheck() {
+        if (!currentOperationId) return;
+
+        statusCheckInterval = setInterval(() => {
+            fetch(`/import-export/status/${currentOperationId}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateProgress(data);
+                    
+                    if (data.status === 'completed' || data.status === 'completed_with_errors' || data.status === 'failed') {
+                        clearInterval(statusCheckInterval);
+                        handleOperationComplete(data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Status check error:', error);
+                    clearInterval(statusCheckInterval);
+                    showError('Errore nel controllo stato: ' + error.message);
+                });
+        }, 1000);
+    }
+
+    function updateProgress(data) {
+        // Update main progress bar
+        progressBar.style.width = data.progress + '%';
+        progressBar.setAttribute('aria-valuenow', data.progress);
+        progressMessage.textContent = data.message;
+
+        // Show status details if progress > 10%
+        if (data.progress > 10) {
+            statusDetails.classList.remove('d-none');
+        }
+
+        // Update progress bar styling based on status
+        progressBar.className = 'progress-bar progress-bar-striped';
+        if (data.status === 'processing') {
+            progressBar.classList.add('progress-bar-animated');
+        } else if (data.status === 'completed') {
+            progressBar.classList.add('bg-success');
+            progressBar.classList.remove('progress-bar-animated');
+        } else if (data.status === 'failed') {
+            progressBar.classList.add('bg-danger');
+            progressBar.classList.remove('progress-bar-animated');
+        } else if (data.status === 'completed_with_errors') {
+            progressBar.classList.add('bg-warning');
+            progressBar.classList.remove('progress-bar-animated');
+        }
+
+        // Update detailed statistics if available
+        if (data.results) {
+            const results = data.results;
+            if (results.records_processed) {
+                recordsProcessed.textContent = results.records_processed.total || 0;
+            }
+            if (results.records_created) {
+                recordsCreated.textContent = results.records_created.total || 0;
+            }
+            if (results.records_updated) {
+                recordsUpdated.textContent = results.records_updated.total || 0;
+            }
+            if (results.records_skipped) {
+                recordsSkipped.textContent = results.records_skipped.total || 0;
+            }
+        }
+
+        // Update error/warning counts
+        if (data.errors && data.errors.length > 0) {
+            errorCount.textContent = data.errors.length;
+            errorSummary.classList.remove('d-none');
+        }
+        if (data.warnings && data.warnings.length > 0) {
+            warningCount.textContent = data.warnings.length;
+            errorSummary.classList.remove('d-none');
+        }
+
+        // Add log entry for significant updates
+        if (data.message && data.message !== progressMessage.previousValue) {
+            addLogEntry(data.message);
+            progressMessage.previousValue = data.message;
+        }
+    }
+
+    function handleOperationComplete(data) {
+        // Hide spinner
+        progressSpinner.style.display = 'none';
+        
+        // Update UI based on completion status
+        if (data.status === 'completed') {
+            if (isPreviewMode) {
+                progressMessage.textContent = 'Anteprima completata con successo';
+                continueBtn.classList.remove('d-none');
+                addLogEntry('Anteprima completata - Nessun errore rilevato', 'success');
+            } else {
+                progressMessage.textContent = 'Importazione completata con successo';
+                addLogEntry('Importazione completata con successo', 'success');
+            }
+        } else if (data.status === 'completed_with_errors') {
+            progressMessage.textContent = 'Operazione completata con avvisi';
+            addLogEntry('Operazione completata con ' + (data.warnings?.length || 0) + ' avvisi', 'warning');
+        } else if (data.status === 'failed') {
+            progressMessage.textContent = 'Operazione fallita';
+            addLogEntry('Operazione fallita: ' + (data.errors?.[0] || 'Errore sconosciuto'), 'error');
+        }
+
+        // Show appropriate buttons
+        viewStatusBtn.classList.remove('d-none');
+        cancelBtn.textContent = 'Chiudi';
+    }
+
+    function addLogEntry(message, type = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        logEntry.className = 'mb-1';
+        
+        let iconClass = 'bi-info-circle text-info';
+        if (type === 'success') iconClass = 'bi-check-circle text-success';
+        else if (type === 'warning') iconClass = 'bi-exclamation-triangle text-warning';
+        else if (type === 'error') iconClass = 'bi-x-circle text-danger';
+        
+        logEntry.innerHTML = `
+            <span class="text-muted">${timestamp}</span>
+            <i class="bi ${iconClass} mx-1"></i>
+            <span>${message}</span>
+        `;
+        
+        processingLog.appendChild(logEntry);
+        processingLog.scrollTop = processingLog.scrollHeight;
+    }
+
+    function showError(message) {
+        progressSpinner.style.display = 'none';
+        progressMessage.textContent = message;
+        progressBar.classList.add('bg-danger');
+        progressBar.classList.remove('progress-bar-animated');
+        viewStatusBtn.classList.remove('d-none');
+        cancelBtn.textContent = 'Chiudi';
+    }
+
+    function resetProgress() {
+        // Reset progress elements
+        progressBar.style.width = '0%';
+        progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+        progressMessage.textContent = 'Inizializzazione...';
+        progressDetails.textContent = '';
+        progressSpinner.style.display = 'block';
+        
+        // Reset status details
+        statusDetails.classList.add('d-none');
+        errorSummary.classList.add('d-none');
+        recordsProcessed.textContent = '0';
+        recordsCreated.textContent = '0';
+        recordsUpdated.textContent = '0';
+        recordsSkipped.textContent = '0';
+        currentEntity.textContent = '-';
+        entityProgress.style.width = '0%';
+        errorCount.textContent = '0';
+        warningCount.textContent = '0';
+        
+        // Reset buttons
+        viewStatusBtn.classList.add('d-none');
+        continueBtn.classList.add('d-none');
+        cancelBtn.textContent = 'Annulla';
+        
+        // Clear log
+        processingLog.innerHTML = 'Avvio elaborazione...';
+        
+        // Reset state
+        currentOperationId = null;
+        if (statusCheckInterval) {
+            clearInterval(statusCheckInterval);
+        }
+    }
+
+    // View status button handler
+    viewStatusBtn.addEventListener('click', function() {
+        if (currentOperationId) {
+            window.location.href = `/import-export/status/${currentOperationId}/page`;
+        }
+    });
+
+    // Entity type selection helpers
+    document.getElementById('selectAllEntities')?.addEventListener('click', function() {
+        document.querySelectorAll('input[name="entity_types"]').forEach(cb => cb.checked = true);
+    });
+
+    document.getElementById('selectNoneEntities')?.addEventListener('click', function() {
+        document.querySelectorAll('input[name="entity_types"]').forEach(cb => cb.checked = false);
+    });
+
+    // File input change handler for format detection
+    document.getElementById('file').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const formatInfo = document.getElementById('formatInfo');
+        const formatInfoText = document.getElementById('formatInfoText');
+        
+        if (file && formatInfo && formatInfoText) {
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+            const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+            
+            let message = '';
+            if (fileExtension === 'json') {
+                message = `Formato rilevato: JSON (${fileSizeMB} MB) - File singolo strutturato con tutte le entità`;
+            } else if (fileExtension === 'csv') {
+                message = `Formato rilevato: CSV (${fileSizeMB} MB) - Assicurati di avere file separati per ogni tipo di entità`;
+            } else {
+                message = `Formato non riconosciuto: ${fileExtension.toUpperCase()} (${fileSizeMB} MB)`;
+            }
+            
+            formatInfoText.textContent = message;
+            formatInfo.classList.remove('d-none');
+            
+            // Show warning for large files
+            if (file.size > 50 * 1024 * 1024) { // 50MB
+                formatInfo.classList.remove('bg-light');
+                formatInfo.classList.add('bg-warning', 'bg-opacity-25');
+                formatInfoText.innerHTML = `<i class="bi bi-exclamation-triangle me-1"></i>${message} - File di grandi dimensioni, l'elaborazione potrebbe richiedere più tempo`;
+            } else {
+                formatInfo.classList.remove('bg-warning', 'bg-opacity-25');
+                formatInfo.classList.add('bg-light');
+            }
+        } else if (formatInfo) {
+            formatInfo.classList.add('d-none');
+        }
+    });
+});
+</script>
+{% endblock %}

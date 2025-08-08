@@ -6,7 +6,7 @@ relationships for all entity types in the system.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any, Callable, Set
+from typing import Dict, List, Optional, Any, Callable, Set, Union
 from datetime import date, datetime
 import json
 
@@ -127,10 +127,16 @@ def parse_boolean(value: str) -> bool:
     return bool(value)
 
 
-def parse_float(value: str) -> float:
+def parse_float(value: Union[str, float, int]) -> float:
     """Parse float with validation."""
-    if not value or value.strip() == "":
+    if value is None:
         return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        if not value or value.strip() == "":
+            return 0.0
+        return float(value)
     return float(value)
 
 

@@ -342,3 +342,307 @@
         left: -1.75rem;
     }
 }
+/* Imp
+ort/Export Preview Styles */
+.preview-summary-card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.preview-summary-card:hover {
+    transform: translateY(-2px);
+}
+
+.validation-error-row {
+    border-left: 4px solid transparent;
+}
+
+.validation-error-row.error {
+    border-left-color: #dc3545;
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+.validation-error-row.warning {
+    border-left-color: #ffc107;
+    background-color: rgba(255, 193, 7, 0.05);
+}
+
+.dependency-flow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.dependency-step {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+}
+
+.dependency-arrow {
+    color: #6c757d;
+    font-size: 1.2rem;
+}
+
+.fk-relationship-card {
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    transition: border-color 0.2s ease-in-out;
+}
+
+.fk-relationship-card:hover {
+    border-color: #007bff;
+}
+
+.fk-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    text-align: center;
+}
+
+.fk-stat-item {
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    background: #f8f9fa;
+}
+
+.fk-stat-value {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.fk-stat-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.preview-data-table {
+    font-size: 0.875rem;
+}
+
+.preview-data-table th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+}
+
+.preview-data-table td {
+    vertical-align: middle;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.preview-data-table .text-truncate {
+    cursor: help;
+}
+
+.alert-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+}
+
+.badge.fs-6 {
+    font-size: 0.875rem !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .dependency-flow {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .dependency-step {
+        justify-content: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .dependency-arrow {
+        transform: rotate(90deg);
+        margin: 0.5rem 0;
+    }
+    
+    .fk-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Animation for loading states */
+.loading-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Preview confirmation styles */
+.preview-actions {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+}
+
+.preview-actions h6 {
+    color: #495057;
+    font-weight: 600;
+}
+
+.preview-actions .btn {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease-in-out;
+}
+
+.preview-actions .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}/* 
+Import/Export specific styles */
+.import-progress-modal .modal-dialog {
+    max-width: 600px;
+}
+
+.import-progress-stats .card {
+    transition: all 0.3s ease;
+}
+
+.import-progress-stats .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.processing-log {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.processing-log .log-entry {
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.processing-log .log-entry:last-child {
+    border-bottom: none;
+}
+
+.entity-progress-indicator {
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-color), var(--info-color));
+    border-radius: 2px;
+}
+
+.format-detection-info {
+    border-left: 3px solid var(--info-color);
+    transition: all 0.3s ease;
+}
+
+.format-detection-info.warning {
+    border-left-color: var(--warning-color);
+}
+
+.import-entity-checkbox {
+    transition: all 0.2s ease;
+}
+
+.import-entity-checkbox:hover {
+    background-color: rgba(var(--primary-color-rgb), 0.05);
+    border-radius: 0.375rem;
+    padding: 0.25rem;
+    margin: -0.25rem;
+}
+
+.import-help-panel .accordion-button {
+    font-size: 0.9rem;
+    padding: 0.75rem 1rem;
+}
+
+.import-help-panel .accordion-body {
+    padding: 1rem;
+}
+
+.import-help-panel pre {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    margin: 0;
+    overflow-x: auto;
+}
+
+/* Progress modal animations */
+@keyframes pulse-progress {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.progress-bar-animated {
+    animation: pulse-progress 1.5s ease-in-out infinite;
+}
+
+.import-status-card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.import-status-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.import-status-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.import-status-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+/* Entity type selection styling */
+.entity-selection-grid .form-check {
+    padding: 0.75rem;
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0.5rem;
+}
+
+.entity-selection-grid .form-check:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(var(--primary-color-rgb), 0.05);
+}
+
+.entity-selection-grid .form-check-input:checked + .form-check-label {
+    color: var(--primary-color);
+}
+
+.entity-selection-grid .form-check-input:checked ~ * {
+    border-color: var(--primary-color);
+    background-color: rgba(var(--primary-color-rgb), 0.1);
+}

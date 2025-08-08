@@ -1,0 +1,165 @@
+{% extends "base/layout.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-1">{{ page_title }}</h1>
+                    <p class="text-muted mb-0">{{ page_subtitle }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Import Section -->
+        <div class="col-md-6">
+            <div class="card h-100 border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-upload me-2"></i>
+                        Importa Dati
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        Carica dati organizzativi da file CSV o JSON. Supporta importazione 
+                        di unità, persone, incarichi e altri dati con validazione automatica 
+                        delle dipendenze.
+                    </p>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">Formati Supportati:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-file-earmark-text text-success me-2"></i>CSV (file separati per tipo)</li>
+                            <li><i class="bi bi-file-earmark-code text-info me-2"></i>JSON (file strutturato)</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">Funzionalità:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Validazione automatica</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Anteprima prima dell'importazione</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Gestione conflitti duplicati</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Elaborazione in background</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="/import-export/import" class="btn btn-primary">
+                        <i class="bi bi-upload me-2"></i>
+                        Inizia Importazione
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Section -->
+        <div class="col-md-6">
+            <div class="card h-100 border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-download me-2"></i>
+                        Esporta Dati
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        Scarica dati organizzativi in formato CSV o JSON per backup, 
+                        migrazione o analisi. Supporta esportazione selettiva per tipo 
+                        di entità e intervallo temporale.
+                    </p>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">Opzioni di Esportazione:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-calendar-range text-primary me-2"></i>Filtro per intervallo temporale</li>
+                            <li><i class="bi bi-funnel text-primary me-2"></i>Selezione tipi di entità</li>
+                            <li><i class="bi bi-clock-history text-primary me-2"></i>Inclusione dati storici</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">Formati di Output:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-file-earmark-text text-success me-2"></i>CSV (file separati)</li>
+                            <li><i class="bi bi-file-earmark-code text-info me-2"></i>JSON (file unico strutturato)</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="/import-export/export" class="btn btn-success">
+                        <i class="bi bi-download me-2"></i>
+                        Inizia Esportazione
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Operations -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock-history me-2"></i>
+                        Operazioni Recenti
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox display-4 mb-3"></i>
+                        <p class="mb-0">Nessuna operazione recente</p>
+                        <small>Le operazioni di import/export appariranno qui</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-light">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-info-circle text-info me-2"></i>
+                        Informazioni Importanti
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary">Ordine di Importazione</h6>
+                            <p class="small text-muted mb-3">
+                                I dati vengono importati nel seguente ordine per rispettare 
+                                le dipendenze: Tipi Unità → Temi → Unità → Titoli → Persone → Incarichi
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-primary">Sicurezza</h6>
+                            <p class="small text-muted mb-3">
+                                Tutti i file caricati vengono validati per sicurezza. 
+                                Dimensione massima: 100MB. Formati consentiti: CSV, JSON.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add any JavaScript for the main page here
+    console.log('Import/Export main page loaded');
+});
+</script>
+{% endblock %}

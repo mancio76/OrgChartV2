@@ -1,0 +1,432 @@
+{% extends "base/layout.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-1">{{ page_title }}</h1>
+                    <p class="text-muted mb-0">{{ page_subtitle }}</p>
+                </div>
+                <a href="/import-export" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>
+                    Torna Indietro
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Form -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-download me-2"></i>
+                        Configurazione Esportazione
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="exportForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        
+                        <!-- Entity Types Selection -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-diagram-3 me-2"></i>
+                                Tipi di Entità da Esportare
+                            </label>
+                            <div class="row">
+                                {% for entity in entity_types %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="entity_types" value="{{ entity.value }}" 
+                                               id="entity_{{ entity.value }}" checked>
+                                        <label class="form-check-label" for="entity_{{ entity.value }}">
+                                            <strong>{{ entity.label }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ entity.description }}</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="form-text">
+                                <button type="button" class="btn btn-sm btn-outline-primary me-2" id="selectAllEntities">
+                                    Seleziona Tutto
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="selectNoneEntities">
+                                    Deseleziona Tutto
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Export Format -->
+                        <div class="mb-4">
+                            <label for="export_format" class="form-label">
+                                <i class="bi bi-file-earmark me-2"></i>
+                                Formato di Esportazione
+                            </label>
+                            <select class="form-select" id="export_format" name="export_format">
+                                {% for format in export_formats %}
+                                <option value="{{ format.value }}" 
+                                        {% if format.value == 'json' %}selected{% endif %}>
+                                    {{ format.label }} - {{ format.description }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                JSON crea un file unico strutturato, CSV crea file separati per tipo.
+                            </div>
+                        </div>
+
+                        <!-- Historical Data -->
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" 
+                                       id="include_historical" name="include_historical" checked>
+                                <label class="form-check-label" for="include_historical">
+                                    <strong>Includi Dati Storici</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        Include tutte le versioni degli incarichi e dati archiviati
+                                    </small>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Date Range -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-calendar-range me-2"></i>
+                                Intervallo Temporale (Opzionale)
+                            </label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="date_from" class="form-label small">Data Inizio</label>
+                                    <input type="date" class="form-control" id="date_from" name="date_from">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="date_to" class="form-label small">Data Fine</label>
+                                    <input type="date" class="form-control" id="date_to" name="date_to">
+                                </div>
+                            </div>
+                            <div class="form-text">
+                                Lascia vuoto per esportare tutti i dati disponibili.
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-download me-2"></i>
+                                Genera Esportazione
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Panel -->
+        <div class="col-lg-4">
+            <div class="card border-success">
+                <div class="card-header bg-light">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-info-circle text-success me-2"></i>
+                        Informazioni Esportazione
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-success">Ordine di Esportazione</h6>
+                    <p class="small mb-3">
+                        I dati vengono esportati nello stesso ordine delle dipendenze 
+                        per facilitare la re-importazione in altri sistemi.
+                    </p>
+
+                    <h6 class="text-success">Formato JSON</h6>
+                    <ul class="small mb-3">
+                        <li>File unico strutturato</li>
+                        <li>Include metadati di esportazione</li>
+                        <li>Mantiene relazioni tra entità</li>
+                        <li>Ideale per backup completi</li>
+                    </ul>
+
+                    <h6 class="text-success">Formato CSV</h6>
+                    <ul class="small mb-3">
+                        <li>File separati per tipo</li>
+                        <li>Compatibile con Excel</li>
+                        <li>Facile da analizzare</li>
+                        <li>Ideale per elaborazioni specifiche</li>
+                    </ul>
+
+                    <h6 class="text-success">Sicurezza</h6>
+                    <p class="small mb-0">
+                        Tutte le esportazioni vengono registrate per audit. 
+                        I file generati sono disponibili per il download per 24 ore.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mt-3 border-info">
+                <div class="card-header bg-light">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-lightning text-info me-2"></i>
+                        Azioni Rapide
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-info btn-sm" id="exportAllBtn">
+                            <i class="bi bi-database me-2"></i>
+                            Esporta Tutto (JSON)
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm" id="exportCurrentBtn">
+                            <i class="bi bi-calendar-check me-2"></i>
+                            Solo Dati Correnti
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm" id="exportAssignmentsBtn">
+                            <i class="bi bi-person-badge me-2"></i>
+                            Solo Incarichi
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Modal -->
+<div class="modal fade" id="progressModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-hourglass-split me-2"></i>
+                    Generazione Esportazione
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <div class="spinner-border text-success" role="status">
+                        <span class="visually-hidden">Caricamento...</span>
+                    </div>
+                </div>
+                <div class="progress mb-3">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" 
+                         id="progressBar"></div>
+                </div>
+                <p class="text-center mb-0" id="progressMessage">
+                    Inizializzazione esportazione...
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="viewStatusBtn" style="display: none;">
+                    Visualizza Dettagli
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const exportForm = document.getElementById('exportForm');
+    const progressModal = new bootstrap.Modal(document.getElementById('progressModal'));
+    const progressBar = document.getElementById('progressBar');
+    const progressMessage = document.getElementById('progressMessage');
+    const viewStatusBtn = document.getElementById('viewStatusBtn');
+    
+    let currentOperationId = null;
+    let statusCheckInterval = null;
+
+    // Form submission
+    exportForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitForm();
+    });
+
+    // Quick action buttons
+    document.getElementById('exportAllBtn').addEventListener('click', function() {
+        selectAllEntities();
+        document.getElementById('export_format').value = 'json';
+        document.getElementById('include_historical').checked = true;
+        submitForm();
+    });
+
+    document.getElementById('exportCurrentBtn').addEventListener('click', function() {
+        selectAllEntities();
+        document.getElementById('include_historical').checked = false;
+        submitForm();
+    });
+
+    document.getElementById('exportAssignmentsBtn').addEventListener('click', function() {
+        selectNoneEntities();
+        document.getElementById('entity_assignments').checked = true;
+        submitForm();
+    });
+
+    // Entity selection helpers
+    document.getElementById('selectAllEntities').addEventListener('click', selectAllEntities);
+    document.getElementById('selectNoneEntities').addEventListener('click', selectNoneEntities);
+
+    function selectAllEntities() {
+        document.querySelectorAll('input[name="entity_types"]').forEach(cb => cb.checked = true);
+    }
+
+    function selectNoneEntities() {
+        document.querySelectorAll('input[name="entity_types"]').forEach(cb => cb.checked = false);
+    }
+
+    function submitForm() {
+        // Validate form
+        if (!validateForm()) {
+            return;
+        }
+
+        // Show progress modal
+        progressModal.show();
+        resetProgress();
+
+        // Prepare form data
+        const formData = new FormData(exportForm);
+        
+        // Get selected entity types
+        const selectedEntities = Array.from(document.querySelectorAll('input[name="entity_types"]:checked'))
+            .map(cb => cb.value);
+        formData.set('entity_types', selectedEntities.join(','));
+
+        // Submit form
+        fetch('/import-export/export/generate', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentOperationId = data.operation_id;
+                startStatusCheck();
+            } else {
+                throw new Error(data.message || 'Errore durante la generazione');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            progressMessage.textContent = 'Errore: ' + error.message;
+            showViewStatusButton();
+        });
+    }
+
+    function validateForm() {
+        // Check entity types selection
+        const selectedEntities = document.querySelectorAll('input[name="entity_types"]:checked');
+        if (selectedEntities.length === 0) {
+            alert('Seleziona almeno un tipo di entità da esportare');
+            return false;
+        }
+
+        // Validate date range
+        const dateFrom = document.getElementById('date_from').value;
+        const dateTo = document.getElementById('date_to').value;
+        
+        if (dateFrom && dateTo && dateFrom > dateTo) {
+            alert('La data di inizio deve essere precedente alla data di fine');
+            return false;
+        }
+
+        return true;
+    }
+
+    function startStatusCheck() {
+        if (!currentOperationId) return;
+
+        statusCheckInterval = setInterval(() => {
+            fetch(`/import-export/status/${currentOperationId}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateProgress(data);
+                    
+                    if (data.status === 'completed' || data.status === 'failed') {
+                        clearInterval(statusCheckInterval);
+                        showViewStatusButton();
+                        
+                        if (data.status === 'completed' && data.download_urls) {
+                            showDownloadLinks(data.download_urls);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Status check error:', error);
+                    clearInterval(statusCheckInterval);
+                    showViewStatusButton();
+                });
+        }, 1000);
+    }
+
+    function updateProgress(data) {
+        progressBar.style.width = data.progress + '%';
+        progressBar.setAttribute('aria-valuenow', data.progress);
+        progressMessage.textContent = data.message;
+
+        // Update progress bar color based on status
+        if (data.status === 'completed') {
+            progressBar.classList.remove('bg-success');
+            progressBar.classList.add('bg-success');
+        } else if (data.status === 'failed') {
+            progressBar.classList.remove('bg-success');
+            progressBar.classList.add('bg-danger');
+        }
+    }
+
+    function resetProgress() {
+        progressBar.style.width = '0%';
+        progressBar.className = 'progress-bar bg-success';
+        progressMessage.textContent = 'Inizializzazione esportazione...';
+        viewStatusBtn.style.display = 'none';
+        currentOperationId = null;
+        
+        if (statusCheckInterval) {
+            clearInterval(statusCheckInterval);
+        }
+    }
+
+    function showViewStatusButton() {
+        viewStatusBtn.style.display = 'inline-block';
+        viewStatusBtn.onclick = function() {
+            if (currentOperationId) {
+                window.location.href = `/import-export/status/${currentOperationId}/page`;
+            }
+        };
+    }
+
+    function showDownloadLinks(downloadUrls) {
+        // Add download buttons to modal
+        const modalFooter = document.querySelector('#progressModal .modal-footer');
+        
+        downloadUrls.forEach(download => {
+            const downloadBtn = document.createElement('button');
+            downloadBtn.type = 'button';
+            downloadBtn.className = 'btn btn-success me-2';
+            downloadBtn.innerHTML = `<i class="bi bi-download me-2"></i>${download.filename}`;
+            downloadBtn.onclick = function() {
+                window.location.href = download.url;
+            };
+            modalFooter.insertBefore(downloadBtn, viewStatusBtn);
+        });
+    }
+
+    // Set default date range (last 30 days)
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+    
+    document.getElementById('date_to').value = today.toISOString().split('T')[0];
+    // Uncomment to set default start date
+    // document.getElementById('date_from').value = thirtyDaysAgo.toISOString().split('T')[0];
+});
+</script>
+{% endblock %}
