@@ -10,6 +10,7 @@ import logging
 import os
 import tempfile
 import time
+import uuid
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union, Tuple
 from dataclasses import dataclass
@@ -22,6 +23,12 @@ from ..models.import_export import (
     FileFormat, ConflictResolutionStrategy
 )
 from ..models.entity_mappings import DEPENDENCY_ORDER, get_entity_mapping
+from ..utils.error_handler import (
+    get_error_logger, ErrorSeverity, ErrorCategory, log_import_error, log_system_error
+)
+from .audit_trail import (
+    get_audit_manager, OperationType, OperationStatus, ChangeType
+)
 from .csv_processor import CSVProcessor
 from .json_processor import JSONProcessor
 from .dependency_resolver import DependencyResolver, ForeignKeyResolver
@@ -76,9 +83,11 @@ class ImportExportService:
         self.foreign_key_resolver = ForeignKeyResolver(self.dependency_resolver)
         self.validation_framework = ValidationFramework()
         self.conflict_resolution_manager = ConflictResolutionManager()
+        self.error_logger = get_error_logger()
+        self.audit_manager = get_audit_manager()
         self._transaction_contexts: Dict[str, TransactionContext] = {}
         
-        logger.info("ImportExportService initialized")
+        logger.info("ImportExportService initialized with enhanced error handling and audit trail")
     
     def detect_file_format(self, file_path: str) -> FileFormat:
         """
@@ -793,22 +802,25 @@ class ImportExportService:
             return 30.0  # Default estimate
     
     def import_data(self, file_path: str, file_format: FileFormat, 
-                   options: ImportOptions) -> ImportResult:
+                   options: ImportOptions, user_id: Optional[str] = None) -> ImportResult:
         """
         Main import orchestration method that processes data files with comprehensive
         error handling, batch processing, and rollback capabilities.
         
-        This method implements Requirements 1.1, 1.4, 1.5 by providing:
+        This method implements Requirements 1.1, 1.4, 1.5, 7.1, 7.2, 7.5 by providing:
         - File format validation and processing
         - Dependency-aware entity processing order
         - Transaction management with rollback on failure
         - Batch processing for large datasets
         - Comprehensive error reporting and validation
+        - Structured error logging with line-by-line reporting
+        - Audit trail with user tracking and data change logging
         
         Args:
             file_path: Path to the file to import
             file_format: Format of the file (CSV or JSON)
             options: Import configuration options
+            user_id: Optional user ID for audit trail
             
         Returns:
             ImportResult with detailed processing information
@@ -816,12 +828,22 @@ class ImportExportService:
         Raises:
             ImportExportException: If critical import operation fails
         """
-        import uuid
-        import time
-        
         # Generate unique operation ID for transaction management
         operation_id = str(uuid.uuid4())
         start_time = time.time()
+        
+        # Initialize enhanced error logging and audit trail
+        error_report = self.error_logger.create_error_report(operation_id, "import")
+        audit_record = self.audit_manager.start_operation(
+            operation_id=operation_id,
+            operation_type=OperationType.IMPORT,
+            user_id=user_id,
+            file_path=file_path,
+            file_format=file_format.value,
+            entity_types=options.entity_types,
+            options=options.__dict__,
+            metadata={"batch_size": options.batch_size, "conflict_resolution": options.conflict_resolution.value}
+        )
         
         logger.info(f"Starting import operation {operation_id} for file: {file_path}")
         
@@ -833,6 +855,9 @@ class ImportExportService:
         )
         
         try:
+            # Update operation status
+            self.audit_manager.update_operation_status(operation_id, OperationStatus.IN_PROGRESS)
+            
             # Step 1: Validate file format and structure
             logger.debug(f"Validating file format and structure for {file_path}")
             
@@ -843,8 +868,29 @@ class ImportExportService:
             
             format_errors = self.validate_file_structure(file_path, file_format, entity_type_for_validation)
             if format_errors:
+                # Log structured errors for file format issues
+                for error in format_errors:
+                    self.error_logger.log_structured_error(
+                        operation_id=operation_id,
+                        severity=ErrorSeverity.ERROR,
+                        category=ErrorCategory.FILE_PROCESSING,
+                        error_type=error.error_type,
+                        message=error.message,
+                        file_path=file_path,
+                        user_id=user_id,
+                        resolution_hint="Check file format and structure requirements"
+                    )
+                
                 result.errors.extend(format_errors)
                 result.execution_time = time.time() - start_time
+                
+                # Update audit trail
+                self.audit_manager.update_operation_status(
+                    operation_id, OperationStatus.FAILED, 
+                    error_count=len(format_errors)
+                )
+                self.error_logger.finalize_error_report(operation_id)
+                
                 logger.error(f"File validation failed for {file_path}: {len(format_errors)} errors")
                 return result
             
@@ -853,18 +899,69 @@ class ImportExportService:
             parsed_data = self._parse_import_file(file_path, file_format, options)
             
             if not parsed_data:
+                # Log structured error for parsing failure
+                self.error_logger.log_structured_error(
+                    operation_id=operation_id,
+                    severity=ErrorSeverity.CRITICAL,
+                    category=ErrorCategory.FILE_PROCESSING,
+                    error_type=ImportErrorType.FILE_FORMAT_ERROR,
+                    message="No data could be parsed from the file",
+                    file_path=file_path,
+                    user_id=user_id,
+                    resolution_hint="Verify file format and content structure"
+                )
+                
                 result.errors.append(ImportExportValidationError(
                     field="file_parsing",
                     message="No data could be parsed from the file",
                     error_type=ImportErrorType.FILE_FORMAT_ERROR
                 ))
                 result.execution_time = time.time() - start_time
+                
+                # Update audit trail
+                self.audit_manager.update_operation_status(
+                    operation_id, OperationStatus.FAILED, error_count=1
+                )
+                self.error_logger.finalize_error_report(operation_id)
+                
                 return result
             
             # Step 3: Comprehensive data validation using validation framework
             logger.debug("Performing comprehensive data validation")
             if not options.skip_validation:
                 validation_result = self.validate_import_data(parsed_data, options)
+                
+                # Log structured errors for validation issues
+                for error in validation_result.errors:
+                    self.error_logger.log_structured_error(
+                        operation_id=operation_id,
+                        severity=ErrorSeverity.ERROR,
+                        category=ErrorCategory.DATA_VALIDATION,
+                        error_type=error.error_type,
+                        message=error.message,
+                        entity_type=error.entity_type,
+                        line_number=error.line_number,
+                        field_name=error.field,
+                        record_id=error.record_id,
+                        user_id=user_id,
+                        resolution_hint="Check data format and business rules"
+                    )
+                
+                # Log warnings
+                for warning in validation_result.warnings:
+                    self.error_logger.log_structured_error(
+                        operation_id=operation_id,
+                        severity=ErrorSeverity.WARNING,
+                        category=ErrorCategory.DATA_VALIDATION,
+                        error_type=warning.error_type,
+                        message=warning.message,
+                        entity_type=warning.entity_type,
+                        line_number=warning.line_number,
+                        field_name=warning.field,
+                        record_id=warning.record_id,
+                        user_id=user_id
+                    )
+                
                 result.errors.extend(validation_result.errors)
                 result.warnings.extend(validation_result.warnings)
                 
@@ -875,6 +972,15 @@ class ImportExportService:
                                                    ImportErrorType.CIRCULAR_REFERENCE]]
                 if critical_errors:
                     result.execution_time = time.time() - start_time
+                    
+                    # Update audit trail
+                    self.audit_manager.update_operation_status(
+                        operation_id, OperationStatus.FAILED, 
+                        error_count=len(validation_result.errors),
+                        warning_count=len(validation_result.warnings)
+                    )
+                    self.error_logger.finalize_error_report(operation_id)
+                    
                     logger.error(f"Critical validation failed: {len(critical_errors)} errors")
                     return result
             
@@ -908,6 +1014,17 @@ class ImportExportService:
                     self.rollback_transaction(operation_id)
                     result.success = True
                     result.execution_time = time.time() - start_time
+                    
+                    # Update audit trail for validation-only operation
+                    self.audit_manager.update_operation_status(
+                        operation_id, OperationStatus.COMPLETED,
+                        results={"validation_only": True},
+                        error_count=len(result.errors),
+                        warning_count=len(result.warnings)
+                    )
+                    self.audit_manager.complete_operation(operation_id)
+                    self.error_logger.finalize_error_report(operation_id)
+                    
                     logger.info(f"Import validation completed successfully in {result.execution_time:.2f}s")
                     return result
                 else:
@@ -915,15 +1032,56 @@ class ImportExportService:
                     self.commit_transaction(operation_id)
                     result.success = True
                     result.execution_time = time.time() - start_time
+                    
+                    # Update audit trail for successful import
+                    self.audit_manager.update_operation_status(
+                        operation_id, OperationStatus.COMPLETED,
+                        results={
+                            "total_processed": result.total_processed,
+                            "total_created": result.total_created,
+                            "total_updated": result.total_updated,
+                            "total_skipped": result.total_skipped,
+                            "execution_time": result.execution_time
+                        },
+                        error_count=len(result.errors),
+                        warning_count=len(result.warnings)
+                    )
+                    self.audit_manager.complete_operation(operation_id)
+                    self.error_logger.finalize_error_report(operation_id)
+                    
                     logger.info(f"Import operation {operation_id} completed successfully in {result.execution_time:.2f}s")
                     return result
             
             except Exception as processing_error:
+                # Log structured error for processing failure
+                self.error_logger.log_structured_error(
+                    operation_id=operation_id,
+                    severity=ErrorSeverity.CRITICAL,
+                    category=ErrorCategory.SYSTEM,
+                    error_type=ImportErrorType.BUSINESS_RULE_VIOLATION,
+                    message=f"Data processing failed: {str(processing_error)}",
+                    user_id=user_id,
+                    exception=processing_error,
+                    resolution_hint="Check system logs and data integrity"
+                )
+                
                 logger.error(f"Error during data processing: {processing_error}")
                 try:
                     self.rollback_transaction(operation_id)
                     logger.info(f"Successfully rolled back transaction for operation {operation_id}")
                 except Exception as rollback_error:
+                    # Log rollback failure
+                    self.error_logger.log_structured_error(
+                        operation_id=operation_id,
+                        severity=ErrorSeverity.CRITICAL,
+                        category=ErrorCategory.TRANSACTION,
+                        error_type=ImportErrorType.BUSINESS_RULE_VIOLATION,
+                        message=f"Failed to rollback transaction: {str(rollback_error)}",
+                        user_id=user_id,
+                        exception=rollback_error,
+                        resolution_hint="Manual database cleanup may be required"
+                    )
+                    
                     logger.error(f"Failed to rollback transaction: {rollback_error}")
                     result.errors.append(ImportExportValidationError(
                         field="transaction_rollback",
@@ -937,9 +1095,31 @@ class ImportExportService:
                     error_type=ImportErrorType.BUSINESS_RULE_VIOLATION
                 ))
                 result.execution_time = time.time() - start_time
+                
+                # Update audit trail for failed operation
+                self.audit_manager.update_operation_status(
+                    operation_id, OperationStatus.FAILED,
+                    error_count=len(result.errors),
+                    warning_count=len(result.warnings)
+                )
+                self.audit_manager.complete_operation(operation_id)
+                self.error_logger.finalize_error_report(operation_id)
+                
                 return result
         
         except Exception as e:
+            # Log critical system error
+            self.error_logger.log_structured_error(
+                operation_id=operation_id,
+                severity=ErrorSeverity.CRITICAL,
+                category=ErrorCategory.SYSTEM,
+                error_type=ImportErrorType.BUSINESS_RULE_VIOLATION,
+                message=f"Critical error in import operation: {str(e)}",
+                user_id=user_id,
+                exception=e,
+                resolution_hint="Check system logs and contact administrator"
+            )
+            
             logger.error(f"Critical error in import operation {operation_id}: {e}")
             result.errors.append(ImportExportValidationError(
                 field="import_operation",
@@ -953,7 +1133,26 @@ class ImportExportService:
                 if operation_id in self._transaction_contexts:
                     self.rollback_transaction(operation_id)
             except Exception as cleanup_error:
+                # Log cleanup error
+                self.error_logger.log_structured_error(
+                    operation_id=operation_id,
+                    severity=ErrorSeverity.CRITICAL,
+                    category=ErrorCategory.TRANSACTION,
+                    error_type=ImportErrorType.BUSINESS_RULE_VIOLATION,
+                    message=f"Error during cleanup: {str(cleanup_error)}",
+                    user_id=user_id,
+                    exception=cleanup_error
+                )
                 logger.error(f"Error during cleanup: {cleanup_error}")
+            
+            # Update audit trail for critical failure
+            self.audit_manager.update_operation_status(
+                operation_id, OperationStatus.FAILED,
+                error_count=len(result.errors),
+                warning_count=len(result.warnings)
+            )
+            self.audit_manager.complete_operation(operation_id)
+            self.error_logger.finalize_error_report(operation_id)
             
             return result
     
@@ -1131,7 +1330,7 @@ class ImportExportService:
                 
                 # Process resolved records in batches
                 batch_success = self._process_entity_batches(
-                    entity_type, resolved_records, options, created_mappings, result
+                    entity_type, resolved_records, options, created_mappings, result, operation_id
                 )
                 
                 if not batch_success:
@@ -1160,7 +1359,7 @@ class ImportExportService:
     
     def _process_entity_batches(self, entity_type: str, records: List[Dict[str, Any]], 
                               options: ImportOptions, created_mappings: Dict[str, Dict[str, int]],
-                              result: ImportResult) -> bool:
+                              result: ImportResult, operation_id: Optional[str] = None) -> bool:
         """
         Process records for a single entity type in batches.
         
@@ -1194,7 +1393,7 @@ class ImportExportService:
                 
                 # Process this batch
                 batch_result = self._process_record_batch(
-                    entity_type, batch_records, options, created_mappings
+                    entity_type, batch_records, options, created_mappings, operation_id
                 )
                 
                 # Update result counters
@@ -1236,7 +1435,8 @@ class ImportExportService:
             return False
     
     def _process_record_batch(self, entity_type: str, records: List[Dict[str, Any]], 
-                            options: ImportOptions, created_mappings: Dict[str, Dict[str, int]]) -> BatchResult:
+                            options: ImportOptions, created_mappings: Dict[str, Dict[str, int]],
+                            operation_id: Optional[str] = None) -> BatchResult:
         """
         Process a single batch of records for an entity type.
         
@@ -1262,8 +1462,12 @@ class ImportExportService:
                     )
                     
                     # Process the record based on conflict resolution strategy
+                    # Calculate line number for error reporting (assuming records are processed in order)
+                    line_number = i + 1 if i is not None else None
+                    
                     processing_result = self._process_single_record(
-                        entity_type, resolved_record, options, created_mappings
+                        entity_type, resolved_record, options, created_mappings,
+                        operation_id, line_number
                     )
                     
                     # Update batch statistics
@@ -1459,7 +1663,8 @@ class ImportExportService:
             return None
     
     def _process_single_record(self, entity_type: str, record: Dict[str, Any], 
-                             options: ImportOptions, created_mappings: Dict[str, Dict[str, int]]) -> Dict[str, Any]:
+                             options: ImportOptions, created_mappings: Dict[str, Dict[str, int]],
+                             operation_id: Optional[str] = None, line_number: Optional[int] = None) -> Dict[str, Any]:
         """
         Process a single record with conflict resolution and proper service integration.
         
@@ -1504,6 +1709,18 @@ class ImportExportService:
                 
                 if options.conflict_resolution == ConflictResolutionStrategy.SKIP:
                     logger.debug(f"Skipping existing {entity_type} record (ID: {existing_record.id})")
+                    
+                    # Track data change for audit trail
+                    if operation_id:
+                        self.audit_manager.track_data_change(
+                            operation_id=operation_id,
+                            entity_type=entity_type,
+                            change_type=ChangeType.SKIP,
+                            entity_id=existing_record.id,
+                            old_values=existing_record.__dict__ if hasattr(existing_record, '__dict__') else None,
+                            line_number=line_number
+                        )
+                    
                     return {
                         'action': 'skipped',
                         'id': existing_record.id,
@@ -1514,9 +1731,24 @@ class ImportExportService:
                 elif options.conflict_resolution == ConflictResolutionStrategy.UPDATE:
                     logger.debug(f"Updating existing {entity_type} record (ID: {existing_record.id})")
                     
+                    # Capture old values for audit trail
+                    old_values = existing_record.__dict__ if hasattr(existing_record, '__dict__') else None
+                    
                     # Update the existing record with new data
                     model.id = existing_record.id
                     updated_record = service.update(model)
+                    
+                    # Track data change for audit trail
+                    if operation_id:
+                        self.audit_manager.track_data_change(
+                            operation_id=operation_id,
+                            entity_type=entity_type,
+                            change_type=ChangeType.UPDATE,
+                            entity_id=updated_record.id,
+                            old_values=old_values,
+                            new_values=updated_record.__dict__ if hasattr(updated_record, '__dict__') else None,
+                            line_number=line_number
+                        )
                     
                     return {
                         'action': 'updated',
@@ -1527,6 +1759,9 @@ class ImportExportService:
                 elif options.conflict_resolution == ConflictResolutionStrategy.CREATE_VERSION:
                     if entity_type == "assignments":
                         logger.debug(f"Creating new version for existing assignment (ID: {existing_record.id})")
+                        
+                        # Capture old values for audit trail
+                        old_values = existing_record.__dict__ if hasattr(existing_record, '__dict__') else None
                         
                         # For assignments, create a new version
                         # First, mark existing assignment as not current
@@ -1540,6 +1775,18 @@ class ImportExportService:
                         
                         created_record = service.create(model)
                         
+                        # Track data change for audit trail
+                        if operation_id:
+                            self.audit_manager.track_data_change(
+                                operation_id=operation_id,
+                                entity_type=entity_type,
+                                change_type=ChangeType.CREATE,
+                                entity_id=created_record.id,
+                                old_values=old_values,
+                                new_values=created_record.__dict__ if hasattr(created_record, '__dict__') else None,
+                                line_number=line_number
+                            )
+                        
                         return {
                             'action': 'created',
                             'id': created_record.id,
@@ -1549,8 +1796,24 @@ class ImportExportService:
                     else:
                         # For non-assignment entities, create_version behaves like update
                         logger.debug(f"Creating version not supported for {entity_type}, updating instead")
+                        
+                        # Capture old values for audit trail
+                        old_values = existing_record.__dict__ if hasattr(existing_record, '__dict__') else None
+                        
                         model.id = existing_record.id
                         updated_record = service.update(model)
+                        
+                        # Track data change for audit trail
+                        if operation_id:
+                            self.audit_manager.track_data_change(
+                                operation_id=operation_id,
+                                entity_type=entity_type,
+                                change_type=ChangeType.UPDATE,
+                                entity_id=updated_record.id,
+                                old_values=old_values,
+                                new_values=updated_record.__dict__ if hasattr(updated_record, '__dict__') else None,
+                                line_number=line_number
+                            )
                         
                         return {
                             'action': 'updated',
@@ -1573,6 +1836,17 @@ class ImportExportService:
                         model.is_current = True
                 
                 created_record = service.create(model)
+                
+                # Track data change for audit trail
+                if operation_id:
+                    self.audit_manager.track_data_change(
+                        operation_id=operation_id,
+                        entity_type=entity_type,
+                        change_type=ChangeType.CREATE,
+                        entity_id=created_record.id,
+                        new_values=created_record.__dict__ if hasattr(created_record, '__dict__') else None,
+                        line_number=line_number
+                    )
                 
                 return {
                     'action': 'created',
@@ -2147,3 +2421,334 @@ class ImportExportService:
             logger.warning(f"Invalid start_time format: {start_time}, using current time")
         
         return next_execution
+    
+    def export_data_json(self, options: ExportOptions) -> ExportResult:
+        """
+        Export organizational data to JSON format.
+        
+        This method implements Requirements 2.1, 2.2, 2.3 by providing:
+        - JSON export with structured data format
+        - Dependency-aware export ordering
+        - Comprehensive metadata inclusion
+        
+        Args:
+            options: Export configuration options
+            
+        Returns:
+            ExportResult with export status and file information
+        """
+        import time
+        
+        start_time = time.time()
+        operation_id = str(uuid.uuid4())
+        
+        logger.info(f"Starting JSON export operation: {operation_id}")
+        
+        # Initialize result
+        result = ExportResult(success=False)
+        
+        try:
+            # Create transaction context
+            transaction_context = self.create_transaction_context(operation_id)
+            
+            # Collect data for export
+            export_data = {}
+            
+            # Process entities in dependency order
+            ordered_entities = self.dependency_resolver.get_processing_order(options.entity_types)
+            
+            for entity_type in ordered_entities:
+                logger.debug(f"Collecting {entity_type} data for JSON export")
+                
+                # Get service for entity type
+                service = self._get_service_for_entity(entity_type)
+                if not service:
+                    logger.warning(f"No service found for entity type: {entity_type}")
+                    continue
+                
+                # Collect records
+                records = self._collect_export_records(entity_type, service, options)
+                export_data[entity_type] = records
+                result.records_exported[entity_type] = len(records)
+            
+            # Generate JSON file using JSONProcessor
+            json_processor = JSONProcessor()
+            
+            # Prepare output path
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{options.file_prefix}_{timestamp}.json"
+            output_path = os.path.join(options.output_directory or "exports", filename)
+            
+            # Ensure output directory exists
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            
+            # Generate JSON file
+            json_file_path = json_processor.generate_json_file(export_data, output_path)
+            
+            # Calculate file size
+            file_size = os.path.getsize(json_file_path)
+            
+            # Update result
+            result.success = True
+            result.exported_files = [json_file_path]
+            result.file_sizes = {json_file_path: file_size}
+            result.execution_time = time.time() - start_time
+            
+            # Add metadata
+            result.export_metadata = {
+                'format': 'json',
+                'export_date': datetime.now().isoformat(),
+                'entity_types': options.entity_types,
+                'total_records': sum(result.records_exported.values()),
+                'include_historical': options.include_historical,
+                'date_range': [options.date_range[0].isoformat(), 
+                              options.date_range[1].isoformat()] if options.date_range else None
+            }
+            
+            # Commit transaction
+            self.commit_transaction(operation_id)
+            
+            logger.info(f"JSON export completed successfully: {result.total_exported} records exported to {json_file_path}")
+            
+            return result
+        
+        except Exception as e:
+            logger.error(f"Error in JSON export operation {operation_id}: {e}")
+            
+            # Rollback transaction
+            try:
+                self.rollback_transaction(operation_id)
+            except Exception as rollback_error:
+                logger.error(f"Error rolling back transaction {operation_id}: {rollback_error}")
+            
+            # Update result with error
+            result.success = False
+            result.errors.append(ImportExportValidationError(
+                field="json_export",
+                message=f"JSON export failed: {str(e)}",
+                error_type=ImportErrorType.BUSINESS_RULE_VIOLATION
+            ))
+            result.execution_time = time.time() - start_time
+            
+            return result
+    
+    def export_data_csv(self, options: ExportOptions) -> ExportResult:
+        """
+        Export organizational data to CSV format.
+        
+        This method implements Requirements 2.1, 2.2, 2.3 by providing:
+        - CSV export with separate files per entity type
+        - Dependency-aware export ordering
+        - Proper CSV formatting and encoding
+        
+        Args:
+            options: Export configuration options
+            
+        Returns:
+            ExportResult with export status and file information
+        """
+        import time
+        
+        start_time = time.time()
+        operation_id = str(uuid.uuid4())
+        
+        logger.info(f"Starting CSV export operation: {operation_id}")
+        
+        # Initialize result
+        result = ExportResult(success=False)
+        
+        try:
+            # Create transaction context
+            transaction_context = self.create_transaction_context(operation_id)
+            
+            # Collect data for export
+            export_data = {}
+            
+            # Process entities in dependency order
+            ordered_entities = self.dependency_resolver.get_processing_order(options.entity_types)
+            
+            for entity_type in ordered_entities:
+                logger.debug(f"Collecting {entity_type} data for CSV export")
+                
+                # Get service for entity type
+                service = self._get_service_for_entity(entity_type)
+                if not service:
+                    logger.warning(f"No service found for entity type: {entity_type}")
+                    continue
+                
+                # Collect records
+                records = self._collect_export_records(entity_type, service, options)
+                export_data[entity_type] = records
+                result.records_exported[entity_type] = len(records)
+            
+            # Generate CSV files using CSVProcessor
+            csv_processor = CSVProcessor()
+            
+            # Prepare output directory
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_dir = os.path.join(options.output_directory or "exports", f"csv_export_{timestamp}")
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Generate CSV files (one per entity type)
+            csv_files = csv_processor.generate_csv_files(export_data, output_dir)
+            
+            # Calculate file sizes
+            file_sizes = {}
+            for file_path in csv_files:
+                file_sizes[file_path] = os.path.getsize(file_path)
+            
+            # Update result
+            result.success = True
+            result.exported_files = csv_files
+            result.file_sizes = file_sizes
+            result.execution_time = time.time() - start_time
+            
+            # Add metadata
+            result.export_metadata = {
+                'format': 'csv',
+                'export_date': datetime.now().isoformat(),
+                'entity_types': options.entity_types,
+                'total_records': sum(result.records_exported.values()),
+                'include_historical': options.include_historical,
+                'date_range': [options.date_range[0].isoformat(), 
+                              options.date_range[1].isoformat()] if options.date_range else None,
+                'files_generated': len(csv_files)
+            }
+            
+            # Commit transaction
+            self.commit_transaction(operation_id)
+            
+            logger.info(f"CSV export completed successfully: {result.total_exported} records exported to {len(csv_files)} files")
+            
+            return result
+        
+        except Exception as e:
+            logger.error(f"Error in CSV export operation {operation_id}: {e}")
+            
+            # Rollback transaction
+            try:
+                self.rollback_transaction(operation_id)
+            except Exception as rollback_error:
+                logger.error(f"Error rolling back transaction {operation_id}: {rollback_error}")
+            
+            # Update result with error
+            result.success = False
+            result.errors.append(ImportExportValidationError(
+                field="csv_export",
+                message=f"CSV export failed: {str(e)}",
+                error_type=ImportErrorType.BUSINESS_RULE_VIOLATION
+            ))
+            result.execution_time = time.time() - start_time
+            
+            return result
+    
+    def _get_service_for_entity(self, entity_type: str):
+        """
+        Get the appropriate service for an entity type.
+        
+        Args:
+            entity_type: Type of entity
+            
+        Returns:
+            Service instance for the entity type
+        """
+        from .unit_type import UnitTypeService
+        from .unit_type_theme import UnitTypeThemeService
+        from .unit import UnitService
+        from .job_title import JobTitleService
+        from .person import PersonService
+        from .assignment import AssignmentService
+        
+        service_mapping = {
+            'unit_types': UnitTypeService,
+            'unit_type_themes': UnitTypeThemeService,
+            'units': UnitService,
+            'job_titles': JobTitleService,
+            'persons': PersonService,
+            'assignments': AssignmentService
+        }
+        
+        service_class = service_mapping.get(entity_type)
+        if service_class:
+            return service_class()
+        return None
+    
+    def _collect_export_records(self, entity_type: str, service, options: ExportOptions) -> List[Dict[str, Any]]:
+        """
+        Collect records for export from the appropriate service.
+        
+        Args:
+            entity_type: Type of entity to collect
+            service: Service instance for the entity
+            options: Export options
+            
+        Returns:
+            List of records for export
+        """
+        try:
+            # Get all records from service
+            if hasattr(service, 'get_all'):
+                records = service.get_all()
+            elif hasattr(service, 'list_all'):
+                records = service.list_all()
+            else:
+                logger.warning(f"Service for {entity_type} does not have get_all or list_all method")
+                return []
+            
+            # Convert to dictionaries if needed
+            export_records = []
+            for record in records:
+                if hasattr(record, '__dict__'):
+                    # Convert dataclass or object to dict
+                    record_dict = record.__dict__.copy()
+                elif isinstance(record, dict):
+                    record_dict = record.copy()
+                else:
+                    logger.warning(f"Unknown record type for {entity_type}: {type(record)}")
+                    continue
+                
+                # Apply date range filter if specified
+                if options.date_range and entity_type == 'assignments':
+                    # Filter assignments by date range
+                    valid_from = record_dict.get('valid_from')
+                    valid_to = record_dict.get('valid_to')
+                    
+                    if valid_from:
+                        if isinstance(valid_from, str):
+                            valid_from = date.fromisoformat(valid_from)
+                        
+                        # Check if assignment overlaps with date range
+                        start_date, end_date = options.date_range
+                        if valid_to:
+                            if isinstance(valid_to, str):
+                                valid_to = date.fromisoformat(valid_to)
+                            # Assignment has end date - check overlap
+                            if valid_to < start_date or valid_from > end_date:
+                                continue
+                        else:
+                            # Assignment is current - check if it started before end date
+                            if valid_from > end_date:
+                                continue
+                
+                # Include historical data filter
+                if not options.include_historical and entity_type == 'assignments':
+                    # Only include current assignments
+                    if not record_dict.get('is_current', False):
+                        continue
+                
+                # Convert dates to strings for serialization
+                for key, value in record_dict.items():
+                    if isinstance(value, (date, datetime)):
+                        record_dict[key] = value.isoformat()
+                    elif value is None and not options.include_empty_fields:
+                        # Remove empty fields if not including them
+                        continue
+                
+                export_records.append(record_dict)
+            
+            logger.debug(f"Collected {len(export_records)} records for {entity_type}")
+            return export_records
+        
+        except Exception as e:
+            logger.error(f"Error collecting records for {entity_type}: {e}")
+            return []

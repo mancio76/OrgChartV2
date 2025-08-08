@@ -1,0 +1,20 @@
+2025-08-08 14:06:26,585 - import_export_errors - INFO - Created error report for operation test_operation_001 (import)
+2025-08-08 14:06:26,585 - import_export_errors - ERROR - [test_operation_001] [persons] [Line 5] [age] [ID: person_123] Invalid data type for field 'age' Hint: Ensure age field contains numeric values only
+2025-08-08 14:06:26,585 - import_export_errors - ERROR - Failed to save structured error to file: 'str' object has no attribute 'value'
+2025-08-08 14:06:35,936 - import_export_errors - INFO - Created error report for operation test_operation_002 (import)
+2025-08-08 14:06:35,936 - import_export_errors - ERROR - [test_operation_002] [units] [Line 3] [name] Line 3: Missing required field 'name' Hint: Check data format for field 'name' on line 3
+2025-08-08 14:06:35,936 - import_export_errors - ERROR - [test_operation_002] [units] [Line 7] [parent_unit_id] Line 7: Invalid foreign key reference Hint: Check data format for field 'parent_unit_id' on line 7
+2025-08-08 14:06:35,936 - import_export_errors - WARNING - [test_operation_002] [persons] [Line 10] [email] Line 10: Invalid email format Hint: Check data format for field 'email' on line 10
+2025-08-08 14:08:22,021 - import_export_errors - INFO - Created error report for operation test_operation_001 (import)
+2025-08-08 14:08:22,021 - import_export_errors - ERROR - [test_operation_001] [persons] [Line 5] [age] [ID: person_123] Invalid data type for field 'age' Hint: Ensure age field contains numeric values only
+2025-08-08 14:08:22,021 - import_export_errors - ERROR - Failed to save structured error to file: 'str' object has no attribute 'value'
+2025-08-08 14:08:22,022 - import_export_errors - INFO - Created error report for operation test_operation_002 (import)
+2025-08-08 14:08:22,022 - import_export_errors - ERROR - [test_operation_002] [units] [Line 3] [name] Line 3: Missing required field 'name' Hint: Check data format for field 'name' on line 3
+2025-08-08 14:08:22,022 - import_export_errors - ERROR - [test_operation_002] [units] [Line 7] [parent_unit_id] Line 7: Invalid foreign key reference Hint: Check data format for field 'parent_unit_id' on line 7
+2025-08-08 14:08:22,022 - import_export_errors - WARNING - [test_operation_002] [persons] [Line 10] [email] Line 10: Invalid email format Hint: Check data format for field 'email' on line 10
+2025-08-08 14:08:22,046 - import_export_errors - INFO - Created error report for operation test_operation_008 (import)
+2025-08-08 14:08:22,046 - import_export_errors - CRITICAL - [test_operation_008] Critical system error occurred Hint: Contact system administrator
+2025-08-08 14:08:22,046 - import_export_errors - ERROR - Failed to save structured error to file: 'str' object has no attribute 'value'
+2025-08-08 14:08:22,046 - import_export_errors - WARNING - [test_operation_008] [units] [Line 15] Data validation warning
+2025-08-08 14:08:22,046 - import_export_errors - ERROR - Failed to save structured error to file: 'str' object has no attribute 'value'
+2025-08-08 14:08:22,046 - import_export_errors - ERROR - Failed to save error report for test_operation_008: 'str' object has no attribute 'value'
