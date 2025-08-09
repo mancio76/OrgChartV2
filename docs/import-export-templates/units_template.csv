@@ -1,0 +1,5 @@
+id,name,short_name,aliases,unit_type_id,parent_unit_id,start_date,end_date
+,Direzione Generale,DG,"[]",1,,2024-01-01,
+,Dipartimento Risorse Umane,DRU,"[{""value"":""Human Resources Department"",""lang"":""en-US""}]",2,1,2024-01-01,
+,Ufficio Personale,UP,"[{""value"":""Personnel Office"",""lang"":""en-US""}]",3,2,2024-01-01,
+,Ufficio Formazione,UF,"[{""value"":""Training Office"",""lang"":""en-US""}]",3,2,2024-01-01,

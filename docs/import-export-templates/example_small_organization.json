@@ -1,0 +1,347 @@
+{
+  "metadata": {
+    "export_date": "2024-01-15T10:30:00Z",
+    "version": "1.0",
+    "description": "Esempio di piccola organizzazione - Azienda Demo SRL",
+    "total_records": 15,
+    "entity_counts": {
+      "unit_types": 3,
+      "unit_type_themes": 2,
+      "units": 4,
+      "job_titles": 4,
+      "persons": 6,
+      "assignments": 6
+    }
+  },
+  "unit_types": [
+    {
+      "id": 1,
+      "name": "Direzione",
+      "short_name": "DIR",
+      "aliases": [
+        {
+          "value": "Management",
+          "lang": "en-US"
+        }
+      ],
+      "level": 1,
+      "theme_id": 1
+    },
+    {
+      "id": 2,
+      "name": "Dipartimento",
+      "short_name": "DEPT",
+      "aliases": [
+        {
+          "value": "Department",
+          "lang": "en-US"
+        }
+      ],
+      "level": 2,
+      "theme_id": 1
+    },
+    {
+      "id": 3,
+      "name": "Ufficio",
+      "short_name": "UFF",
+      "aliases": [
+        {
+          "value": "Office",
+          "lang": "en-US"
+        }
+      ],
+      "level": 3,
+      "theme_id": 2
+    }
+  ],
+  "unit_type_themes": [
+    {
+      "id": 1,
+      "name": "Tema Direzione",
+      "description": "Tema per unità direzionali e strategiche",
+      "icon_class": "diagram-2",
+      "emoji_fallback": "🏛️",
+      "primary_color": "#0dcaf0",
+      "secondary_color": "#f0fdff",
+      "text_color": "#0dcaf0",
+      "display_label": "Unità Direzionale",
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "name": "Tema Operativo",
+      "description": "Tema per unità operative e di supporto",
+      "icon_class": "people",
+      "emoji_fallback": "👥",
+      "primary_color": "#198754",
+      "secondary_color": "#f0fff4",
+      "text_color": "#198754",
+      "display_label": "Unità Operativa",
+      "is_active": true
+    }
+  ],
+  "units": [
+    {
+      "id": 1,
+      "name": "Direzione Generale",
+      "short_name": "DG",
+      "aliases": [
+        {
+          "value": "General Management",
+          "lang": "en-US"
+        }
+      ],
+      "unit_type_id": 1,
+      "parent_unit_id": null,
+      "start_date": "2024-01-01",
+      "end_date": null
+    },
+    {
+      "id": 2,
+      "name": "Dipartimento Risorse Umane",
+      "short_name": "DRU",
+      "aliases": [
+        {
+          "value": "Human Resources Department",
+          "lang": "en-US"
+        }
+      ],
+      "unit_type_id": 2,
+      "parent_unit_id": 1,
+      "start_date": "2024-01-01",
+      "end_date": null
+    },
+    {
+      "id": 3,
+      "name": "Ufficio Personale",
+      "short_name": "UP",
+      "aliases": [
+        {
+          "value": "Personnel Office",
+          "lang": "en-US"
+        }
+      ],
+      "unit_type_id": 3,
+      "parent_unit_id": 2,
+      "start_date": "2024-01-01",
+      "end_date": null
+    },
+    {
+      "id": 4,
+      "name": "Ufficio Amministrazione",
+      "short_name": "UA",
+      "aliases": [
+        {
+          "value": "Administration Office",
+          "lang": "en-US"
+        }
+      ],
+      "unit_type_id": 3,
+      "parent_unit_id": 1,
+      "start_date": "2024-01-01",
+      "end_date": null
+    }
+  ],
+  "job_titles": [
+    {
+      "id": 1,
+      "name": "Direttore Generale",
+      "short_name": "DG",
+      "aliases": [
+        {
+          "value": "General Director",
+          "lang": "en-US"
+        }
+      ],
+      "start_date": "2024-01-01",
+      "end_date": null
+    },
+    {
+      "id": 2,
+      "name": "Direttore di Dipartimento",
+      "short_name": "DD",
+      "aliases": [
+        {
+          "value": "Department Director",
+          "lang": "en-US"
+        }
+      ],
+      "start_date": "2024-01-01",
+      "end_date": null
+    },
+    {
+      "id": 3,
+      "name": "Responsabile Ufficio",
+      "short_name": "RU",
+      "aliases": [
+        {
+          "value": "Office Manager",
+          "lang": "en-US"
+        }
+      ],
+      "start_date": "2024-01-01",
+      "end_date": null
+    },
+    {
+      "id": 4,
+      "name": "Impiegato",
+      "short_name": "IMP",
+      "aliases": [
+        {
+          "value": "Employee",
+          "lang": "en-US"
+        }
+      ],
+      "start_date": "2024-01-01",
+      "end_date": null
+    }
+  ],
+  "persons": [
+    {
+      "id": 1,
+      "name": "Mario Rossi",
+      "short_name": "M.Rossi",
+      "email": "mario.rossi@aziendademo.com",
+      "first_name": "Mario",
+      "last_name": "Rossi",
+      "registration_no": "EMP001",
+      "profile_image": "profiles/mario.rossi.jpg"
+    },
+    {
+      "id": 2,
+      "name": "Giulia Bianchi",
+      "short_name": "G.Bianchi",
+      "email": "giulia.bianchi@aziendademo.com",
+      "first_name": "Giulia",
+      "last_name": "Bianchi",
+      "registration_no": "EMP002",
+      "profile_image": "profiles/giulia.bianchi.jpg"
+    },
+    {
+      "id": 3,
+      "name": "Luca Verdi",
+      "short_name": "L.Verdi",
+      "email": "luca.verdi@aziendademo.com",
+      "first_name": "Luca",
+      "last_name": "Verdi",
+      "registration_no": "EMP003",
+      "profile_image": "profiles/luca.verdi.jpg"
+    },
+    {
+      "id": 4,
+      "name": "Anna Neri",
+      "short_name": "A.Neri",
+      "email": "anna.neri@aziendademo.com",
+      "first_name": "Anna",
+      "last_name": "Neri",
+      "registration_no": "EMP004",
+      "profile_image": "profiles/anna.neri.jpg"
+    },
+    {
+      "id": 5,
+      "name": "Francesco Blu",
+      "short_name": "F.Blu",
+      "email": "francesco.blu@aziendademo.com",
+      "first_name": "Francesco",
+      "last_name": "Blu",
+      "registration_no": "EMP005",
+      "profile_image": "profiles/francesco.blu.jpg"
+    },
+    {
+      "id": 6,
+      "name": "Sara Gialli",
+      "short_name": "S.Gialli",
+      "email": "sara.gialli@aziendademo.com",
+      "first_name": "Sara",
+      "last_name": "Gialli",
+      "registration_no": "EMP006",
+      "profile_image": "profiles/sara.gialli.jpg"
+    }
+  ],
+  "assignments": [
+    {
+      "id": 1,
+      "person_id": 1,
+      "unit_id": 1,
+      "job_title_id": 1,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "notes": "Direttore Generale dell'azienda",
+      "valid_from": "2024-01-01",
+      "valid_to": null,
+      "is_current": true
+    },
+    {
+      "id": 2,
+      "person_id": 2,
+      "unit_id": 2,
+      "job_title_id": 2,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "notes": "Direttore del Dipartimento Risorse Umane",
+      "valid_from": "2024-01-01",
+      "valid_to": null,
+      "is_current": true
+    },
+    {
+      "id": 3,
+      "person_id": 3,
+      "unit_id": 3,
+      "job_title_id": 3,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "notes": "Responsabile Ufficio Personale",
+      "valid_from": "2024-01-01",
+      "valid_to": null,
+      "is_current": true
+    },
+    {
+      "id": 4,
+      "person_id": 4,
+      "unit_id": 4,
+      "job_title_id": 3,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "notes": "Responsabile Ufficio Amministrazione",
+      "valid_from": "2024-01-01",
+      "valid_to": null,
+      "is_current": true
+    },
+    {
+      "id": 5,
+      "person_id": 5,
+      "unit_id": 3,
+      "job_title_id": 4,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": false,
+      "notes": "Impiegato Ufficio Personale",
+      "valid_from": "2024-01-01",
+      "valid_to": null,
+      "is_current": true
+    },
+    {
+      "id": 6,
+      "person_id": 6,
+      "unit_id": 4,
+      "job_title_id": 4,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": false,
+      "notes": "Impiegato Ufficio Amministrazione",
+      "valid_from": "2024-01-01",
+      "valid_to": null,
+      "is_current": true
+    }
+  ]
+}

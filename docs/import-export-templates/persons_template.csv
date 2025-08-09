@@ -1,0 +1,5 @@
+id,name,short_name,email,first_name,last_name,registration_no,profile_image
+,Mario Rossi,M.Rossi,mario.rossi@azienda.com,Mario,Rossi,EMP001,profiles/mario.rossi.jpg
+,Giulia Bianchi,G.Bianchi,giulia.bianchi@azienda.com,Giulia,Bianchi,EMP002,profiles/giulia.bianchi.jpg
+,Luca Verdi,L.Verdi,luca.verdi@azienda.com,Luca,Verdi,EMP003,profiles/luca.verdi.jpg
+,Anna Neri,A.Neri,anna.neri@azienda.com,Anna,Neri,EMP004,profiles/anna.neri.jpg

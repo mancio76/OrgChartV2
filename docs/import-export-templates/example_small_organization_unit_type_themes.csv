@@ -1,0 +1,3 @@
+id,name,description,icon_class,emoji_fallback,primary_color,secondary_color,text_color,display_label,is_active
+1,Tema Direzione,Tema per unità direzionali e strategiche,diagram-2,🏛️,#0dcaf0,#f0fdff,#0dcaf0,Unità Direzionale,true
+2,Tema Operativo,Tema per unità operative e di supporto,people,👥,#198754,#f0fff4,#198754,Unità Operativa,true

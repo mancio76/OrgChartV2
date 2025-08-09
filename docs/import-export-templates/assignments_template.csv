@@ -1,0 +1,5 @@
+id,person_id,unit_id,job_title_id,version,percentage,is_ad_interim,is_unit_boss,notes,valid_from,valid_to,is_current
+,1,1,1,1,1.0,false,true,Incarico di Direttore Generale,2024-01-01,,true
+,2,2,2,1,1.0,false,true,Incarico di Direttore Dipartimento RU,2024-01-01,,true
+,3,3,3,1,1.0,false,true,Responsabile Ufficio Personale,2024-01-01,,true
+,4,4,3,1,1.0,false,true,Responsabile Ufficio Formazione,2024-01-01,,true

@@ -1,0 +1,6 @@
+id,name,short_name,aliases,start_date,end_date
+,Direttore Generale,DG,"[{""value"":""General Director"",""lang"":""en-US""}]",2024-01-01,
+,Direttore di Dipartimento,DD,"[{""value"":""Department Director"",""lang"":""en-US""}]",2024-01-01,
+,Responsabile Ufficio,RU,"[{""value"":""Office Manager"",""lang"":""en-US""}]",2024-01-01,
+,Impiegato,IMP,"[{""value"":""Employee"",""lang"":""en-US""}]",2024-01-01,
+,Consulente,CONS,"[{""value"":""Consultant"",""lang"":""en-US""}]",2024-01-01,

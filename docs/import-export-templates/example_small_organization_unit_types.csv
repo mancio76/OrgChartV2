@@ -1,0 +1,4 @@
+id,name,short_name,aliases,level,theme_id
+1,Direzione,DIR,"[{""value"":""Management"",""lang"":""en-US""}]",1,1
+2,Dipartimento,DEPT,"[{""value"":""Department"",""lang"":""en-US""}]",2,1
+3,Ufficio,UFF,"[{""value"":""Office"",""lang"":""en-US""}]",3,2

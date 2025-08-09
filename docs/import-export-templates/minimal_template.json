@@ -1,0 +1,49 @@
+{
+  "metadata": {
+    "export_date": "2024-01-15T10:30:00Z",
+    "version": "1.0",
+    "description": "Template minimale con solo campi obbligatori"
+  },
+  "unit_types": [
+    {
+      "name": "Direzione Generale",
+      "short_name": "DG"
+    }
+  ],
+  "unit_type_themes": [
+    {
+      "name": "Tema Predefinito",
+      "primary_color": "#0dcaf0"
+    }
+  ],
+  "units": [
+    {
+      "name": "Direzione Generale",
+      "short_name": "DG",
+      "unit_type_id": 1,
+      "start_date": "2024-01-01"
+    }
+  ],
+  "job_titles": [
+    {
+      "name": "Direttore Generale",
+      "short_name": "DG",
+      "start_date": "2024-01-01"
+    }
+  ],
+  "persons": [
+    {
+      "name": "Mario Rossi",
+      "short_name": "M.Rossi",
+      "email": "mario.rossi@azienda.com"
+    }
+  ],
+  "assignments": [
+    {
+      "person_id": 1,
+      "unit_id": 1,
+      "job_title_id": 1,
+      "valid_from": "2024-01-01"
+    }
+  ]
+}

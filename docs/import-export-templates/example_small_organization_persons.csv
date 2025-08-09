@@ -1,0 +1,7 @@
+id,name,short_name,email,first_name,last_name,registration_no,profile_image
+1,Mario Rossi,M.Rossi,mario.rossi@aziendademo.com,Mario,Rossi,EMP001,profiles/mario.rossi.jpg
+2,Giulia Bianchi,G.Bianchi,giulia.bianchi@aziendademo.com,Giulia,Bianchi,EMP002,profiles/giulia.bianchi.jpg
+3,Luca Verdi,L.Verdi,luca.verdi@aziendademo.com,Luca,Verdi,EMP003,profiles/luca.verdi.jpg
+4,Anna Neri,A.Neri,anna.neri@aziendademo.com,Anna,Neri,EMP004,profiles/anna.neri.jpg
+5,Francesco Blu,F.Blu,francesco.blu@aziendademo.com,Francesco,Blu,EMP005,profiles/francesco.blu.jpg
+6,Sara Gialli,S.Gialli,sara.gialli@aziendademo.com,Sara,Gialli,EMP006,profiles/sara.gialli.jpg

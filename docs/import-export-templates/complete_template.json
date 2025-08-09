@@ -1,0 +1,169 @@
+{
+  "metadata": {
+    "export_date": "2024-01-15T10:30:00Z",
+    "version": "1.0",
+    "description": "Template completo per importazione dati organigramma",
+    "total_records": 0
+  },
+  "unit_types": [
+    {
+      "id": null,
+      "name": "Direzione Generale",
+      "short_name": "DG",
+      "aliases": [
+        {
+          "value": "General Direction",
+          "lang": "en-US"
+        }
+      ],
+      "level": 1,
+      "theme_id": 1
+    },
+    {
+      "id": null,
+      "name": "Dipartimento",
+      "short_name": "DEPT",
+      "aliases": [
+        {
+          "value": "Department",
+          "lang": "en-US"
+        }
+      ],
+      "level": 2,
+      "theme_id": 1
+    }
+  ],
+  "unit_type_themes": [
+    {
+      "id": null,
+      "name": "Tema Direzione",
+      "description": "Tema per unità direzionali",
+      "icon_class": "diagram-2",
+      "emoji_fallback": "🏛️",
+      "primary_color": "#0dcaf0",
+      "secondary_color": "#f0fdff",
+      "text_color": "#0dcaf0",
+      "display_label": "Unità Direzionale",
+      "is_active": true
+    },
+    {
+      "id": null,
+      "name": "Tema Operativo",
+      "description": "Tema per unità operative",
+      "icon_class": "people",
+      "emoji_fallback": "👥",
+      "primary_color": "#198754",
+      "secondary_color": "#f0fff4",
+      "text_color": "#198754",
+      "display_label": "Unità Operativa",
+      "is_active": true
+    }
+  ],
+  "units": [
+    {
+      "id": null,
+      "name": "Direzione Generale",
+      "short_name": "DG",
+      "aliases": [],
+      "unit_type_id": 1,
+      "parent_unit_id": null,
+      "start_date": "2024-01-01",
+      "end_date": null
+    },
+    {
+      "id": null,
+      "name": "Dipartimento Risorse Umane",
+      "short_name": "DRU",
+      "aliases": [
+        {
+          "value": "Human Resources Department",
+          "lang": "en-US"
+        }
+      ],
+      "unit_type_id": 2,
+      "parent_unit_id": 1,
+      "start_date": "2024-01-01",
+      "end_date": null
+    }
+  ],
+  "job_titles": [
+    {
+      "id": null,
+      "name": "Direttore Generale",
+      "short_name": "DG",
+      "aliases": [
+        {
+          "value": "General Director",
+          "lang": "en-US"
+        }
+      ],
+      "start_date": "2024-01-01",
+      "end_date": null
+    },
+    {
+      "id": null,
+      "name": "Direttore di Dipartimento",
+      "short_name": "DD",
+      "aliases": [
+        {
+          "value": "Department Director",
+          "lang": "en-US"
+        }
+      ],
+      "start_date": "2024-01-01",
+      "end_date": null
+    }
+  ],
+  "persons": [
+    {
+      "id": null,
+      "name": "Mario Rossi",
+      "short_name": "M.Rossi",
+      "email": "mario.rossi@azienda.com",
+      "first_name": "Mario",
+      "last_name": "Rossi",
+      "registration_no": "EMP001",
+      "profile_image": "profiles/mario.rossi.jpg"
+    },
+    {
+      "id": null,
+      "name": "Giulia Bianchi",
+      "short_name": "G.Bianchi",
+      "email": "giulia.bianchi@azienda.com",
+      "first_name": "Giulia",
+      "last_name": "Bianchi",
+      "registration_no": "EMP002",
+      "profile_image": "profiles/giulia.bianchi.jpg"
+    }
+  ],
+  "assignments": [
+    {
+      "id": null,
+      "person_id": 1,
+      "unit_id": 1,
+      "job_title_id": 1,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "notes": "Incarico di Direttore Generale",
+      "valid_from": "2024-01-01",
+      "valid_to": null,
+      "is_current": true
+    },
+    {
+      "id": null,
+      "person_id": 2,
+      "unit_id": 2,
+      "job_title_id": 2,
+      "version": 1,
+      "percentage": 1.0,
+      "is_ad_interim": false,
+      "is_unit_boss": true,
+      "notes": "Incarico di Direttore Dipartimento RU",
+      "valid_from": "2024-01-01",
+      "valid_to": null,
+      "is_current": true
+    }
+  ]
+}

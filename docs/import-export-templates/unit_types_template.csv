@@ -1,0 +1,5 @@
+id,name,short_name,aliases,level,theme_id
+,Direzione Generale,DG,"[{""value"":""General Direction"",""lang"":""en-US""}]",1,1
+,Dipartimento,DEPT,"[{""value"":""Department"",""lang"":""en-US""}]",2,1
+,Ufficio,UFF,"[{""value"":""Office"",""lang"":""en-US""}]",3,2
+,Servizio,SERV,"[{""value"":""Service"",""lang"":""en-US""}]",4,2

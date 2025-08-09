@@ -1,0 +1,5 @@
+id,name,short_name,aliases,unit_type_id,parent_unit_id,start_date,end_date
+1,Direzione Generale,DG,"[{""value"":""General Management"",""lang"":""en-US""}]",1,,2024-01-01,
+2,Dipartimento Risorse Umane,DRU,"[{""value"":""Human Resources Department"",""lang"":""en-US""}]",2,1,2024-01-01,
+3,Ufficio Personale,UP,"[{""value"":""Personnel Office"",""lang"":""en-US""}]",3,2,2024-01-01,
+4,Ufficio Amministrazione,UA,"[{""value"":""Administration Office"",""lang"":""en-US""}]",3,1,2024-01-01,
