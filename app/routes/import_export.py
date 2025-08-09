@@ -21,6 +21,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, File
 from fastapi.security import HTTPBearer
 
 from app.services.import_export import ImportExportService, ImportExportException
+from app.services.import_export_security import get_import_export_security_service
 from app.models.import_export import (
     ImportOptions, ExportOptions, FileFormat, ConflictResolutionStrategy,
     ImportExportValidationError, ImportErrorType
@@ -44,44 +45,21 @@ def get_import_export_service():
     return ImportExportService()
 
 
-# File upload security validation
-def validate_upload_file(file: UploadFile) -> None:
+# Enhanced file upload security validation using security service
+def validate_upload_file(file: UploadFile, request: Request, operation_type: str = "import") -> None:
     """
-    Validate uploaded file for security compliance.
+    Enhanced file upload security validation using security service.
     
     Args:
         file: Uploaded file to validate
+        request: HTTP request context
+        operation_type: Type of operation (import/export)
         
     Raises:
         HTTPException: If file fails security validation
     """
-    # Check file size (max 100MB)
-    max_size = 100 * 1024 * 1024  # 100MB
-    if file.size and file.size > max_size:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File troppo grande. Dimensione massima: {max_size // (1024*1024)}MB"
-        )
-    
-    # Check file extension
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="Nome file mancante")
-    
-    allowed_extensions = {'.csv', '.json'}
-    file_extension = Path(file.filename).suffix.lower()
-    if file_extension not in allowed_extensions:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Formato file non supportato. Formati consentiti: {', '.join(allowed_extensions)}"
-        )
-    
-    # Check content type
-    allowed_content_types = {
-        'text/csv', 'application/csv', 'text/plain',
-        'application/json', 'text/json'
-    }
-    if file.content_type and file.content_type not in allowed_content_types:
-        logger.warning(f"Suspicious content type: {file.content_type} for file: {file.filename}")
+    security_service = get_import_export_security_service()
+    security_service.validate_file_upload(file, request, operation_type)
 
 
 async def save_upload_file(file: UploadFile) -> str:
@@ -236,8 +214,11 @@ async def upload_import_file(
     temp_file_path = None
     
     try:
-        # Security validation for file upload
-        validate_upload_file(file)
+        # Enhanced security validation for file upload
+        validate_upload_file(file, request, "import")
+        
+        # Additional access control validation
+        security_service = get_import_export_security_service()
         
         # Log security event
         log_security_event('IMPORT_FILE_UPLOAD', {
@@ -259,6 +240,9 @@ async def upload_import_file(
             invalid_entities = set(entity_types_list) - valid_entities
             if invalid_entities:
                 raise ValueError(f"Tipi di entità non validi: {', '.join(invalid_entities)}")
+            
+            # Access control validation for entity types
+            security_service.validate_access_permissions(request, "import", entity_types_list)
             
             # Validate conflict resolution strategy
             if conflict_resolution not in ['skip', 'update', 'create_version']:
@@ -316,13 +300,20 @@ async def upload_import_file(
                 operation_id, temp_file_path, file_format, import_options, import_export_service
             )
         
-        # Return operation ID for status tracking
-        return JSONResponse({
+        # Return operation ID for status tracking with security headers
+        security_service = get_import_export_security_service()
+        response = JSONResponse({
             "success": True,
             "operation_id": operation_id,
             "message": "File caricato con successo. Elaborazione in corso...",
             "status_url": f"/import-export/status/{operation_id}"
         })
+        
+        # Add security headers
+        for header, value in security_service.get_security_headers().items():
+            response.headers[header] = value
+        
+        return response
     
     except HTTPException:
         if temp_file_path:
@@ -483,7 +474,7 @@ async def export_form(
         export_formats = []
         for file_format in FileFormat.items():
             export_formats.append({
-                "value": f"{file_format.value().lower()}",
+                "value": f"{file_format.value.lower()}",
                 "label": f"{file_format.label()}",
                 "description": f"{file_format.description()}",
                 "extension": f"{file_format.extension()}"
@@ -565,6 +556,10 @@ async def generate_export(
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
         
+        # Access control validation for entity types
+        security_service = get_import_export_security_service()
+        security_service.validate_access_permissions(request, "export", entity_types_list)
+        
         # Log security event
         log_security_event('EXPORT_GENERATION', {
             'entity_types': entity_types_list,
@@ -603,13 +598,20 @@ async def generate_export(
             operation_id, export_format, export_options, import_export_service
         )
         
-        # Return operation ID for status tracking
-        return JSONResponse({
+        # Return operation ID for status tracking with security headers
+        security_service = get_import_export_security_service()
+        response = JSONResponse({
             "success": True,
             "operation_id": operation_id,
             "message": "Esportazione avviata. Elaborazione in corso...",
             "status_url": f"/import-export/status/{operation_id}"
         })
+        
+        # Add security headers
+        for header, value in security_service.get_security_headers().items():
+            response.headers[header] = value
+        
+        return response
     
     except HTTPException:
         raise

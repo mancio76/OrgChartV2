@@ -10,7 +10,7 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, Any, Union
 from pathlib import Path
-from .base import ValidationError as BaseValidationError
+# Removed BaseValidationError import - using Exception directly
 
 
 class ImportErrorType(Enum):
@@ -29,7 +29,7 @@ class ImportErrorType(Enum):
 
     @staticmethod
     def values() -> list[str]:
-        return [enum.value() for enum in ImportErrorType]
+        return [enum.value for enum in ImportErrorType]
     
     @staticmethod
     def names() -> list[str]:
@@ -47,7 +47,7 @@ class ConflictResolutionStrategy(Enum):
 
     @staticmethod
     def values() -> list[str]:
-        return [enum.value() for enum in ConflictResolutionStrategy]
+        return [enum.value for enum in ConflictResolutionStrategy]
     
     @staticmethod
     def names() -> list[str]:
@@ -64,8 +64,8 @@ class FileFormat(Enum):
         return list(FileFormat)
 
     @staticmethod
-    def values() -> list[str]:
-        return [enum.value() for enum in FileFormat]
+    def values():
+        return [enum.value for enum in FileFormat]
     
     @staticmethod
     def names() -> list[str]:
@@ -77,9 +77,6 @@ class FileFormat(Enum):
 
     def label(self) -> str:
         return self.name
-
-    def value(self) -> str:
-        return self.name.upper()
 
     def description(self) -> str:
         if self == FileFormat.CSV:
@@ -93,9 +90,20 @@ class FileFormat(Enum):
         return '.' + self.name.lower()
 
 @dataclass
-class ImportExportValidationError(BaseValidationError):
+class ImportExportValidationError(Exception):
     """Extended validation error for import/export operations."""
+    field: str
+    message: str
+    value: Any = None
+    level: str = 'error'
     error_type: ImportErrorType = ImportErrorType.BUSINESS_RULE_VIOLATION
+    line_number: Optional[int] = None
+    entity_type: Optional[str] = None
+    record_id: Optional[str] = None
+    
+    def __str__(self) -> str:
+        """String representation of the error."""
+        return f"{self.field}: {self.message}"
     line_number: Optional[int] = None
     entity_type: Optional[str] = None
     record_id: Optional[Union[int, str]] = None

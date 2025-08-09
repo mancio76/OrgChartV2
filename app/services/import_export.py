@@ -30,6 +30,8 @@ from .audit_trail import (
     get_audit_manager, OperationType, OperationStatus, ChangeType
 )
 from .error_reporting import get_error_reporting_service
+from .import_export_security import get_import_export_security_service
+from .import_export_performance import get_import_export_performance_service
 from .csv_processor import CSVProcessor
 from .json_processor import JSONProcessor
 from .dependency_resolver import DependencyResolver, ForeignKeyResolver
@@ -84,12 +86,14 @@ class ImportExportService:
         self.foreign_key_resolver = ForeignKeyResolver(self.dependency_resolver)
         self.validation_framework = ValidationFramework()
         self.conflict_resolution_manager = ConflictResolutionManager()
+        self.security_service = get_import_export_security_service()
+        self.performance_service = get_import_export_performance_service()
         self.error_logger = get_error_logger()
         self.audit_manager = get_audit_manager()
         self.error_reporting_service = get_error_reporting_service()
         self._transaction_contexts: Dict[str, TransactionContext] = {}
         
-        logger.info("ImportExportService initialized with enhanced error handling and audit trail")
+        logger.info("ImportExportService initialized with enhanced security, performance optimization, error handling and audit trail")
     
     def detect_file_format(self, file_path: str) -> FileFormat:
         """
@@ -490,6 +494,364 @@ class ImportExportService:
         except Exception:
             return None
     
+    def sanitize_import_data(self, data: Dict[str, List[Dict[str, Any]]], 
+                           options: ImportOptions) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Sanitize import data to prevent security vulnerabilities.
+        
+        Args:
+            data: Raw import data
+            options: Import options
+            
+        Returns:
+            Sanitized import data
+            
+        Raises:
+            ImportExportException: If sanitization fails
+        """
+        try:
+            logger.debug("Starting data sanitization for import")
+            sanitized_data = {}
+            
+            for entity_type, records in data.items():
+                if entity_type not in options.entity_types:
+                    continue
+                
+                logger.debug(f"Sanitizing {len(records)} records for {entity_type}")
+                sanitized_records = []
+                
+                for record_idx, record in enumerate(records):
+                    try:
+                        # Add line number for error reporting
+                        record['_line_number'] = record_idx + 2  # +2 for header and 1-based indexing
+                        
+                        # Sanitize individual record
+                        sanitized_record = self.security_service.sanitize_import_data(record, entity_type)
+                        
+                        # Remove the line number from sanitized record
+                        sanitized_record.pop('_line_number', None)
+                        
+                        sanitized_records.append(sanitized_record)
+                    
+                    except ImportExportValidationError as e:
+                        # Re-raise validation errors with proper context
+                        e.line_number = record_idx + 2
+                        e.entity_type = entity_type
+                        raise e
+                
+                sanitized_data[entity_type] = sanitized_records
+            
+            logger.info(f"Data sanitization completed for {len(sanitized_data)} entity types")
+            return sanitized_data
+        
+        except ImportExportValidationError:
+            raise
+        except Exception as e:
+            logger.error(f"Error in data sanitization: {e}")
+            raise ImportExportException(f"Data sanitization failed: {str(e)}")
+    
+    def _parse_import_file(self, file_path: str, file_format: FileFormat, 
+                          options: ImportOptions) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Parse import file based on format with performance optimizations.
+        
+        Args:
+            file_path: Path to the file to parse
+            file_format: Format of the file
+            options: Import options
+            
+        Returns:
+            Parsed data dictionary
+            
+        Raises:
+            ImportExportException: If parsing fails
+        """
+        try:
+            # Get performance optimization recommendations
+            file_size = os.path.getsize(file_path)
+            estimated_records = max(1, file_size // 100)  # Rough estimate
+            
+            optimization_config = self.performance_service.optimize_import_processing(
+                file_path, file_format.value, estimated_records
+            )
+            
+            logger.debug(f"Using optimization strategy: {optimization_config['processing_strategy']}")
+            
+            # Use streaming for large files
+            if optimization_config['use_streaming']:
+                return self._parse_file_streaming(file_path, file_format, options, optimization_config)
+            else:
+                return self._parse_file_standard(file_path, file_format, options)
+        
+        except Exception as e:
+            logger.error(f"Error parsing import file {file_path}: {e}")
+            if isinstance(e, ImportExportException):
+                raise
+            raise ImportExportException(f"File parsing failed: {str(e)}")
+    
+    def _parse_file_standard(self, file_path: str, file_format: FileFormat, 
+                           options: ImportOptions) -> Dict[str, List[Dict[str, Any]]]:
+        """Standard file parsing for smaller files."""
+        if file_format == FileFormat.JSON:
+            processor = JSONProcessor()
+            return processor.parse_json_file(file_path)
+        
+        elif file_format == FileFormat.CSV:
+            processor = CSVProcessor()
+            # For CSV, we need to handle multiple files or single file with entity type
+            if len(options.entity_types) == 1:
+                # Single entity type - parse as single CSV
+                entity_type = options.entity_types[0]
+                records = processor.parse_csv_file(file_path, entity_type)
+                return {entity_type: records}
+            else:
+                # Multiple entity types - expect multiple files or structured CSV
+                # For now, assume single file with entity type detection
+                # This would be enhanced in a full implementation
+                raise ImportExportException("Multi-entity CSV import not yet implemented")
+        
+        else:
+            raise ImportExportException(f"Unsupported file format: {file_format.value}")
+    
+    def _parse_file_streaming(self, file_path: str, file_format: FileFormat, 
+                            options: ImportOptions, optimization_config: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
+        """Streaming file parsing for large files."""
+        logger.info(f"Using streaming parsing for large file: {file_path}")
+        
+        parsed_data = {}
+        batch_size = optimization_config['batch_size']
+        
+        try:
+            # Create performance metrics tracker
+            metrics = self.performance_service.create_performance_metrics()
+            
+            with self.performance_service.memory_manager.memory_monitor():
+                if file_format == FileFormat.CSV:
+                    # Stream CSV records
+                    if len(options.entity_types) != 1:
+                        raise ImportExportException("Streaming CSV import requires single entity type")
+                    
+                    entity_type = options.entity_types[0]
+                    records = []
+                    
+                    record_stream = self.performance_service.stream_file_records(file_path, 'csv')
+                    batch_stream = self.performance_service.streaming_processor.batch_stream_records(
+                        record_stream, batch_size
+                    )
+                    
+                    for batch in batch_stream:
+                        records.extend(batch)
+                        metrics.records_processed += len(batch)
+                        
+                        # Memory management
+                        if metrics.records_processed % optimization_config.get('gc_frequency', 1000) == 0:
+                            self.performance_service.memory_manager.force_garbage_collection()
+                    
+                    parsed_data[entity_type] = records
+                
+                elif file_format == FileFormat.JSON:
+                    # Stream JSON records by entity type
+                    record_stream = self.performance_service.stream_file_records(file_path, 'json')
+                    
+                    for entity_type, record in record_stream:
+                        if entity_type not in options.entity_types:
+                            continue
+                        
+                        if entity_type not in parsed_data:
+                            parsed_data[entity_type] = []
+                        
+                        parsed_data[entity_type].append(record)
+                        metrics.records_processed += 1
+                        
+                        # Memory management
+                        if metrics.records_processed % optimization_config.get('gc_frequency', 1000) == 0:
+                            self.performance_service.memory_manager.force_garbage_collection()
+                
+                else:
+                    raise ImportExportException(f"Streaming not supported for format: {file_format.value}")
+            
+            # Finalize metrics
+            metrics.end_time = time.time()
+            self.performance_service.monitor_performance(metrics, "file_parsing")
+            
+            return parsed_data
+        
+        except Exception as e:
+            logger.error(f"Error in streaming file parsing: {e}")
+            raise ImportExportException(f"Streaming file parsing failed: {str(e)}")
+    
+    def _retrieve_export_data_optimized(self, options: ExportOptions, 
+                                       metrics) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Retrieve export data with performance optimizations.
+        
+        Args:
+            options: Export options
+            metrics: Performance metrics tracker
+            
+        Returns:
+            Dictionary of export data by entity type
+        """
+        try:
+            # Use existing method but with performance monitoring
+            export_data = self._retrieve_export_data(options)
+            
+            # Update metrics
+            total_records = sum(len(records) for records in export_data.values())
+            metrics.records_processed += total_records
+            
+            # Memory management for large datasets
+            if total_records > 10000:
+                self.performance_service.memory_manager.force_garbage_collection()
+            
+            return export_data
+        
+        except Exception as e:
+            logger.error(f"Error in optimized data retrieval: {e}")
+            raise
+    
+    def _generate_export_files_optimized(self, export_data: Dict[str, List[Dict[str, Any]]], 
+                                       export_format: FileFormat, options: ExportOptions,
+                                       metrics) -> List[str]:
+        """
+        Generate export files with performance optimizations.
+        
+        Args:
+            export_data: Data to export
+            export_format: Export format
+            options: Export options
+            metrics: Performance metrics tracker
+            
+        Returns:
+            List of generated file paths
+        """
+        try:
+            # Use batch processing for large datasets
+            total_records = sum(len(records) for records in export_data.values())
+            
+            if total_records > 5000:
+                logger.info(f"Using batch processing for {total_records} records")
+                return self._generate_files_with_batching(export_data, export_format, options, metrics)
+            else:
+                # Use existing method for smaller datasets
+                return self._generate_export_files(export_data, export_format, options)
+        
+        except Exception as e:
+            logger.error(f"Error in optimized file generation: {e}")
+            raise
+    
+    def _generate_export_files_parallel(self, export_data: Dict[str, List[Dict[str, Any]]], 
+                                       export_format: FileFormat, options: ExportOptions,
+                                       metrics) -> List[str]:
+        """
+        Generate export files using parallel processing.
+        
+        Args:
+            export_data: Data to export
+            export_format: Export format
+            options: Export options
+            metrics: Performance metrics tracker
+            
+        Returns:
+            List of generated file paths
+        """
+        try:
+            if export_format == FileFormat.CSV:
+                # For CSV, each entity type can be processed in parallel
+                def process_entity_csv(entity_type: str, records: List[Dict[str, Any]]) -> str:
+                    processor = CSVProcessor()
+                    return processor.generate_csv_file(records, entity_type, options.format_options)
+                
+                # Process entity types in parallel
+                results = self.performance_service.process_entities_optimized(
+                    export_data, process_entity_csv
+                )
+                
+                # Collect file paths
+                generated_files = []
+                for entity_type, file_path in results.items():
+                    if file_path:
+                        generated_files.append(file_path)
+                
+                return generated_files
+            
+            else:
+                # For JSON, use single file generation (can't easily parallelize)
+                return self._generate_export_files(export_data, export_format, options)
+        
+        except Exception as e:
+            logger.error(f"Error in parallel file generation: {e}")
+            # Fall back to standard generation
+            return self._generate_export_files(export_data, export_format, options)
+    
+    def _generate_files_with_batching(self, export_data: Dict[str, List[Dict[str, Any]]], 
+                                    export_format: FileFormat, options: ExportOptions,
+                                    metrics) -> List[str]:
+        """
+        Generate export files using batch processing for memory efficiency.
+        
+        Args:
+            export_data: Data to export
+            export_format: Export format
+            options: Export options
+            metrics: Performance metrics tracker
+            
+        Returns:
+            List of generated file paths
+        """
+        try:
+            generated_files = []
+            
+            for entity_type, records in export_data.items():
+                if not records:
+                    continue
+                
+                logger.debug(f"Processing {len(records)} records for {entity_type} in batches")
+                
+                # Determine optimal batch size
+                batch_size = self.performance_service.batch_processor.get_optimal_batch_size(len(records))
+                
+                if export_format == FileFormat.CSV:
+                    # For CSV, we can write incrementally
+                    processor = CSVProcessor()
+                    file_path = processor.generate_csv_file_streaming(records, entity_type, batch_size, options.format_options)
+                    if file_path:
+                        generated_files.append(file_path)
+                
+                elif export_format == FileFormat.JSON:
+                    # For JSON, we need to collect all data first (limitation of JSON format)
+                    # But we can still process in batches for memory management
+                    batches = []
+                    for i in range(0, len(records), batch_size):
+                        batch = records[i:i + batch_size]
+                        batches.append(batch)
+                        
+                        # Memory management
+                        if i % (batch_size * 10) == 0:
+                            self.performance_service.memory_manager.force_garbage_collection()
+                    
+                    # Combine batches and generate file
+                    all_records = []
+                    for batch in batches:
+                        all_records.extend(batch)
+                    
+                    processor = JSONProcessor()
+                    if entity_type == list(export_data.keys())[0]:  # First entity type generates the main file
+                        file_path = processor.generate_json_file({entity_type: all_records for entity_type, all_records in [(k, v) for k, v in export_data.items()]}, options.format_options)
+                        if file_path:
+                            generated_files.append(file_path)
+                        break  # JSON generates single file for all entities
+                
+                # Update metrics
+                metrics.batch_count += len(range(0, len(records), batch_size))
+            
+            return generated_files
+        
+        except Exception as e:
+            logger.error(f"Error in batch file generation: {e}")
+            # Fall back to standard generation
+            return self._generate_export_files(export_data, export_format, options)
+    
     def get_supported_formats(self) -> List[FileFormat]:
         """Get list of supported file formats."""
         return FileFormat.items() ##[FileFormat.JSON, FileFormat.CSV]
@@ -574,6 +936,20 @@ class ImportExportService:
             # Step 2: Parse file data based on format
             logger.debug(f"Parsing {file_format.value} file for preview")
             parsed_data = self._parse_import_file(file_path, file_format, options)
+            
+            # Step 2.5: Sanitize parsed data for security
+            if parsed_data:
+                logger.debug("Sanitizing parsed data for security")
+                try:
+                    parsed_data = self.sanitize_import_data(parsed_data, options)
+                except ImportExportValidationError as e:
+                    result.validation_results.append(e)
+                except ImportExportException as e:
+                    result.validation_results.append(ImportExportValidationError(
+                        field="data_sanitization",
+                        message=str(e),
+                        error_type=ImportErrorType.BUSINESS_RULE_VIOLATION
+                    ))
             
             if not parsed_data:
                 result.validation_results.append(ImportExportValidationError(
@@ -2067,9 +2443,14 @@ class ImportExportService:
                 logger.error(f"Export options validation failed: {len(validation_errors)} errors")
                 return result
             
-            # Step 2: Retrieve data from database with filtering
-            logger.debug("Retrieving data from database")
-            export_data = self._retrieve_export_data(options)
+            # Step 2: Retrieve data from database with performance optimizations
+            logger.debug("Retrieving data from database with performance optimizations")
+            
+            # Create performance metrics tracker
+            metrics = self.performance_service.create_performance_metrics()
+            
+            with self.performance_service.memory_manager.memory_monitor():
+                export_data = self._retrieve_export_data_optimized(options, metrics)
             
             if not export_data or not any(export_data.values()):
                 result.warnings.append(ImportExportValidationError(
@@ -2087,9 +2468,18 @@ class ImportExportService:
                 logger.debug(f"Applying date range filter: {options.date_range}")
                 export_data = self._apply_date_range_filter(export_data, options)
             
-            # Step 4: Generate export files based on format
-            logger.info(f"Generating {export_format.value} export files")
-            generated_files = self._generate_export_files(export_data, export_format, options)
+            # Step 4: Generate export files with performance optimizations
+            logger.info(f"Generating {export_format.value} export files with performance optimizations")
+            
+            # Determine if parallel processing should be used
+            total_records = sum(len(records) for records in export_data.values())
+            use_parallel = self.performance_service.parallel_processor.should_use_parallel_processing(total_records)
+            
+            if use_parallel:
+                logger.info(f"Using parallel processing for {total_records} records")
+                generated_files = self._generate_export_files_parallel(export_data, export_format, options, metrics)
+            else:
+                generated_files = self._generate_export_files_optimized(export_data, export_format, options, metrics)
             
             if not generated_files:
                 result.errors.append(ImportExportValidationError(
@@ -2119,6 +2509,11 @@ class ImportExportService:
             
             result.success = True
             result.execution_time = time.time() - start_time
+            
+            # Finalize performance metrics
+            metrics.end_time = time.time()
+            metrics.records_processed = sum(result.records_exported.values())
+            self.performance_service.monitor_performance(metrics, f"export_{export_format.value}")
             
             logger.info(f"Export operation {operation_id} completed successfully in {result.execution_time:.2f}s")
             logger.info(f"Exported {result.total_exported} records to {len(generated_files)} files")
