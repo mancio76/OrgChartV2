@@ -1,0 +1,362 @@
+{% extends "base/layout.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="bi bi-shield-check me-2"></i>
+                    Dashboard Audit
+                </h1>
+                <div class="btn-group" role="group">
+                    <a href="{{ url_for('audit_reports:operation_history') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-clock-history me-1"></i>
+                        Storico Operazioni
+                    </a>
+                    <a href="{{ url_for('audit_reports:compliance_report') }}" class="btn btn-outline-success">
+                        <i class="bi bi-file-earmark-check me-1"></i>
+                        Report Compliance
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Operazioni (Ultima Settimana)
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ operation_summary.total_operations }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-activity fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Tasso di Successo
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ "%.1f"|format(operation_summary.success_rate) }}%
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Record Elaborati
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ "{:,}".format(operation_summary.total_records_processed) }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-database fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Modifiche Dati
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ "{:,}".format(data_change_summary.total_changes) }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-pencil-square fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Operations by Type Chart -->
+        <div class="col-xl-6 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Operazioni per Tipo</h6>
+                </div>
+                <div class="card-body">
+                    {% if operation_summary.operations_by_type %}
+                        <div class="chart-pie pt-4 pb-2">
+                            <canvas id="operationTypeChart"></canvas>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-info-circle text-muted"></i>
+                            <p class="text-muted mt-2">Nessuna operazione trovata nel periodo selezionato</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Changes Breakdown -->
+        <div class="col-xl-6 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Modifiche Dati</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <div class="text-center">
+                                <div class="h4 font-weight-bold text-success">
+                                    {{ "{:,}".format(data_change_summary.creates) }}
+                                </div>
+                                <div class="text-xs text-uppercase text-success">Creazioni</div>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="text-center">
+                                <div class="h4 font-weight-bold text-info">
+                                    {{ "{:,}".format(data_change_summary.updates) }}
+                                </div>
+                                <div class="text-xs text-uppercase text-info">Aggiornamenti</div>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="text-center">
+                                <div class="h4 font-weight-bold text-warning">
+                                    {{ "{:,}".format(data_change_summary.skips) }}
+                                </div>
+                                <div class="text-xs text-uppercase text-warning">Saltati</div>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="text-center">
+                                <div class="h4 font-weight-bold text-danger">
+                                    {{ "{:,}".format(data_change_summary.deletes) }}
+                                </div>
+                                <div class="text-xs text-uppercase text-danger">Eliminazioni</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Failed Operations -->
+    {% if failed_operations %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-danger">Operazioni Fallite Recenti</h6>
+                    <a href="{{ url_for('audit_reports:operation_history') }}?status=failed" class="btn btn-sm btn-outline-danger">
+                        Vedi Tutte
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>ID Operazione</th>
+                                    <th>Tipo</th>
+                                    <th>Utente</th>
+                                    <th>Data/Ora</th>
+                                    <th>Errori</th>
+                                    <th>File</th>
+                                    <th>Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for operation in failed_operations[:10] %}
+                                <tr>
+                                    <td>
+                                        <code>{{ operation.operation_id[:8] }}...</code>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-secondary">{{ operation.operation_type }}</span>
+                                    </td>
+                                    <td>{{ operation.user_id or 'N/A' }}</td>
+                                    <td>
+                                        {% if operation.start_time %}
+                                            {{ operation.start_time[:19].replace('T', ' ') }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-danger">{{ operation.error_count or 0 }}</span>
+                                    </td>
+                                    <td>
+                                        {% if operation.file_path %}
+                                            <small>{{ operation.file_path.split('/')[-1] }}</small>
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('audit_reports:operation_details', operation_id=operation.operation_id) }}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Most Active Entities -->
+    {% if data_change_summary.most_active_entities %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Entità Più Attive</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for entity_type, change_count in data_change_summary.most_active_entities[:6] %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-left-info">
+                                <div class="card-body py-3">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                                {{ entity_type.replace('_', ' ').title() }}
+                                            </div>
+                                            <div class="h6 mb-0 font-weight-bold text-gray-800">
+                                                {{ "{:,}".format(change_count) }} modifiche
+                                            </div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <a href="{{ url_for('audit_reports:entity_change_history', entity_type=entity_type) }}" 
+                                               class="btn btn-sm btn-outline-info">
+                                                <i class="bi bi-arrow-right"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Chart for operations by type
+{% if operation_summary.operations_by_type %}
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('operationTypeChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ operation_summary.operations_by_type.keys() | list | tojson }},
+            datasets: [{
+                data: {{ operation_summary.operations_by_type.values() | list | tojson }},
+                backgroundColor: [
+                    '#4e73df',
+                    '#1cc88a',
+                    '#36b9cc',
+                    '#f6c23e',
+                    '#e74a3b',
+                    '#858796'
+                ],
+                hoverBackgroundColor: [
+                    '#2e59d9',
+                    '#17a673',
+                    '#2c9faf',
+                    '#f4b619',
+                    '#e02d1b',
+                    '#6c757d'
+                ],
+                hoverBorderColor: "rgba(234, 236, 244, 1)",
+            }],
+        },
+        options: {
+            maintainAspectRatio: false,
+            tooltips: {
+                backgroundColor: "rgb(255,255,255)",
+                bodyFontColor: "#858796",
+                borderColor: '#dddfeb',
+                borderWidth: 1,
+                xPadding: 15,
+                yPadding: 15,
+                displayColors: false,
+                caretPadding: 10,
+            },
+            legend: {
+                display: true,
+                position: 'bottom'
+            },
+            cutoutPercentage: 80,
+        },
+    });
+});
+{% endif %}
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+.text-xs {
+    font-size: 0.7rem;
+}
+</style>
+{% endblock %}

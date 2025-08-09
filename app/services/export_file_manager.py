@@ -34,7 +34,7 @@ class RetentionPolicy(Enum):
     
     @staticmethod
     def values() -> list[str]:
-        return [enum.value for enum in RetentionPolicy]
+        return [enum.value() for enum in RetentionPolicy]
     
     @staticmethod
     def names() -> list[str]:
@@ -48,7 +48,7 @@ class CompressionType(Enum):
     
     @staticmethod
     def values() -> list[str]:
-        return [enum.value for enum in CompressionType]
+        return [enum.value() for enum in CompressionType]
     
     @staticmethod
     def names() -> list[str]:
@@ -64,7 +64,7 @@ class NotificationType(Enum):
     
     @staticmethod
     def values() -> list[str]:
-        return [enum.value for enum in NotificationType]
+        return [enum.value() for enum in NotificationType]
     
     @staticmethod
     def names() -> list[str]:

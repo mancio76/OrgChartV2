@@ -23,12 +23,35 @@ class ImportErrorType(Enum):
     BUSINESS_RULE_VIOLATION = "business_rule_violation"
     CIRCULAR_REFERENCE = "circular_reference"
 
+    @staticmethod
+    def items() -> list['ImportErrorType']:
+        return list(ImportErrorType)
+
+    @staticmethod
+    def values() -> list[str]:
+        return [enum.value() for enum in ImportErrorType]
+    
+    @staticmethod
+    def names() -> list[str]:
+        return [enum.name for enum in ImportErrorType]
 
 class ConflictResolutionStrategy(Enum):
     """Strategies for handling duplicate records during import."""
     SKIP = "skip"
     UPDATE = "update"
     CREATE_VERSION = "create_version"
+
+    @staticmethod
+    def items() -> list['ConflictResolutionStrategy']:
+        return list(ConflictResolutionStrategy)
+
+    @staticmethod
+    def values() -> list[str]:
+        return [enum.value() for enum in ConflictResolutionStrategy]
+    
+    @staticmethod
+    def names() -> list[str]:
+        return [enum.name for enum in ConflictResolutionStrategy]
 
 
 class FileFormat(Enum):
@@ -42,15 +65,15 @@ class FileFormat(Enum):
 
     @staticmethod
     def values() -> list[str]:
-        return [enum.value for enum in RetentionPolicy]
+        return [enum.value() for enum in FileFormat]
     
     @staticmethod
     def names() -> list[str]:
-        return [enum.name for enum in RetentionPolicy]
+        return [enum.name for enum in FileFormat]
 
     @staticmethod
     def extensions() -> list[str]:
-        return ['.' + enum.name.lower() for enum in RetentionPolicy]
+        return ['.' + enum.name.lower() for enum in FileFormat]
 
     def label(self) -> str:
         return self.name

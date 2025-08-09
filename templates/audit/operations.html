@@ -1,0 +1,219 @@
+{% extends "base/layout.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="bi bi-clock-history me-2"></i>
+                    Storico Operazioni
+                </h1>
+                <a href="{{ url_for('audit_reports:audit_dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>
+                    Torna alla Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Filtri</h6>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="user_id" class="form-label">Utente</label>
+                            <input type="text" class="form-control" id="user_id" name="user_id" 
+                                   value="{{ filters.user_id or '' }}" placeholder="ID Utente">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="operation_type" class="form-label">Tipo Operazione</label>
+                            <select class="form-select" id="operation_type" name="operation_type">
+                                <option value="">Tutti</option>
+                                {% for op_type in operation_types %}
+                                <option value="{{ op_type }}" 
+                                        {% if filters.operation_type == op_type %}selected{% endif %}>
+                                    {{ op_type.title() }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="status" class="form-label">Stato</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">Tutti</option>
+                                {% for status_option in statuses %}
+                                <option value="{{ status_option }}" 
+                                        {% if filters.status == status_option %}selected{% endif %}>
+                                    {{ status_option.title() }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="days" class="form-label">Giorni</label>
+                            <select class="form-select" id="days" name="days">
+                                <option value="1" {% if filters.days == 1 %}selected{% endif %}>1</option>
+                                <option value="7" {% if filters.days == 7 %}selected{% endif %}>7</option>
+                                <option value="30" {% if filters.days == 30 %}selected{% endif %}>30</option>
+                                <option value="90" {% if filters.days == 90 %}selected{% endif %}>90</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="limit" class="form-label">Limite</label>
+                            <select class="form-select" id="limit" name="limit">
+                                <option value="25" {% if filters.limit == 25 %}selected{% endif %}>25</option>
+                                <option value="50" {% if filters.limit == 50 %}selected{% endif %}>50</option>
+                                <option value="100" {% if filters.limit == 100 %}selected{% endif %}>100</option>
+                                <option value="200" {% if filters.limit == 200 %}selected{% endif %}>200</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-1"></i>
+                                Filtra
+                            </button>
+                            <a href="{{ url_for('audit_reports:operation_history') }}" class="btn btn-outline-secondary ms-2">
+                                <i class="bi bi-x-circle me-1"></i>
+                                Pulisci Filtri
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operations Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        Operazioni ({{ operations|length }} risultati)
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if operations %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover" width="100%" cellspacing="0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID Operazione</th>
+                                    <th>Tipo</th>
+                                    <th>Stato</th>
+                                    <th>Utente</th>
+                                    <th>Inizio</th>
+                                    <th>Fine</th>
+                                    <th>Durata</th>
+                                    <th>Record</th>
+                                    <th>Errori</th>
+                                    <th>Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for operation in operations %}
+                                <tr>
+                                    <td>
+                                        <code class="text-primary">{{ operation.operation_id[:12] }}...</code>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ operation.operation_type }}</span>
+                                    </td>
+                                    <td>
+                                        {% if operation.status == 'completed' %}
+                                            <span class="badge bg-success">Completata</span>
+                                        {% elif operation.status == 'failed' %}
+                                            <span class="badge bg-danger">Fallita</span>
+                                        {% elif operation.status == 'cancelled' %}
+                                            <span class="badge bg-warning">Annullata</span>
+                                        {% else %}
+                                            <span class="badge bg-info">{{ operation.status.title() }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ operation.user_id or 'N/A' }}</td>
+                                    <td>
+                                        {% if operation.start_time %}
+                                            <small>{{ operation.start_time[:19].replace('T', ' ') }}</small>
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if operation.end_time %}
+                                            <small>{{ operation.end_time[:19].replace('T', ' ') }}</small>
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if operation.start_time and operation.end_time %}
+                                            {% set duration = (operation.end_time | parse_datetime - operation.start_time | parse_datetime).total_seconds() %}
+                                            <small>{{ "%.1f"|format(duration) }}s</small>
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if operation.records_processed %}
+                                            {% set total_processed = operation.records_processed.values() | sum %}
+                                            <small>{{ "{:,}".format(total_processed) }}</small>
+                                        {% else %}
+                                            0
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if operation.error_count %}
+                                            <span class="badge bg-danger">{{ operation.error_count }}</span>
+                                        {% else %}
+                                            <span class="badge bg-success">0</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('audit_reports:operation_details', operation_id=operation.operation_id) }}" 
+                                           class="btn btn-sm btn-outline-primary" title="Visualizza Dettagli">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-info-circle text-muted" style="font-size: 3rem;"></i>
+                        <h5 class="text-muted mt-3">Nessuna operazione trovata</h5>
+                        <p class="text-muted">Prova a modificare i filtri di ricerca.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-submit form when filters change
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const selects = form.querySelectorAll('select');
+    
+    selects.forEach(select => {
+        select.addEventListener('change', function() {
+            // Optional: auto-submit on change
+            // form.submit();
+        });
+    });
+});
+</script>
+{% endblock %}

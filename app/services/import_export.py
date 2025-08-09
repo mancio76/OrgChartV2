@@ -29,6 +29,7 @@ from ..utils.error_handler import (
 from .audit_trail import (
     get_audit_manager, OperationType, OperationStatus, ChangeType
 )
+from .error_reporting import get_error_reporting_service
 from .csv_processor import CSVProcessor
 from .json_processor import JSONProcessor
 from .dependency_resolver import DependencyResolver, ForeignKeyResolver
@@ -85,6 +86,7 @@ class ImportExportService:
         self.conflict_resolution_manager = ConflictResolutionManager()
         self.error_logger = get_error_logger()
         self.audit_manager = get_audit_manager()
+        self.error_reporting_service = get_error_reporting_service()
         self._transaction_contexts: Dict[str, TransactionContext] = {}
         
         logger.info("ImportExportService initialized with enhanced error handling and audit trail")
@@ -749,6 +751,26 @@ class ImportExportService:
             logger.error(f"Error building preview foreign key mappings: {e}")
             return {}
     
+    def _estimate_total_records(self, file_path: str, file_format: FileFormat) -> int:
+        """Estimate total number of records in the file for progress tracking."""
+        try:
+            if file_format == FileFormat.CSV:
+                # For CSV, count lines (approximate)
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return sum(1 for line in f) - 1  # Subtract header
+            elif file_format == FileFormat.JSON:
+                # For JSON, try to parse and count records
+                import json
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    if isinstance(data, dict):
+                        return sum(len(records) for records in data.values() if isinstance(records, list))
+                    elif isinstance(data, list):
+                        return len(data)
+            return 0
+        except Exception:
+            return 0
+    
     def _estimate_processing_time(self, data: Dict[str, List[Dict[str, Any]]], 
                                 options: ImportOptions) -> float:
         """
@@ -834,6 +856,13 @@ class ImportExportService:
         
         # Initialize enhanced error logging and audit trail
         error_report = self.error_logger.create_error_report(operation_id, "import")
+        
+        # Start comprehensive error tracking
+        total_records = self._estimate_total_records(file_path, file_format)
+        comprehensive_report = self.error_reporting_service.start_error_tracking(
+            operation_id, "import", total_records
+        )
+        
         audit_record = self.audit_manager.start_operation(
             operation_id=operation_id,
             operation_type=OperationType.IMPORT,
@@ -868,8 +897,13 @@ class ImportExportService:
             
             format_errors = self.validate_file_structure(file_path, file_format, entity_type_for_validation)
             if format_errors:
-                # Log structured errors for file format issues
+                # Track file-level errors in comprehensive reporting
                 for error in format_errors:
+                    self.error_reporting_service.track_file_error(
+                        operation_id, file_path, error.message, error.error_type
+                    )
+                    
+                    # Also log structured errors for file format issues
                     self.error_logger.log_structured_error(
                         operation_id=operation_id,
                         severity=ErrorSeverity.ERROR,
@@ -889,6 +923,12 @@ class ImportExportService:
                     operation_id, OperationStatus.FAILED, 
                     error_count=len(format_errors)
                 )
+                
+                # Finalize comprehensive error report
+                comprehensive_report = self.error_reporting_service.finalize_error_report(operation_id)
+                if comprehensive_report:
+                    result.metadata = {"error_summary": self.error_reporting_service.generate_error_summary_for_result(operation_id, result)}
+                
                 self.error_logger.finalize_error_report(operation_id)
                 
                 logger.error(f"File validation failed for {file_path}: {len(format_errors)} errors")
@@ -899,6 +939,12 @@ class ImportExportService:
             parsed_data = self._parse_import_file(file_path, file_format, options)
             
             if not parsed_data:
+                # Track file-level error in comprehensive reporting
+                self.error_reporting_service.track_file_error(
+                    operation_id, file_path, "No data could be parsed from the file", 
+                    ImportErrorType.FILE_FORMAT_ERROR
+                )
+                
                 # Log structured error for parsing failure
                 self.error_logger.log_structured_error(
                     operation_id=operation_id,
@@ -922,6 +968,12 @@ class ImportExportService:
                 self.audit_manager.update_operation_status(
                     operation_id, OperationStatus.FAILED, error_count=1
                 )
+                
+                # Finalize comprehensive error report
+                comprehensive_report = self.error_reporting_service.finalize_error_report(operation_id)
+                if comprehensive_report:
+                    result.metadata = {"error_summary": self.error_reporting_service.generate_error_summary_for_result(operation_id, result)}
+                
                 self.error_logger.finalize_error_report(operation_id)
                 
                 return result
@@ -1023,6 +1075,12 @@ class ImportExportService:
                         warning_count=len(result.warnings)
                     )
                     self.audit_manager.complete_operation(operation_id)
+                    
+                    # Finalize comprehensive error report
+                    comprehensive_report = self.error_reporting_service.finalize_error_report(operation_id)
+                    if comprehensive_report:
+                        result.metadata = {"error_summary": self.error_reporting_service.generate_error_summary_for_result(operation_id, result)}
+                    
                     self.error_logger.finalize_error_report(operation_id)
                     
                     logger.info(f"Import validation completed successfully in {result.execution_time:.2f}s")
@@ -1047,6 +1105,12 @@ class ImportExportService:
                         warning_count=len(result.warnings)
                     )
                     self.audit_manager.complete_operation(operation_id)
+                    
+                    # Finalize comprehensive error report
+                    comprehensive_report = self.error_reporting_service.finalize_error_report(operation_id)
+                    if comprehensive_report:
+                        result.metadata = {"error_summary": self.error_reporting_service.generate_error_summary_for_result(operation_id, result)}
+                    
                     self.error_logger.finalize_error_report(operation_id)
                     
                     logger.info(f"Import operation {operation_id} completed successfully in {result.execution_time:.2f}s")
@@ -1103,6 +1167,12 @@ class ImportExportService:
                     warning_count=len(result.warnings)
                 )
                 self.audit_manager.complete_operation(operation_id)
+                
+                # Finalize comprehensive error report
+                comprehensive_report = self.error_reporting_service.finalize_error_report(operation_id)
+                if comprehensive_report:
+                    result.metadata = {"error_summary": self.error_reporting_service.generate_error_summary_for_result(operation_id, result)}
+                
                 self.error_logger.finalize_error_report(operation_id)
                 
                 return result
@@ -1152,6 +1222,12 @@ class ImportExportService:
                 warning_count=len(result.warnings)
             )
             self.audit_manager.complete_operation(operation_id)
+            
+            # Finalize comprehensive error report
+            comprehensive_report = self.error_reporting_service.finalize_error_report(operation_id)
+            if comprehensive_report:
+                result.metadata = {"error_summary": self.error_reporting_service.generate_error_summary_for_result(operation_id, result)}
+            
             self.error_logger.finalize_error_report(operation_id)
             
             return result
@@ -1462,8 +1538,31 @@ class ImportExportService:
                     )
                     
                     # Process the record based on conflict resolution strategy
-                    # Calculate line number for error reporting (assuming records are processed in order)
-                    line_number = i + 1 if i is not None else None
+                    # Calculate line number for error reporting (record_index is 0-based)
+                    line_number = record_index + 1
+                    
+                    # Validate record before processing and track line-level errors
+                    record_errors = self.validation_framework.validate_record(
+                        entity_type, resolved_record, line_number
+                    )
+                    
+                    if record_errors:
+                        # Track line-level errors in comprehensive reporting
+                        if operation_id:
+                            self.error_reporting_service.track_line_error(
+                                operation_id, line_number, entity_type, resolved_record, record_errors
+                            )
+                        
+                        # Add to batch errors
+                        batch_result.errors.extend(record_errors)
+                        
+                        # Skip processing if there are critical errors
+                        critical_errors = [e for e in record_errors 
+                                         if e.error_type in [ImportErrorType.MISSING_REQUIRED_FIELD,
+                                                           ImportErrorType.FOREIGN_KEY_VIOLATION]]
+                        if critical_errors:
+                            batch_result.skipped_count += 1
+                            continue
                     
                     processing_result = self._process_single_record(
                         entity_type, resolved_record, options, created_mappings,
@@ -1490,13 +1589,26 @@ class ImportExportService:
                         batch_result.skipped_count += 1
                 
                 except Exception as record_error:
-                    logger.error(f"Error processing record {record_index + 1} in {entity_type}: {record_error}")
+                    line_number = record_index + 1
+                    logger.error(f"Error processing record {line_number} in {entity_type}: {record_error}")
+                    
+                    # Track system error in comprehensive reporting
+                    if operation_id:
+                        self.error_reporting_service.track_system_error(
+                            operation_id, record_error, 
+                            context={
+                                'entity_type': entity_type,
+                                'line_number': line_number,
+                                'record_data': record
+                            }
+                        )
+                    
                     batch_result.errors.append(ImportExportValidationError(
                         field="record_processing",
                         message=f"Failed to process record: {str(record_error)}",
                         error_type=ImportErrorType.BUSINESS_RULE_VIOLATION,
                         entity_type=entity_type,
-                        line_number=record_index + 1
+                        line_number=line_number
                     ))
                     
                     # Continue processing other records unless it's a critical error

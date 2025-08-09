@@ -24,7 +24,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.routes import (
     home, units, unit_types, job_titles, persons, companies,
-    assignments, orgchart, api, health, themes, import_export
+    assignments, orgchart, api, health, themes, import_export, audit_reports
 )
 
 # Get configuration
@@ -155,6 +155,7 @@ app.include_router(assignments.router, prefix="/assignments", tags=["Assignments
 app.include_router(orgchart.router, prefix="/orgchart", tags=["Orgchart"])
 app.include_router(themes.router, prefix="/themes", tags=["Themes"])
 app.include_router(import_export.router, prefix="/import-export", tags=["Import/Export"])
+app.include_router(audit_reports.router, tags=["Audit Reports"])
 app.include_router(api.router, prefix="/api", tags=["API"])
 
 @app.get("/favicon.ico", include_in_schema=False)
