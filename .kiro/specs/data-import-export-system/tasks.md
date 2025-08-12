@@ -118,7 +118,6 @@
 - [x] 9. Build user interface templates
   - [x] 9.1 Create import interface template
 
-
     - Build file upload form with format selection
     - Add entity type selection and options configuration
     - Implement progress display and status updates
